@@ -5,19 +5,21 @@
 
 ## Engine & Language
 
-- **Engine**: [TO BE CONFIGURED — run /setup-engine]
-- **Language**: [TO BE CONFIGURED]
-- **Rendering**: [TO BE CONFIGURED]
-- **Physics**: [TO BE CONFIGURED]
+- **Engine**: Unity 2022.3.62f1
+- **Language**: C#
+- **Rendering**: URP (Universal Render Pipeline)
+- **Physics**: Unity Physics (3D: PhysX, 2D: Box2D)
 
 ## Naming Conventions
 
-- **Classes**: [TO BE CONFIGURED]
-- **Variables**: [TO BE CONFIGURED]
-- **Signals/Events**: [TO BE CONFIGURED]
-- **Files**: [TO BE CONFIGURED]
-- **Scenes/Prefabs**: [TO BE CONFIGURED]
-- **Constants**: [TO BE CONFIGURED]
+- **Classes**: PascalCase (e.g., `PlayerController`)
+- **Public fields/properties**: PascalCase (e.g., `MoveSpeed`)
+- **Private fields**: _camelCase (e.g., `_moveSpeed`)
+- **Methods**: PascalCase (e.g., `TakeDamage()`)
+- **Events/Delegates**: PascalCase (e.g., `OnHealthChanged`)
+- **Files**: PascalCase matching class (e.g., `PlayerController.cs`)
+- **Scenes/Prefabs**: PascalCase (e.g., `PlayerController.prefab`)
+- **Constants**: PascalCase or UPPER_SNAKE_CASE
 
 ## Performance Budgets
 
