@@ -243,30 +243,30 @@ Layer 4 — Meta/Polish
 
 | ID | ระบบ | สถานะ | GDD Path |
 |----|------|-------|----------|
-| F1 | Actor System | Not Started | — |
-| F2 | Networking Core | Not Started | — |
-| F3 | Input System | Not Started | — |
-| F4 | Data/Config System | Not Started | — |
+| F1 | Actor System | ✅ Done | design/gdd/actor-system.md |
+| F2 | Networking Core | ✅ Done | design/gdd/networking-core.md |
+| F3 | Input System | ✅ Done | design/gdd/input-system.md |
+| F4 | Data/Config System | ✅ Done | design/gdd/data-config-system.md |
 | F5 | Audio System | Not Started | — |
-| C1 | Combat & Skills System | Not Started | — |
-| C2 | Hero System | Not Started | — |
-| C3 | Movement & Navigation | Not Started | — |
-| C4 | Gold Economy | Not Started | — |
-| C5 | Level/XP System | Not Started | — |
-| FT1 | Item System | Not Started | — |
-| FT2 | Map & Objectives | Not Started | — |
-| FT3 | Creep/Minion System | Not Started | — |
-| FT4 | Fog of War | Not Started | — |
-| FT5 | AI/Bot System | Not Started | — |
-| FT6 | Matchmaking | Not Started | — |
-| FT7 | Game Mode Manager | Not Started | — |
-| FT8 | Dungeon Mode | Not Started | — |
-| FT9 | Town System | Not Started | — |
-| P1 | HUD & In-Game UI | Not Started | — |
-| P2 | Item Shop UI | Not Started | — |
-| P3 | Hero Select UI | Not Started | — |
+| C1 | Combat & Skills System | ✅ Done | design/gdd/combat-skills-system.md |
+| C2 | Hero System | ✅ Done | design/gdd/hero-system.md |
+| C3 | Movement & Navigation | ✅ Done | design/gdd/movement-navigation-system.md |
+| C4 | Gold Economy | ✅ Done | design/gdd/gold-economy.md |
+| C5 | Level/XP System | ✅ Done | design/gdd/level-xp-system.md |
+| FT1 | Item System | ✅ Done | design/gdd/item-system.md |
+| FT2 | Map & Objectives | ✅ Done | design/gdd/map-objectives-system.md |
+| FT3 | Creep/Minion System | ✅ Done | design/gdd/creep-minion-system.md |
+| FT4 | Fog of War | ✅ Done | design/gdd/fog-of-war-system.md |
+| FT5 | AI/Bot System | ✅ Done | design/gdd/ai-bot-system.md |
+| FT6 | Matchmaking | ✅ Done | design/gdd/matchmaking-system.md |
+| FT7 | Game Mode Manager | ✅ Done | design/gdd/game-mode-manager.md |
+| FT8 | Dungeon Mode | ✅ Done | design/gdd/dungeon-mode.md |
+| FT9 | Town System | ✅ Done | design/gdd/town-system.md |
+| P1 | HUD & In-Game UI | ✅ Done | design/gdd/hud-ingame-ui.md |
+| P2 | Item Shop UI | ✅ Done | design/gdd/item-shop-ui.md |
+| P3 | Hero Select UI | ✅ Done | design/gdd/hero-select-ui.md |
 | P4 | Menu & Lobby UI | Not Started | — |
-| P5 | Camera System | Not Started | — |
+| P5 | Camera System | ✅ Done | design/gdd/camera-system.md |
 | M1 | Social System | Not Started | — |
 | M2 | Battle Pass | Not Started | — |
 | M3 | Customization | Not Started | — |
