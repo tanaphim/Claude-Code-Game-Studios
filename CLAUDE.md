@@ -5,22 +5,22 @@ Each agent owns a specific domain, enforcing separation of concerns and quality.
 
 ## Technology Stack
 
-- **Engine**: [CHOOSE: Godot 4 / Unity / Unreal Engine 5]
-- **Language**: [CHOOSE: GDScript / C# / C++ / Blueprint]
+- **Engine**: Unity 2022.3.62f1
+- **Language**: C#
+- **Rendering**: URP (Universal Render Pipeline)
+- **Networking**: Photon Fusion 2
+- **Backend**: PlayFab (CBS) + Azure Functions
 - **Version Control**: Git with trunk-based development
-- **Build System**: [SPECIFY after choosing engine]
-- **Asset Pipeline**: [SPECIFY after choosing engine]
+- **Build System**: Unity Build System (Unity Cloud Build ready)
+- **Asset Pipeline**: Unity Asset Pipeline v2
 
-> **Note**: Engine-specialist agents exist for Godot, Unity, and Unreal with
-> dedicated sub-specialists. Use the set matching your engine.
+> **Note**: Use `unity-specialist` and its sub-specialists (`unity-shader-specialist`,
+> `unity-ui-specialist`, `unity-dots-specialist`, `unity-addressables-specialist`) for
+> all engine-specific work.
 
 ## Project Structure
 
 @.claude/docs/directory-structure.md
-
-## Engine Version Reference
-
-@docs/engine-reference/godot/VERSION.md
 
 ## Technical Preferences
 

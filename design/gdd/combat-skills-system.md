@@ -393,7 +393,7 @@ actual_cost     = base_cost     × (1 - EnergyReduction / 100)
 | **Networking Core (F2)** | RPC_Hit, server-authoritative damage calculation |
 | **Input System (F3)** | รับ key press → trigger skill |
 | **Hero System (C2)** | ← พึ่งพา C1 สำหรับ skill execution framework |
-| **Item System (FT1)** | ← ไอเทม active ใช้ pipeline เดียวกับ skill |
+| **Item System (FT1)** | ← ไอเทม active ใช้ pipeline เดียวกับ skill; `CBSAbility.ItemAnimationType` กำหนด animator state ที่เล่นขณะใช้ไอเทม (ดู FT1 §3.8) |
 | **HUD & In-Game UI (P1)** | ← แสดง damage numbers, cooldown, shield bar |
 | **AI/Bot System (FT5)** | ← ใช้ CBSAbility.AI weights สำหรับ skill decisions |
 | **Statistics & History (M5)** | ← รับ damage events สำหรับ tracking |
