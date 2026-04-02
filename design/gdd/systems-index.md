@@ -265,15 +265,15 @@ Layer 4 — Meta/Polish
 | P1 | HUD & In-Game UI | ✅ Done | design/gdd/hud-ingame-ui.md |
 | P2 | Item Shop UI | ✅ Done | design/gdd/item-shop-ui.md |
 | P3 | Hero Select UI | ✅ Done | design/gdd/hero-select-ui.md |
-| P4 | Menu & Lobby UI | Not Started | — |
+| P4 | Menu & Lobby UI | ✅ Done | design/gdd/menu-lobby-ui.md |
 | P5 | Camera System | ✅ Done | design/gdd/camera-system.md |
-| M1 | Social System | Not Started | — |
-| M2 | Battle Pass | Not Started | — |
-| M3 | Customization | Not Started | — |
-| M4 | Notification System | Not Started | — |
-| M5 | Statistics & History | Not Started | — |
-| M6 | Account & Auth | Not Started | — |
-| M7 | AFK Detection | Not Started | — |
-| M8 | Surrender System | Not Started | — |
-| M9 | Tutorial System | Not Started | — |
-| M10 | Announcement System | Not Started | — |
+| M1 | Social System | ✅ Done | design/gdd/social-system.md |
+| M2 | Battle Pass | ✅ Done | design/gdd/battle-pass.md |
+| M3 | Customization | ✅ Done | design/gdd/customization-system.md |
+| M4 | Notification System | ✅ Done | design/gdd/notification-system.md |
+| M5 | Statistics & History | ✅ Done | design/gdd/statistics-history.md |
+| M6 | Account & Auth | ✅ Done | design/gdd/account-auth-system.md |
+| M7 | AFK Detection | ✅ Done | design/gdd/afk-detection.md |
+| M8 | Surrender System | ✅ Done | design/gdd/surrender-system.md |
+| M9 | Tutorial System | ✅ Done (stub) | design/gdd/tutorial-system.md |
+| M10 | Announcement System | ✅ Done | design/gdd/announcement-system.md |
