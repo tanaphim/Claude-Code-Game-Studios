@@ -11,7 +11,7 @@ date: 2026-04-02
 เอกสารนี้แจกแจงระบบทั้งหมดของเกม Delta พร้อม dependencies, ลำดับความสำคัญ,
 และลำดับการเขียน GDD เป็นแผนที่หลักสำหรับการออกแบบและพัฒนา
 
-**จำนวนระบบทั้งหมด**: 34
+**จำนวนระบบทั้งหมด**: 37
 **สถานะ**: Reverse-documented จาก codebase ที่มีอยู่ (1,139 C# scripts)
 
 ---
@@ -51,6 +51,9 @@ date: 2026-04-02
 | FT7 | Game Mode Manager | จัดการโหมดเกมทั้งหมด (Ranked, Casual, Arcade, Training, Dungeon, Town) | จาก concept |
 | FT8 | Dungeon Mode | PvE เดี่ยว — ด่าน/เวฟ, ระบบมอนสเตอร์, progression | จาก concept |
 | FT9 | Town System | Hub โซเชียล — NPC, ภารกิจ, customization, พบเพื่อน | จาก concept |
+| FT10 | Territory War | Meta-game layer — World Map 1M+ เมือง, ซื้อเมืองด้วย Premium Currency, ประกาศสงคราม, สู้แบบ MOBA (1v1/3v3/5v5/25v25), ผู้แพ้กลายเป็นเมืองขึ้น | ใหม่ |
+| FT10a | Citizen System | Sub-system ของ FT10 — ผู้เล่นสมัครเป็นพลเมืองของเมือง, เจ้าเมืองเรียกพลเมืองออกรบได้ | ใหม่ |
+| FT10b | Mercenary System | Sub-system ของ FT10 — ตลาดทหารรับจ้าง, ผู้เล่นลงทะเบียนรับจ้าง, เจ้าเมืองจ้างมาเสริมทีมสงคราม | ใหม่ |
 
 ### Presentation (ระบบ UI/UX — ห่อหุ้มระบบ gameplay)
 
@@ -277,3 +280,6 @@ Layer 4 — Meta/Polish
 | M8 | Surrender System | ✅ Done | design/gdd/surrender-system.md |
 | M9 | Tutorial System | ✅ Done (stub) | design/gdd/tutorial-system.md |
 | M10 | Announcement System | ✅ Done | design/gdd/announcement-system.md |
+| FT10 | Territory War | 🔍 In Review | design/gdd/territory-war.md |
+| FT10a | Citizen System | Not Started | — |
+| FT10b | Mercenary System | Not Started | — |
