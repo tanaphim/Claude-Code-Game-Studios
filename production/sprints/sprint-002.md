@@ -1,0 +1,118 @@
+# Sprint 2 — 2026-04-18 to 2026-05-01
+
+## Sprint Goal
+
+ปิด Sprint 001 carryover ทั้งหมด (Item animation, combat/networking bugs, risk register)
+และเริ่มออกแบบระบบ AI Bot + กำหนด Gold Economy values
+
+## Capacity
+
+- Total days: 14 (2 สัปดาห์)
+- Buffer (20%): 2.8 วัน สำรองสำหรับงานที่ไม่ได้วางแผน
+- Available: ~11 วัน
+
+---
+
+## Tasks
+
+### Must Have (Critical Path)
+
+| ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
+|----|------|-------------|-----------|-------------|-------------------|
+| S2-01 | สร้าง Animator States `Item_Recall_Perform`, `Item_Consume_Perform`, `Item_Spell_Perform`, `Item_Attack_Perform` ใน AnimatorController ต่อ Hero | unity-specialist | 2.0 | — | Item recall/consume/spell/attack เล่น clip ถูกต้องใน hero อย่างน้อย 1 ตัว |
+| S2-02 | เพิ่ม `Item_Viable` bool parameter ใน Animator ต่อ Hero | unity-specialist | 0.5 | S2-01 | `GetViable(SkillKey.Item)` และ `SetViable(SkillKey.Item, true/false)` ทำงานโดยไม่ error |
+| S2-03 | ตรวจสอบและ fix `attack_speed` / `move_speed` ÷100 bug | gameplay-programmer | 1.0 | — | ยืนยันว่าค่าใน CBS ตั้ง 0–100; stat apply กับ Actor ถูกต้อง |
+| S2-04 | ระบุและ document Photon Fusion Tick Rate config | network-programmer | 0.5 | — | ค่า TickRate จริงถูกระบุใน `networking-core.md` |
+| S2-05 | ตรวจสอบ `AvailableToPurchase()` Role Restriction | gameplay-programmer | 0.5 | — | Documented ว่า `Positions[]` enforce จริง หรือระบุว่าเป็น unimplemented |
+| S2-06 | Reverse-document Mythic Passive Bonus formula จากโค้ด | game-designer | 1.0 | — | `item-system.md §4` มีสูตรและตัวแปรครบถ้วน |
+| S2-07 | ตรวจสอบ `AdditionalMoveSpeed` override bug (หลาย buff พร้อมกัน) | gameplay-programmer | 1.0 | — | Bug status documented; `movement-navigation-system.md` อัพเดต |
+| S2-08 | สร้าง Risk Register เริ่มต้น | producer | 0.5 | — | `production/risk-register/risk-register.md` พร้อมรายการ risk จาก ADRs + GDDs |
+
+**Must Have Subtotal: 7.0 วัน**
+
+### Should Have
+
+| ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
+|----|------|-------------|-----------|-------------|-------------------|
+| S2-09 | ออกแบบ AI Bot item-buying logic | game-designer | 2.0 | S2-06 | `ai-bot-system.md` มี buy decision tree ที่ implementable ครบ |
+| S2-10 | ออกแบบ AI Difficulty Level system | game-designer | 1.0 | S2-09 | Difficulty multiplier Easy/Normal/Hard defined ใน GDD พร้อม tuning knobs |
+| S2-11 | กำหนด Gold Economy values — minion gold ทุกประเภท + Buyback cost formula | game-designer | 1.0 | — | `gold-economy.md` ไม่มี ⚠️ TODO เหลือสำหรับ minion gold และ buyback |
+
+**Should Have Subtotal: 4.0 วัน**
+
+### Nice to Have
+
+| ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
+|----|------|-------------|-----------|-------------|-------------------|
+| S2-12 | สืบสวน Surrender Reject Vote logic (ถูก comment out) | gameplay-programmer | 0.5 | — | Documented ว่าเป็น bug หรือ design intent; `surrender-system.md` อัพเดต |
+| S2-13 | สืบสวน AFK Detection RPC stubs ว่าง | gameplay-programmer | 0.5 | — | Documented ว่า stubs ต้องการ implement หรือเป็น placeholder; `afk-detection.md` อัพเดต |
+
+**Nice to Have Subtotal: 1.0 วัน**
+
+**Total Estimated: 12.0 วัน** (fits within available capacity, 2 วันเหลือเป็น buffer)
+
+---
+
+## Carryover from Previous Sprint
+
+| Task | เหตุผล | Estimate ใหม่ |
+|------|--------|--------------|
+| S1-01 → S2-01 | ไม่ได้เริ่ม | 2.0 วัน |
+| S1-02 → S2-02 | ไม่ได้เริ่ม | 0.5 วัน |
+| S1-03 → S2-03 | ไม่ได้เริ่ม | 1.0 วัน |
+| S1-04 → S2-04 | ไม่ได้เริ่ม | 0.5 วัน |
+| S1-05 → S2-05 | ไม่ได้เริ่ม | 0.5 วัน |
+| S1-06 → S2-06 | ไม่ได้เริ่ม | 1.0 วัน |
+| S1-07 → S2-07 | ไม่ได้เริ่ม | 1.0 วัน |
+| S1-08 → S2-08 | ไม่ได้เริ่ม | 0.5 วัน |
+| S1-09 → S2-09 | ไม่ได้เริ่ม | 2.0 วัน |
+| S1-10 → S2-10 | ไม่ได้เริ่ม | 1.0 วัน |
+
+---
+
+## Risks
+
+| Risk | Probability | Impact | Mitigation |
+|------|------------|--------|-----------|
+| Animator States ต่อ hero หลาย ตัว ใช้เวลานานกว่าคาด | สูง | ปานกลาง | เริ่มจาก hero ต้นแบบ 1 ตัว; สร้าง template ให้ hero อื่น copy |
+| `attack_speed` ÷100 bug กระทบ balance data ที่มีอยู่ | ปานกลาง | สูง | ทดสอบ hero sample ก่อน fix; บันทึก ADR ถ้าต้องเปลี่ยน CBS format |
+| Tick Rate config ไม่ได้ตั้งค่าไว้จริง | ปานกลาง | ปานกลาง | ถ้าใช้ Fusion default — document และ test ว่า default รองรับ 5v5 |
+| Sprint 001 carryover ทั้งหมด 10 วัน อาจ overload ถ้ามี blockers | ปานกลาง | สูง | Should Have เป็น optional; cut S2-09/S2-10 ถ้า Must Have ล่าช้า |
+| Gold Economy values ต้องการ playtesting ก่อนกำหนด | ต่ำ | ปานกลาง | ใช้ค่าจาก MOBA reference (DotA2/LoL) เป็น baseline ก่อน |
+
+---
+
+## Dependencies on External Factors
+
+- Unity Editor เข้าถึง `delta-unity` AnimatorControllers ได้ (S2-01, S2-02)
+- Photon Fusion Project Settings เข้าถึงได้ (S2-04)
+- PlayFab CBS Dashboard เข้าถึงได้สำหรับตรวจ stat values (S2-03)
+
+---
+
+## Definition of Done for this Sprint
+
+- [ ] S2-01: Item animation เล่นถูก clip สำหรับ hero อย่างน้อย 1 ตัว (proof of concept)
+- [ ] S2-02: `Item_Viable` parameter ทำงานบน hero ที่ทำ S2-01
+- [ ] S2-03: `attack_speed`/`move_speed` behavior documented และ fix ถ้าเป็น bug
+- [ ] S2-04: Tick Rate ถูกระบุใน `networking-core.md`
+- [ ] S2-05: Role Restriction status documented
+- [ ] S2-06: Mythic Passive formula อยู่ใน `item-system.md §4`
+- [ ] S2-07: AdditionalMoveSpeed bug status documented
+- [ ] S2-08: Risk Register สร้างแล้วที่ `production/risk-register/risk-register.md`
+- [ ] GDD ที่เกี่ยวข้องอัพเดตสำหรับทุก finding
+- [ ] ไม่มี S1/S2 bugs ใหม่จาก tasks ในสปรินท์นี้
+
+---
+
+## Source
+
+สร้างจาก carryover Sprint 001 และ GDD scan ของ `/project-stage-detect` (2026-04-17):
+- `design/gdd/item-system.md`
+- `design/gdd/item-animation-system.md`
+- `design/gdd/networking-core.md`
+- `design/gdd/movement-navigation-system.md`
+- `design/gdd/ai-bot-system.md`
+- `design/gdd/gold-economy.md`
+- `design/gdd/surrender-system.md`
+- `design/gdd/afk-detection.md`
