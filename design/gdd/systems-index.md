@@ -43,6 +43,7 @@ date: 2026-04-02
 | ID | ระบบ | คำอธิบาย | ที่มา |
 |----|------|---------|-------|
 | FT1 | Item System | ไอเทม 7 ระดับ, คราฟ/รวม, 6 ช่อง, item effects (Lifeline, Cleave ฯลฯ) | จาก concept |
+| FT1-ANIM | Item Animation System | Animation routing ต่อ ItemAnimationType, AnimatorOverrideController per hero/weapon, placeholder clips | Implemented |
 | FT2 | Map & Objectives | 3 เลน, หอคอย, ค่ายทหาร, บอส/Mini-Boss, จุดฮีล | จาก concept |
 | FT3 | Creep/Minion System | สร้างคลื่นมินเนี่ยน, ป่า camps, scaling ตามเวลา, Super Creep | จาก concept |
 | FT4 | Fog of War | ระบบ AOI visibility, พุ่มไม้, vision revealers | จาก concept |
