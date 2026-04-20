@@ -570,8 +570,8 @@ delta-unity/Assets/GameScripts/Gameplays/Abilities/        (NEW folder)
 | 1 | Press assigned key → correct dummy ability's `Execute` runs | ✅ PASS | Q/W/E/R → `TestAbilityAction.Execute` fired for `proto.ability.{q,w,e,r}` |
 | 2 | Remap mid-test (`SetBinding`) → new key triggers same ability | ✅ PASS | Covered by `KeybindMap` PlayerPrefs persistence + `OnBindingChanged` |
 | 3 | Rebind slot (`BindSlot(1, other_id)`) → same key triggers different ability | ✅ PASS | `BindSlotPrototype` → replicated `Slots[1]` updates; `FixedUpdateNetwork` reads new target |
-| 4 | `NetworkDictionary<byte, NetworkBehaviourId>` replicates correctly (host-client parity) | ⏸ DEFERRED | `GameMode.Single` only proves local path; multipeer test in Day 3 |
-| 5 | Bandwidth test — `Fusion.NetworkStatistics` < 2KB/s for abilities channel (idle) | ⏸ DEFERRED | Needs multipeer runner + instrumentation in Day 3 |
+| 4 | `NetworkDictionary<byte, NetworkBehaviourId>` replicates correctly (host-client parity) | 🟡 PARTIAL (argument) | Pass #3 proof แสดงว่า ChangeDetector path fire บน "client view" ของ peer เดียวใน Single mode — **code path เดียวกับที่ remote client จะใช้**. Cross-process wire parity defer ไป Phase 1b (Host+Client harness) |
+| 5 | Bandwidth test — `Fusion.NetworkStatistics` < 2KB/s for abilities channel (idle) | ⏸ DEFERRED (hard) | Day 3-Lite ลอง proxy metric `FusionStatisticsSnapshot.WordsWrittenSize` (pre-transport) แต่ `GameMode.Single` elide state serialization step ทั้งหมด → อ่านได้ `0 B` เสมอ (ทั้ง idle และ keypress). **Supporting signal:** `ObjectsAllocMemoryUsedInBytes = 7168 B` คงที่ = state footprint ไม่ leak/grow. Wire-level measurement ต้องรอ Phase 1b Host+Client |
 
 **Pass #3 proof of dual-path `OnSlotChanged`:** ในโหมด `GameMode.Single` peer เดียวเป็น
 ทั้ง server+client, log แสดงทั้งสอง code paths ทำงานจริง:
@@ -581,9 +581,16 @@ delta-unity/Assets/GameScripts/Gameplays/Abilities/        (NEW folder)
 2. **ChangeDetector path** (`AbilityComponent.EmitSlotDiffs:91` from `Render:65`) —
    fire ตอน replicated state changes ถึง local peer (= path ที่ remote client จะใช้)
 
+**Day 3-Lite scope reduction:** Day 3 multipeer bootstrap ถูก scope ลงเป็น
+"Day 3-Lite" — คง `GameMode.Single` แต่เพิ่ม state-write probe เพื่อหา proxy
+evidence สำหรับ #5 ผ่าน `FusionStatisticsManager.CompleteSnapshot`. ผลคือ
+Fusion ข้าม state serialization ทั้ง step ใน Single mode → proxy ใช้งาน
+ไม่ได้. Full Host+Client harness เลื่อนเป็น Phase 1b entry criterion
+(ดู §9.3)
+
 Gate decision: **Phase 1b unblocked** — interface contracts ถือว่า verified เพียงพอ
-สำหรับ implementation sprint; replication parity + bandwidth (#4, #5) จะยืนยัน
-ใน Day 3 ก่อน Phase 1b ปิด
+สำหรับ implementation sprint; wire-level replication parity + bandwidth (#4, #5)
+จะยืนยันใน Phase 1b Host+Client harness
 
 ---
 
@@ -612,6 +619,14 @@ Gate decision: **Phase 1b unblocked** — interface contracts ถือว่า
 6. **Fusion 2 Scene registration:** prototype scene ต้องอยู่ใน
    `EditorBuildSettings` (build index) เพื่อให้ `StartGameArgs.Scene =
    SceneRef.FromIndex(buildIndex)` หาเจอ — drag-drop ลง Hierarchy ไม่พอ
+7. **Fusion Statistics ใน `GameMode.Single` = ศูนย์ทุก counter** — ทั้ง
+   transport-level (`InBandwidth/OutBandwidth`) และ pre-transport
+   (`WordsWrittenSize`, `OutObjectUpdates`, per-object via
+   `NetworkObjectStatisticsManager`) อ่านได้ `0` เสมอ เพราะ Fusion skip
+   state serialization step ทั้งหมดเมื่อไม่มี peer ปลายทาง. **Signal เดียว
+   ที่ stable ใน Single mode** คือ `ObjectsAllocMemoryUsedInBytes`
+   (simulation-side state footprint). Bandwidth measurement ต้องใช้
+   `GameMode.Host` หรือ multipeer harness เสมอ
 
 ---
 
@@ -619,8 +634,9 @@ Gate decision: **Phase 1b unblocked** — interface contracts ถือว่า
 
 ก่อนเปิด Phase 1b (implementation sprint) ต้องปิดงานเหล่านี้:
 
-- **Day 3:** multipeer test mode (second Fusion runner / multipeer scene) เพื่อ
-  verify Pass criteria #4 (replication parity) และ #5 (bandwidth < 2KB/s idle)
+- **Phase 1b entry (Day 3 scope-reduced to Day 3-Lite):** Host+Client test
+  harness เพื่อ verify wire-level parity (#4) + bandwidth (#5). Day 3-Lite
+  confirmed ว่า `GameMode.Single` probes ใช้งานไม่ได้สำหรับ #5 — ดู §9.1 Row #5
 - **Integration touch-point audit:** ระบุจุดที่ `ActorCombatAction` จะต้อง
   ปรับตอน Phase 1b (constructor signature, `AbilityRegistry.CreateAction`
   entry point) — ยังไม่แก้ code, แต่ list ออกมาเพื่อ scope Phase 1b
@@ -638,6 +654,7 @@ Gate decision: **Phase 1b unblocked** — interface contracts ถือว่า
 | `19707e8f43` | Add Testing folder `.meta` for asmdef discovery |
 | `3dd8153929` | Initial `TestAbility` scene |
 | `6938a52c2d` | Day 2 wrap-up — `allowUnsafeCode` fix + `AssembliesToWeave` registration + prototype scene migration + verified pass criteria #1-3 |
+| `a218eddfaa` | Day 3-Lite — state-write probe (`FusionStatistics` proxy); confirms Single mode elides state serialization (see §9.1 row #5, §9.2 lesson #7) |
 
 ---
 
