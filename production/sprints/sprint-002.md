@@ -34,11 +34,13 @@
 
 | ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
 |----|------|-------------|-----------|-------------|-------------------|
-| S2-09 | ออกแบบ AI Bot item-buying logic | game-designer | 2.0 | S2-06 | `ai-bot-system.md` มี buy decision tree ที่ implementable ครบ |
-| S2-10 | ออกแบบ AI Difficulty Level system | game-designer | 1.0 | S2-09 | Difficulty multiplier Easy/Normal/Hard defined ใน GDD พร้อม tuning knobs |
 | S2-11 | กำหนด Gold Economy values — minion gold ทุกประเภท + Buyback cost formula | game-designer | 1.0 | — | `gold-economy.md` ไม่มี ⚠️ TODO เหลือสำหรับ minion gold และ buyback |
+| S2-14 | **ADR-0006 Phase 1a** — ออกแบบ interface signature + data contract ของ `AbilityRegistry`, `AbilityComponent`, `KeybindMap`, `AbilityDataSnapshot` + dummy test-scene prototype (ไม่แตะ hero เก่า / SkillKey) | lead-programmer + unity-specialist | 3.0 | — | `docs/architecture/ADR-0006-phase-1a-interfaces.md` อนุมัติ + dummy prototype runs ใน test scene พิสูจน์ input → slot → registry lookup chain |
 
 **Should Have Subtotal: 4.0 วัน**
+
+> **Deferred to Sprint 003:** S2-09 (AI Bot item-buying, 2d) และ S2-10 (AI Difficulty
+> Level, 1d) ถูกดันไป Sprint 003 เพื่อเปิดทางให้ S2-14 (ADR-0006 Phase 1a).
 
 ### Nice to Have
 
@@ -100,6 +102,7 @@
 - [ ] S2-06: Mythic Passive formula อยู่ใน `item-system.md §4`
 - [ ] S2-07: AdditionalMoveSpeed bug status documented
 - [ ] S2-08: Risk Register สร้างแล้วที่ `production/risk-register/risk-register.md`
+- [ ] S2-14: ADR-0006 Phase 1a interface document approved + dummy prototype พิสูจน์ input→slot→registry chain
 - [ ] GDD ที่เกี่ยวข้องอัพเดตสำหรับทุก finding
 - [ ] ไม่มี S1/S2 bugs ใหม่จาก tasks ในสปรินท์นี้
 
