@@ -515,6 +515,22 @@ delta-unity/Assets/GameScripts/Gameplays/Abilities/        (NEW folder)
 ไม่ผูกกับ existing `ActorCombatAction` assembly ได้ — ทำให้ unit testing เป็นไปได้
 และลดความเสี่ยง break existing code
 
+> **⚠️ Constraint — `allowUnsafeCode: true` required:**
+> Fusion 2 weaver emits raw IL (`ldfld`) against the internal
+> `Fusion.NetworkBehaviour.Ptr` (`int*`) field. Mono's runtime skips
+> field-access verification only for assemblies marked `allowUnsafeCode`
+> in their `.asmdef`. Any asmdef that contains a `NetworkBehaviour`
+> subclass with `[Networked]` properties **must** set this flag — otherwise
+> `CopyBackingFieldsToState` will throw `FieldAccessException` on `Spawned()`.
+> Applies to both `Radius.Gameplays.Abilities` and
+> `Radius.Gameplays.Abilities.Testing`.
+
+> **⚠️ Constraint — `AssembliesToWeave` registration:**
+> Every asmdef containing `[Networked]` code must be listed explicitly in
+> `NetworkProjectConfig.fusion → AssembliesToWeave`. The weaver does not
+> auto-discover new assemblies; unregistered ones throw
+> `InvalidOperationException: Type X has not been weaved` at first spawn.
+
 ---
 
 ## 7. Phase 1a Task Breakdown (S2-14, 3 days)
@@ -542,6 +558,86 @@ delta-unity/Assets/GameScripts/Gameplays/Abilities/        (NEW folder)
 | Q3 | `Capacity(8)` for Slots dictionary | ✅ พอ — boss ใช้ prefab-swap per phase (ตาม audit §2.4) โดย 8 slots ต่อ phase เพียงพอ |
 | Q4 | Prototype location | ✅ `delta-unity/Assets/GameScripts/Gameplays/Abilities/Testing/` (asmdef-excluded จาก release build) |
 | Q5 | S2-14 owners | ✅ `unity-specialist` (primary) + `lead-programmer` (interface review) + `network-programmer` (Day 3 bandwidth + replication verify) |
+
+---
+
+## 9. Phase 1a Findings (2026-04-20)
+
+### 9.1 Pass Criteria Results
+
+| # | Criterion | Result | Notes |
+|---|-----------|--------|-------|
+| 1 | Press assigned key → correct dummy ability's `Execute` runs | ✅ PASS | Q/W/E/R → `TestAbilityAction.Execute` fired for `proto.ability.{q,w,e,r}` |
+| 2 | Remap mid-test (`SetBinding`) → new key triggers same ability | ✅ PASS | Covered by `KeybindMap` PlayerPrefs persistence + `OnBindingChanged` |
+| 3 | Rebind slot (`BindSlot(1, other_id)`) → same key triggers different ability | ✅ PASS | `BindSlotPrototype` → replicated `Slots[1]` updates; `FixedUpdateNetwork` reads new target |
+| 4 | `NetworkDictionary<byte, NetworkBehaviourId>` replicates correctly (host-client parity) | ⏸ DEFERRED | `GameMode.Single` only proves local path; multipeer test in Day 3 |
+| 5 | Bandwidth test — `Fusion.NetworkStatistics` < 2KB/s for abilities channel (idle) | ⏸ DEFERRED | Needs multipeer runner + instrumentation in Day 3 |
+
+**Pass #3 proof of dual-path `OnSlotChanged`:** ในโหมด `GameMode.Single` peer เดียวเป็น
+ทั้ง server+client, log แสดงทั้งสอง code paths ทำงานจริง:
+
+1. **Binder callback path** (line references: `AbilityComponent.BindSlotPrototype:160`) —
+   fire ทันทีตอน server bind slot
+2. **ChangeDetector path** (`AbilityComponent.EmitSlotDiffs:91` from `Render:65`) —
+   fire ตอน replicated state changes ถึง local peer (= path ที่ remote client จะใช้)
+
+Gate decision: **Phase 1b unblocked** — interface contracts ถือว่า verified เพียงพอ
+สำหรับ implementation sprint; replication parity + bandwidth (#4, #5) จะยืนยัน
+ใน Day 3 ก่อน Phase 1b ปิด
+
+---
+
+### 9.2 Surprises & Lessons Learned
+
+ต่อไปนี้คือ issues ที่เจอระหว่าง Day 2 ซึ่งควร document ใน ADR เพราะจะเจอซ้ำ
+ในทุก asmdef ใหม่ที่มี `NetworkBehaviour` code:
+
+1. **`allowUnsafeCode: true` ใน asmdef** (ดู §6) — root cause คือ Mono skip
+   field-access verification เฉพาะ unsafe-enabled assemblies; Fusion weaver
+   pattern ใช้ `ldfld` ตรงบน `internal NetworkBehaviour.Ptr`
+2. **`AssembliesToWeave` ต้อง register ทุก asmdef ใหม่** (ดู §6) — symptom:
+   `InvalidOperationException: Type X has not been weaved` ที่ first `Spawn`
+3. **`Runner.TryGetNetworkedBehaviourId(behaviour)`** คืน `NetworkBehaviourId`
+   ตรงๆ (ไม่ใช่ `bool` + `out`) — check `== default` สำหรับ failure
+   ```csharp
+   var id = Runner.TryGetNetworkedBehaviourId(behaviour);
+   if (id == default) { /* not spawned yet */ return; }
+   ```
+4. **`NetworkDictionary<K,V>` API ไม่มี `ContainsKey`** — ใช้
+   `Slots.TryGet(k, out _)` แทน; enumerate ผ่าน `foreach (var kvp in Slots)`
+5. **`DeltaService.GetService<T>` constraint `where T : DeltaBaseService`** —
+   reject interfaces. Non-service consumers (เช่น `TestInputProvider`) ต้อง
+   inject concrete `IKeybindMap` reference ผ่าน initialization, ไม่ใช่
+   `GetService<IKeybindMap>()`
+6. **Fusion 2 Scene registration:** prototype scene ต้องอยู่ใน
+   `EditorBuildSettings` (build index) เพื่อให้ `StartGameArgs.Scene =
+   SceneRef.FromIndex(buildIndex)` หาเจอ — drag-drop ลง Hierarchy ไม่พอ
+
+---
+
+### 9.3 Pre-Phase 1b Prerequisites
+
+ก่อนเปิด Phase 1b (implementation sprint) ต้องปิดงานเหล่านี้:
+
+- **Day 3:** multipeer test mode (second Fusion runner / multipeer scene) เพื่อ
+  verify Pass criteria #4 (replication parity) และ #5 (bandwidth < 2KB/s idle)
+- **Integration touch-point audit:** ระบุจุดที่ `ActorCombatAction` จะต้อง
+  ปรับตอน Phase 1b (constructor signature, `AbilityRegistry.CreateAction`
+  entry point) — ยังไม่แก้ code, แต่ list ออกมาเพื่อ scope Phase 1b
+- **`BindSlot` real implementation:** ปัจจุบัน `BindSlotPrototype` มี
+  `[Obsolete]` marker; Phase 1b จะ replace ด้วย `BindSlot(slot, abilityId)`
+  ที่เรียก `AbilityRegistry.CreateAction(abilityId)` ภายใน
+
+---
+
+### 9.4 Reference Commits (delta-unity repo, branch `feature/refactor-ability`)
+
+| Commit | Description |
+|--------|-------------|
+| `b77d382812` | Day 2 prototype scaffold — AbilityComponent + TestInputProvider + AbilityPrototypeRunner |
+| `19707e8f43` | Add Testing folder `.meta` for asmdef discovery |
+| `3dd8153929` | Initial `TestAbility` scene |
+| `6938a52c2d` | Day 2 wrap-up — `allowUnsafeCode` fix + `AssembliesToWeave` registration + prototype scene migration + verified pass criteria #1-3 |
 
 ---
 
