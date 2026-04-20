@@ -35,7 +35,7 @@
 | ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
 |----|------|-------------|-----------|-------------|-------------------|
 | S2-11 | กำหนด Gold Economy values — minion gold ทุกประเภท + Buyback cost formula | game-designer | 1.0 | — | `gold-economy.md` ไม่มี ⚠️ TODO เหลือสำหรับ minion gold และ buyback |
-| S2-14 | **ADR-0006 Phase 1a** — ออกแบบ interface signature + data contract ของ `AbilityRegistry`, `AbilityComponent`, `KeybindMap`, `AbilityDataSnapshot` + dummy test-scene prototype (ไม่แตะ hero เก่า / SkillKey) | lead-programmer + unity-specialist | 3.0 | — | `docs/architecture/ADR-0006-phase-1a-interfaces.md` อนุมัติ + dummy prototype runs ใน test scene พิสูจน์ input → slot → registry lookup chain |
+| S2-14 | ✅ **ADR-0006 Phase 1a** — ออกแบบ interface signature + data contract ของ `AbilityRegistry`, `AbilityComponent`, `KeybindMap`, `AbilityDataSnapshot` + dummy test-scene prototype (ไม่แตะ hero เก่า / SkillKey) | lead-programmer + unity-specialist | 3.0 | — | **DONE 2026-04-21** — ADR §9.1: Pass #1-3 ✅, #4 🟡 PARTIAL (argument), #5 ⏸ DEFERRED→Phase 1b. Prototype Q/W/E/R → 4 slots Execute fired. Gate: Phase 1b unblocked |
 
 **Should Have Subtotal: 4.0 วัน**
 
@@ -102,9 +102,36 @@
 - [ ] S2-06: Mythic Passive formula อยู่ใน `item-system.md §4`
 - [ ] S2-07: AdditionalMoveSpeed bug status documented
 - [ ] S2-08: Risk Register สร้างแล้วที่ `production/risk-register/risk-register.md`
-- [ ] S2-14: ADR-0006 Phase 1a interface document approved + dummy prototype พิสูจน์ input→slot→registry chain
+- [x] S2-14: ADR-0006 Phase 1a interface document approved + dummy prototype พิสูจน์ input→slot→registry chain ✅ (see `docs/architecture/ADR-0006-phase-1a-interfaces.md` §9)
 - [ ] GDD ที่เกี่ยวข้องอัพเดตสำหรับทุก finding
 - [ ] ไม่มี S1/S2 bugs ใหม่จาก tasks ในสปรินท์นี้
+
+---
+
+## Progress
+
+### S2-14 — ADR-0006 Phase 1a (Closed 2026-04-21)
+
+**Deliverables:**
+- `docs/architecture/ADR-0006-phase-1a-interfaces.md` — Accepted (interfaces §1-8 + findings §9)
+- `delta-unity` prototype: `AbilityPrototypeRunner` + `AbilityPrototypeDriver` + `TestInputProvider` + `TestAbilityAction` + `AbilityComponent` (with `[Obsolete] BindSlotPrototype` marker)
+- `delta-unity` commits: `b77d382812` (scaffold), `6938a52c2d` (Day 2 wrap-up), `a218eddfaa` (Day 3-Lite state-write probe)
+
+**Pass Criteria:**
+| # | Status | Notes |
+|---|---|---|
+| 1-3 | ✅ PASS | Keybind→slot→registry→Execute chain พิสูจน์ได้ใน `GameMode.Single` |
+| 4 | 🟡 PARTIAL | ChangeDetector path argument from Pass #3; wire parity defer ไป Phase 1b |
+| 5 | ⏸ DEFERRED (hard) | Single mode elide state serialization → probe ใช้งานไม่ได้; Host+Client harness คือ Phase 1b entry criterion |
+
+**Lessons captured (ADR §9.2):** 7 items — รวม `allowUnsafeCode` asmdef constraint, `AssembliesToWeave` registration, Fusion Statistics zero-counter behavior
+
+**Day count:** Estimate 3.0 วัน → actual ~3 วัน (Day 1-2 core prototype, Day 3-Lite bandwidth probe) — on-budget
+
+**Phase 1b entry criteria (see ADR §9.3):**
+1. Host+Client test harness → verify Pass #4/#5 at wire level
+2. Integration touch-point audit (`ActorCombatAction` boundary)
+3. Real `BindSlot(slot, abilityId)` impl replacing `BindSlotPrototype`
 
 ---
 
