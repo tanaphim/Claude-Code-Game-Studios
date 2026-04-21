@@ -98,7 +98,7 @@
 
 ### Per-Task Gates
 
-- [ ] S3-01: Multipeer harness pass #4 + #5 ✅ verified
+- [x] S3-01: Multipeer harness pass #4 + #5 ✅ verified (2026-04-21)
 - [ ] S3-02: `AbilityRegistry` real impl + unit tests pass
 - [ ] S3-03: `AbilityDataSnapshot` real impl + immutability test
 - [ ] S3-04: `BindSlot` real impl + `[Obsolete]` removed + regression pass
@@ -127,7 +127,24 @@
 
 ## Progress
 
-*(อัพเดตเมื่อ task ปิดแต่ละรายการ — ตาม format ของ sprint-002 §Progress)*
+### 2026-04-21 — S3-01 closed ✅
+
+**P1B-01 Host+Client multipeer test harness** — DONE
+
+- สร้าง `Assets/Scenes/Testing/AbilityMultipeer.unity` + `AbilityMultipeerRunner.cs`
+  (Host + Client `NetworkRunner` ใน editor session เดียวกัน, `PeerMode=Multiple`)
+- **Pass #4 ✅ PASS** — 4/4 slots converge Host↔Client; log: `[Multipeer-Parity] ✅ PASS #4 — all 4 slots converge (Host↔Client).`
+- **Pass #5 ✅ PASS** — Host out 26–27 B/s, Client out 39–65 B/s (~1–3% ของ 2048 B/s budget); per-object `OutBandwidth > 0`
+- Fix `SceneRef.FromIndex` `ArgumentOutOfRangeException` (guard buildIndex < 0 → `default(SceneRef)` + warning)
+- Fix duplicate AudioListener + MainCamera ที่เกิดจาก multipeer scene clone
+- Evidence บันทึกใน `docs/architecture/ADR-0006-phase-1a-interfaces.md` §9.5
+
+**Known polish item (non-blocking):**
+- `AbilityMultipeerRunner.Start()` ยิง 2 ครั้งเมื่อ multipeer clone active scene
+  (second instance ถูกสร้างใน client peer scene) → `GameIsFull` cascade.
+  Pass #4 + #5 ไม่กระทบ (first session สำเร็จก่อน). Fix: static bootstrap
+  guard หรือ disable self เมื่อ `NetworkRunner.Instances.Count > 0`.
+  → tracked ต่อใน S3-02..S3-07 polish pass หรือ Sprint 004 nice-to-have.
 
 ---
 

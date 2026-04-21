@@ -570,8 +570,8 @@ delta-unity/Assets/GameScripts/Gameplays/Abilities/        (NEW folder)
 | 1 | Press assigned key → correct dummy ability's `Execute` runs | ✅ PASS | Q/W/E/R → `TestAbilityAction.Execute` fired for `proto.ability.{q,w,e,r}` |
 | 2 | Remap mid-test (`SetBinding`) → new key triggers same ability | ✅ PASS | Covered by `KeybindMap` PlayerPrefs persistence + `OnBindingChanged` |
 | 3 | Rebind slot (`BindSlot(1, other_id)`) → same key triggers different ability | ✅ PASS | `BindSlotPrototype` → replicated `Slots[1]` updates; `FixedUpdateNetwork` reads new target |
-| 4 | `NetworkDictionary<byte, NetworkBehaviourId>` replicates correctly (host-client parity) | 🟡 PARTIAL (argument) | Pass #3 proof แสดงว่า ChangeDetector path fire บน "client view" ของ peer เดียวใน Single mode — **code path เดียวกับที่ remote client จะใช้**. Cross-process wire parity defer ไป Phase 1b (Host+Client harness) |
-| 5 | Bandwidth test — `Fusion.NetworkStatistics` < 2KB/s for abilities channel (idle) | ⏸ DEFERRED (hard) | Day 3-Lite ลอง proxy metric `FusionStatisticsSnapshot.WordsWrittenSize` (pre-transport) แต่ `GameMode.Single` elide state serialization step ทั้งหมด → อ่านได้ `0 B` เสมอ (ทั้ง idle และ keypress). **Supporting signal:** `ObjectsAllocMemoryUsedInBytes = 7168 B` คงที่ = state footprint ไม่ leak/grow. Wire-level measurement ต้องรอ Phase 1b Host+Client |
+| 4 | `NetworkDictionary<byte, NetworkBehaviourId>` replicates correctly (host-client parity) | ✅ PASS (Phase 1b 2026-04-21) | Verified via `AbilityMultipeerRunner` (Host+Client in one editor session, `PeerMode=Multiple`). Parity probe: Host bind Q/W/E/R → client poll `Slots[1..4]` → all 4 slots converge to identical `(NetworkBehaviourId, AbilityId)` tuples. Log: `[Multipeer-Parity] ✅ PASS #4 — all 4 slots converge (Host↔Client)`. ดู §9.5 |
+| 5 | Bandwidth test — `Fusion.NetworkStatistics` < 2KB/s for abilities channel (idle) | ✅ PASS (Phase 1b 2026-04-21) | Verified via same harness. Idle sample ≥ 10s after slot bind: Host `OutBandwidth` ≈ 26–27 B/s; Client `OutBandwidth` ≈ 39–65 B/s — both ≪ 2048 B/s budget (~3% usage). Per-object `OutBandwidth > 0` confirms serialization active (not Single-mode elision). ดู §9.5 |
 
 **Pass #3 proof of dual-path `OnSlotChanged`:** ในโหมด `GameMode.Single` peer เดียวเป็น
 ทั้ง server+client, log แสดงทั้งสอง code paths ทำงานจริง:
@@ -591,6 +591,9 @@ Fusion ข้าม state serialization ทั้ง step ใน Single mode →
 Gate decision: **Phase 1b unblocked** — interface contracts ถือว่า verified เพียงพอ
 สำหรับ implementation sprint; wire-level replication parity + bandwidth (#4, #5)
 จะยืนยันใน Phase 1b Host+Client harness
+
+**Update 2026-04-21:** Rows #4 และ #5 อัพเกรดเป็น ✅ PASS ผ่าน Phase 1b
+Host+Client multipeer harness (S3-01). ดู §9.5 สำหรับ evidence.
 
 ---
 
@@ -655,6 +658,54 @@ Gate decision: **Phase 1b unblocked** — interface contracts ถือว่า
 | `3dd8153929` | Initial `TestAbility` scene |
 | `6938a52c2d` | Day 2 wrap-up — `allowUnsafeCode` fix + `AssembliesToWeave` registration + prototype scene migration + verified pass criteria #1-3 |
 | `a218eddfaa` | Day 3-Lite — state-write probe (`FusionStatistics` proxy); confirms Single mode elides state serialization (see §9.1 row #5, §9.2 lesson #7) |
+
+---
+
+### 9.5 Phase 1b Verification Evidence (2026-04-21)
+
+Sprint 003 task **S3-01** ปิด gate #4 + #5 ด้วย `AbilityMultipeerRunner`
+harness (Host + Client NetworkRunner ใน Unity Editor session เดียวกัน,
+`NetworkProjectConfig.PeerMode = Multiple`).
+
+**Harness structure:**
+- Scene: `Assets/Scenes/Testing/AbilityMultipeer.unity`
+- Runner: `Assets/GameScripts/Gameplays/Abilities/Testing/AbilityMultipeerRunner.cs`
+- Flow: `StartHostAsync()` → spawn TestActor → `BindSlotPrototype(1..4, proto.ability.{q,w,e,r})`
+  → `StartClientAsync()` → wait 2s for state sync → poll `Slots` on client view
+- Scene dedup: disables duplicate `AudioListener` + `MainCamera` introduced
+  by per-peer scene clone (multipeer mode loads active scene twice)
+
+**Pass #4 evidence (parity):**
+```
+[Multipeer-Parity] slot=1 ✅ host=(id=[Object:[Id:1027], Behaviour:0],'proto.ability.q')
+                              client=(id=[Object:[Id:1027], Behaviour:0],'proto.ability.q')
+[Multipeer-Parity] slot=2 ✅ ...'proto.ability.w'
+[Multipeer-Parity] slot=3 ✅ ...'proto.ability.e'
+[Multipeer-Parity] slot=4 ✅ ...'proto.ability.r'
+[Multipeer-Parity] ✅ PASS #4 — all 4 slots converge (Host↔Client).
+```
+
+**Pass #5 evidence (idle bandwidth):**
+- Sample window ≥ 10s post-bind, no player input
+- Host `OutBandwidth` ≈ 26–27 B/s
+- Client `OutBandwidth` ≈ 39–65 B/s
+- Budget: 2048 B/s — observed usage ~1–3%
+- Per-object `OutBandwidth > 0` → confirms serialization active (ไม่ใช่
+  Single-mode elision ที่เจอใน §9.1 row #5 เดิม + §9.2 lesson #7)
+
+**Known non-blocking defect (flagged for polish):**
+- Fusion multipeer clones the active scene per peer → `AbilityMultipeerRunner`
+  MonoBehaviour (placed บน scene root) ถูก duplicate → second `Start()` ยิง
+  `StartGame` ครั้งที่สอง → ได้ `GameIsFull` (ErrorCode 32765) + follow-on
+  `NetworkObjectSpawnException`. Pass #4 + #5 ไม่กระทบ (first session
+  สำเร็จก่อน duplicate fires). Fix: static bootstrap guard or disable self
+  when `NetworkRunner.Instances.Count > 0`. Tracked as S3-01 polish item.
+
+**Scene-ref robustness fix:**
+- `SceneRef.FromIndex(SceneManager.GetActiveScene().buildIndex)` throws
+  `ArgumentOutOfRangeException` เมื่อ scene ไม่ได้ register ใน Build Settings
+  (buildIndex = -1). Added `GetActiveSceneRef()` helper ที่ guard `idx < 0`
+  แล้ว return `default(SceneRef)` + warning log.
 
 ---
 
