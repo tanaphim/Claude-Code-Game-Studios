@@ -2,6 +2,8 @@
 status: reverse-documented
 source: C:\GitHub\delta-unity
 date: 2026-04-02
+last-revised: 2026-04-23
+revision-source: design/decisions/meeting-2026-04-23-tournament-pivot.md
 ---
 
 # Delta — Systems Index
@@ -11,8 +13,14 @@ date: 2026-04-02
 เอกสารนี้แจกแจงระบบทั้งหมดของเกม Delta พร้อม dependencies, ลำดับความสำคัญ,
 และลำดับการเขียน GDD เป็นแผนที่หลักสำหรับการออกแบบและพัฒนา
 
-**จำนวนระบบทั้งหมด**: 37
-**สถานะ**: Reverse-documented จาก codebase ที่มีอยู่ (1,139 C# scripts)
+**จำนวนระบบทั้งหมด**: 41 (37 เดิม − 3 deprecate + 7 ใหม่)
+**สถานะ**: Reverse-documented จาก codebase ที่มีอยู่ (1,139 C# scripts) +
+revised หลัง [Tournament Pivot 2026-04-23](../decisions/meeting-2026-04-23-tournament-pivot.md)
+
+> **Pivot 2026-04-23:** Territory War (FT10) + sub-systems (FT10a/FT10b) ถูกแทนด้วย
+> Tournament + Faction + World Map (10 cities) + Fragment + Wager + Reputation +
+> Manga Influence Loop. ดู [change-impact report](../../docs/architecture/change-impact-2026-04-23-tournament-pivot.md)
+> สำหรับ ADR impact analysis
 
 ---
 
@@ -52,9 +60,14 @@ date: 2026-04-02
 | FT7 | Game Mode Manager | จัดการโหมดเกมทั้งหมด (Ranked, Casual, Arcade, Training, Dungeon, Town) | จาก concept |
 | FT8 | Dungeon Mode | PvE เดี่ยว — ด่าน/เวฟ, ระบบมอนสเตอร์, progression | จาก concept |
 | FT9 | Town System | Hub โซเชียล — NPC, ภารกิจ, customization, พบเพื่อน | จาก concept |
-| FT10 | Territory War | Meta-game layer — World Map 1M+ เมือง, ซื้อเมืองด้วย Premium Currency, ประกาศสงคราม, สู้แบบ MOBA (1v1/3v3/5v5/25v25), ผู้แพ้กลายเป็นเมืองขึ้น | ใหม่ |
-| FT10a | Citizen System | Sub-system ของ FT10 — ผู้เล่นสมัครเป็นพลเมืองของเมือง, เจ้าเมืองเรียกพลเมืองออกรบได้ | ใหม่ |
-| FT10b | Mercenary System | Sub-system ของ FT10 — ตลาดทหารรับจ้าง, ผู้เล่นลงทะเบียนรับจ้าง, เจ้าเมืองจ้างมาเสริมทีมสงคราม | ใหม่ |
+| ~~FT10~~ | ~~Territory War~~ | ⛔ **Superseded 2026-04-23** by FT11/FT12/FT13/FT14 — see [decision](../decisions/meeting-2026-04-23-tournament-pivot.md) | deprecated |
+| ~~FT10a~~ | ~~Citizen System~~ | ⛔ **Removed 2026-04-23** (never authored) | deprecated |
+| ~~FT10b~~ | ~~Mercenary System~~ | ⛔ **Removed 2026-04-23** (never authored) | deprecated |
+| FT11 | Faction System | 5–6 ฝ่าย, ผู้เล่นเลือกฝ่าย, switch rules, faction-shared Fragment pool | pivot 2026-04-23 |
+| FT12 | World Map (10 Neutral Cities) | 10 ดาว/เมืองกลาง — socialize hub, theme เฉพาะตัว, Fragment drop locations | pivot 2026-04-23 |
+| FT13 | Tournament System | MOBA 5v5 หลัก (+1v1/2v2/3v3 on request), Casual/Ranked, bracket + matchmaking, Top 10% Ranked → Fragment | pivot 2026-04-23 |
+| FT14 | Fragment & Meta-Game System | Daily Fragment drops, faction pool aggregation, ~100M → ring → "กฎ Universe", reset cycle (~3 ปี) | pivot 2026-04-23 |
+| FT15 | Wager Mode | เมื่อ Fragment ประจำวันหมด — วาง Fragment ของตัวเองเดิมพันชิงของผู้อื่น (escrow) | pivot 2026-04-23 |
 
 ### Presentation (ระบบ UI/UX — ห่อหุ้มระบบ gameplay)
 
@@ -80,6 +93,8 @@ date: 2026-04-02
 | M8 | Surrender System | โหวตยอมแพ้ระหว่างแมตช์ | จากโค้ด |
 | M9 | Tutorial System | สอนผู้เล่นใหม่ — การเคลื่อนที่, สกิล, ไอเทม, objective | โดยนัย |
 | M10 | Announcement System | ประกาศ kill streak, first blood, objective taken | จากโค้ด |
+| M11 | Reputation / Anti-Toxicity System | Reputation score, หักคะแนนเมื่อพิมพ์คำหยาบ → ล็อคจาก Ranked, chat filter integration | pivot 2026-04-23 |
+| M12 | Manga Influence Loop | ผลในเกม → influence story ในมังงะ; ผู้เล่นเก่งอาจกลายเป็นตัวละคร [🔮 Deferred — รอ proposal] | pivot 2026-04-23 |
 
 ---
 
@@ -109,7 +124,12 @@ Layer 2 — Feature
 ├── [FT6] Matchmaking                ← F2, C2, F4
 ├── [FT7] Game Mode Manager          ← FT6, FT2, F2
 ├── [FT8] Dungeon Mode               ← FT7, FT5, C1, FT2
-└── [FT9] Town System                ← F1, C3, F4, F2
+├── [FT9] Town System                ← F1, C3, F4, F2
+├── [FT11] Faction System            ← F4, M6
+├── [FT12] World Map (10 Cities)     ← FT11, FT9, F2
+├── [FT13] Tournament System         ← FT6, FT7, FT11, F2
+├── [FT14] Fragment & Meta-Game      ← FT13, FT11, F4
+└── [FT15] Wager Mode                ← FT14, F4
 
 Layer 3 — Presentation
 ├── [P1] HUD & In-Game UI            ← C1, C4, C5, FT4
@@ -128,7 +148,9 @@ Layer 4 — Meta/Polish
 ├── [M7] AFK Detection               ← F1, F2, F3
 ├── [M8] Surrender System            ← F2, FT7
 ├── [M9] Tutorial System             ← C2, C1, FT1, FT2, P1
-└── [M10] Announcement System        ← C1, FT2, F2
+├── [M10] Announcement System        ← C1, FT2, F2
+├── [M11] Reputation/Anti-Toxicity   ← M1, M6, F4
+└── [M12] Manga Influence Loop       ← FT14 (deferred)
 ```
 
 ### ระบบคอขวด (High-Risk Bottlenecks)
@@ -141,6 +163,8 @@ Layer 4 — Meta/Polish
 | Data/Config (F4) | 11 ระบบ | สูง |
 | Hero System (C2) | 7 ระบบ | กลาง |
 | Map & Objectives (FT2) | 7 ระบบ | กลาง |
+| Faction System (FT11) | 4 ระบบ (FT12, FT13, FT14, M11) | กลาง — **new bottleneck post-pivot** |
+| Tournament System (FT13) | 2 ระบบ (FT14, FT15) | กลาง |
 
 ---
 
@@ -167,7 +191,9 @@ Layer 4 — Meta/Polish
 | FT3 | Creep/Minion System | เลนไม่มีความหมายถ้าไม่มีมินเนี่ยน |
 | FT4 | Fog of War | กลยุทธ์หลักของ MOBA |
 | FT6 | Matchmaking | ผู้เล่นเข้าเกมได้อย่างไร |
-| FT7 | Game Mode Manager | จัดการ 6 โหมด |
+| FT7 | Game Mode Manager | จัดการโหมด (5v5 standard, 25v25 deferred) |
+| FT11 | Faction System | foundation ของ Tournament/World Map/Fragment |
+| FT13 | Tournament System | core meta loop ใหม่ (แทน FT10) |
 | P1 | HUD & In-Game UI | ผู้เล่นอ่านข้อมูลในเกมจากที่ไหน |
 
 ### Alpha — ระบบ gameplay ที่เหลือ
@@ -179,6 +205,10 @@ Layer 4 — Meta/Polish
 | FT5 | AI/Bot System |
 | FT8 | Dungeon Mode |
 | FT9 | Town System |
+| FT12 | World Map (10 Neutral Cities) |
+| FT14 | Fragment & Meta-Game System |
+| FT15 | Wager Mode |
+| M11 | Reputation / Anti-Toxicity System |
 | P2 | Item Shop UI |
 | P3 | Hero Select UI |
 | P5 | Camera System |
@@ -199,6 +229,7 @@ Layer 4 — Meta/Polish
 | M8 | Surrender System |
 | M9 | Tutorial System |
 | M10 | Announcement System |
+| M12 | Manga Influence Loop *(deferred — รอ proposal)* |
 
 ---
 
@@ -240,6 +271,14 @@ Layer 4 — Meta/Polish
 | 32 | M8 | Surrender System | Full | F2, FT7 |
 | 33 | M10 | Announcement System | Full | C1, FT2, F2 |
 | 34 | M9 | Tutorial System | Full | C2, C1, FT1, FT2, P1 |
+| **Pivot 2026-04-23 — author after retrofit ของ existing GDDs:** ||||
+| 35 | FT11 | Faction System | V-Slice | F4, M6 |
+| 36 | FT12 | World Map (10 Cities) | Alpha | FT11, FT9 |
+| 37 | FT13 | Tournament System | V-Slice | FT6, FT7, FT11 |
+| 38 | FT14 | Fragment & Meta-Game | Alpha | FT13, FT11, F4 |
+| 39 | FT15 | Wager Mode | Alpha | FT14 |
+| 40 | M11 | Reputation / Anti-Toxicity | Alpha | M1, M6, F4 |
+| 41 | M12 | Manga Influence Loop | Full *(deferred)* | FT14 |
 
 ---
 
@@ -253,18 +292,18 @@ Layer 4 — Meta/Polish
 | F4 | Data/Config System | ✅ Done | design/gdd/data-config-system.md |
 | F5 | Audio System | Not Started | — |
 | C1 | Combat & Skills System | ✅ Done | design/gdd/combat-skills-system.md |
-| C2 | Hero System | ✅ Done | design/gdd/hero-system.md |
+| C2 | Hero System | 🔄 Needs Revision (build lock per hero) | design/gdd/hero-system.md |
 | C3 | Movement & Navigation | ✅ Done | design/gdd/movement-navigation-system.md |
-| C4 | Gold Economy | ✅ Done | design/gdd/gold-economy.md |
-| C5 | Level/XP System | ✅ Done | design/gdd/level-xp-system.md |
-| FT1 | Item System | ✅ Done | design/gdd/item-system.md |
+| C4 | Gold Economy | 🔄 Needs Revision (last-hit cut/reduce) | design/gdd/gold-economy.md |
+| C5 | Level/XP System | 🔄 Needs Revision (Max Level ใน 10 นาที) | design/gdd/level-xp-system.md |
+| FT1 | Item System | 🔄 Needs Revision (build lock, simplify stats) | design/gdd/item-system.md |
 | FT2 | Map & Objectives | ✅ Done | design/gdd/map-objectives-system.md |
 | FT3 | Creep/Minion System | ✅ Done | design/gdd/creep-minion-system.md |
 | FT4 | Fog of War | ✅ Done | design/gdd/fog-of-war-system.md |
 | FT5 | AI/Bot System | ✅ Done | design/gdd/ai-bot-system.md |
 | FT6 | Matchmaking | ✅ Done | design/gdd/matchmaking-system.md |
-| FT7 | Game Mode Manager | ✅ Done | design/gdd/game-mode-manager.md |
-| FT8 | Dungeon Mode | ✅ Done | design/gdd/dungeon-mode.md |
+| FT7 | Game Mode Manager | 🔄 Needs Revision (5v5 standard, 25v25 deferred) | design/gdd/game-mode-manager.md |
+| FT8 | Dungeon Mode | 🔄 Needs Revision (Personal/Side Quest 1-5 + bot) | design/gdd/dungeon-mode.md |
 | FT9 | Town System | ✅ Done | design/gdd/town-system.md |
 | P1 | HUD & In-Game UI | ✅ Done | design/gdd/hud-ingame-ui.md |
 | P2 | Item Shop UI | ✅ Done | design/gdd/item-shop-ui.md |
@@ -272,7 +311,7 @@ Layer 4 — Meta/Polish
 | P4 | Menu & Lobby UI | ✅ Done | design/gdd/menu-lobby-ui.md |
 | P5 | Camera System | ✅ Done | design/gdd/camera-system.md |
 | M1 | Social System | ✅ Done | design/gdd/social-system.md |
-| M2 | Battle Pass | ✅ Done | design/gdd/battle-pass.md |
+| M2 | Battle Pass | 🔄 Needs Revision (relationship กับ Fragment) | design/gdd/battle-pass.md |
 | M3 | Customization | ✅ Done | design/gdd/customization-system.md |
 | M4 | Notification System | ✅ Done | design/gdd/notification-system.md |
 | M5 | Statistics & History | ✅ Done | design/gdd/statistics-history.md |
@@ -281,6 +320,13 @@ Layer 4 — Meta/Polish
 | M8 | Surrender System | ✅ Done | design/gdd/surrender-system.md |
 | M9 | Tutorial System | ✅ Done (stub) | design/gdd/tutorial-system.md |
 | M10 | Announcement System | ✅ Done | design/gdd/announcement-system.md |
-| FT10 | Territory War | 🔍 In Review | design/gdd/territory-war.md |
-| FT10a | Citizen System | Not Started | — |
-| FT10b | Mercenary System | Not Started | — |
+| ~~FT10~~ | ~~Territory War~~ | ⛔ Superseded 2026-04-23 (mark in GDD) | design/gdd/territory-war.md |
+| ~~FT10a~~ | ~~Citizen System~~ | ⛔ Removed 2026-04-23 (never authored) | — |
+| ~~FT10b~~ | ~~Mercenary System~~ | ⛔ Removed 2026-04-23 (never authored) | — |
+| FT11 | Faction System | ✅ Designed (pending review) | design/gdd/faction-system.md |
+| FT12 | World Map (10 Neutral Cities) | 🆕 Not Started (pivot 2026-04-23) | — |
+| FT13 | Tournament System | 🆕 Not Started (pivot 2026-04-23) | — |
+| FT14 | Fragment & Meta-Game System | 🆕 Not Started (pivot 2026-04-23) | — |
+| FT15 | Wager Mode | 🆕 Not Started (pivot 2026-04-23) | — |
+| M11 | Reputation / Anti-Toxicity System | 🆕 Not Started (pivot 2026-04-23) | — |
+| M12 | Manga Influence Loop | 🔮 Deferred (รอ proposal) | — |

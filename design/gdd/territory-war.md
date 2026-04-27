@@ -1,9 +1,32 @@
 # Territory War System
 
-> **Status**: In Review
+> ## ⛔ SUPERSEDED — 2026-04-23
+>
+> ระบบนี้ถูก **deprecated** ตามมติ leadership meeting วันที่ 2026-04-23
+> ([decision doc](../decisions/meeting-2026-04-23-tournament-pivot.md)).
+>
+> เนื้อหาด้านล่างถูกเก็บไว้เพื่อ historical reference / audit trail เท่านั้น
+> **ห้ามใช้เป็น source of truth สำหรับการ implement หรือ design ใหม่**
+>
+> **ระบบที่มาแทน:**
+>
+> | สิ่งที่ Territory War เคยทำ | ระบบใหม่ที่มาแทน |
+> |---|---|
+> | World Map (1M+ cities, ซื้อด้วย Premium) | **FT12** World Map (10 Neutral Cities — socialize hub, ไม่มีเจ้าของ) |
+> | Declare War + MOBA 1v1–25v25 | **FT13** Tournament System (Casual/Ranked, MOBA 5v5 หลัก) |
+> | Conquest hierarchy / vassal | **FT11** Faction System (5–6 ฝ่าย, faction-shared progression) |
+> | Long-term meta progression | **FT14** Fragment & Meta-Game (~100M Fragment → ring → กฎ Universe) |
+> | Premium currency wagering | **FT15** Wager Mode (Fragment-based betting) |
+> | FT10a Citizen System (sub-system) | ⛔ Removed — never authored |
+> | FT10b Mercenary System (sub-system) | ⛔ Removed — never authored |
+>
+> ดูรายละเอียดผลกระทบต่อ ADRs ใน
+> [change-impact-2026-04-23-tournament-pivot.md](../../docs/architecture/change-impact-2026-04-23-tournament-pivot.md)
+
+> **Status**: ⛔ Superseded (was: In Review)
 > **Author**: User + Claude Code agents
-> **Last Updated**: 2026-04-04
-> **System ID**: FT10
+> **Last Updated**: 2026-04-04 *(superseded 2026-04-23)*
+> **System ID**: FT10 *(deprecated)*
 > **Implements Pillar**: แข่งขันจริงจัง (Competitive Core), ความลึกเชิงกลยุทธ์ (Strategic Depth)
 
 ## Overview

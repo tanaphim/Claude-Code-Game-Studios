@@ -37,7 +37,7 @@
 #   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
 
 version: 1
-last_updated: ""
+last_updated: 2026-04-27
 
 # ─── ENTITIES ────────────────────────────────────────────────────────────────
 # Named game-world objects: enemies, NPCs, characters, factions, bosses.
@@ -106,7 +106,67 @@ items: []
 #   output_range[min, max], added
 # Optional: expression (the actual formula), notes
 
-formulas: []
+formulas:
+  - name: inactive_decay
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    variables:
+      - uncommitted_f
+      - DECAY_RATE_PCT
+      - MIN_FRAGMENT_FLOOR
+    output_range: [0, uncommitted_f]
+    expression: "DecayAmount(c) = uncommitted_f(c) * DECAY_RATE_PCT ; floor rule: if uncommitted_f < MIN_FRAGMENT_FLOOR then DecayAmount = uncommitted_f"
+    notes: "Linear decay on remaining balance; geometric series → 0 until floor triggers full return. Output feeds into FT14 Central Pool aggregation."
+    added: 2026-04-27
+    revised: ""
+
+  - name: is_active
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    variables:
+      - t
+      - last_active_date
+      - INACTIVE_DECAY_DAYS
+    output_range: [false, true]
+    expression: "IsActive(player, t) = (t - last_active_date) <= INACTIVE_DECAY_DAYS"
+    notes: "Binary gate. Drives state transition Active <-> Inactive. Will be referenced by FT14 (decay batch eligibility) and M11 (reputation context)."
+    added: 2026-04-27
+    revised: ""
+
+  - name: switch_eligibility
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    variables:
+      - player.state
+      - last_switch_date
+      - SWITCH_COOLDOWN_DAYS
+      - CycleDaysRemaining
+      - BLACKOUT_DAYS_BEFORE_END
+    output_range: [false, true]
+    expression: "SwitchEligible = (state==Active) AND (t - last_switch_date >= SWITCH_COOLDOWN_DAYS) AND NOT (CycleDaysRemaining <= BLACKOUT_DAYS_BEFORE_END)"
+    notes: "NULL last_switch_date treated as +infinity. Used by Faction switch endpoint."
+    added: 2026-04-27
+    revised: ""
+
+  - name: faction_pool_decay_rate
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    variables:
+      - DECAY_RATE_PCT
+      - InactiveFraction
+    output_range: [0.0, DECAY_RATE_PCT]
+    expression: "FactionPoolDecayRate(f, t) ≈ DECAY_RATE_PCT * (inactive_member_count / total_member_count)"
+    notes: "Derived diagnostic metric for FT14 dashboards (NOT a tuning knob). Approximation assumes uniform uncommitted_f distribution."
+    added: 2026-04-27
+    revised: ""
 
 # Example:
 #
@@ -139,7 +199,94 @@ formulas: []
 #
 # Required fields: name, status, source, referenced_by, value, unit, added
 
-constants: []
+constants:
+  - name: INACTIVE_DECAY_DAYS
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    value: 21
+    unit: days
+    notes: "Days of inactivity before player transitions to Inactive state. Safe range 14–60. Live-tunable from CBS."
+    added: 2026-04-27
+    revised: ""
+
+  - name: DECAY_RATE_PCT
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    value: 0.07
+    unit: fraction
+    notes: "Per-cycle decay rate for inactive players' uncommitted Fragments. Pairs with DECAY_INTERVAL_DAYS=3 to give ~30-day half-life. Safe range 0.03–0.15."
+    added: 2026-04-27
+    revised: ""
+
+  - name: DECAY_INTERVAL_DAYS
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    value: 3
+    unit: days
+    notes: "Decay batch frequency. Lower = continuous liquidity flow + higher batch load. Safe range 1–30."
+    added: 2026-04-27
+    revised: ""
+
+  - name: MIN_FRAGMENT_FLOOR
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    value: 1.0
+    unit: fragment
+    notes: "Floor that triggers full-return rule in InactiveDecay (D1). Prevents infinite micro-decay tail."
+    added: 2026-04-27
+    revised: ""
+
+  - name: SWITCH_COOLDOWN_DAYS
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    value: 90
+    unit: days
+    notes: "Minimum cooldown between faction switches. Principle-driven; prevents bandwagon-following. Safe range 30–365."
+    added: 2026-04-27
+    revised: ""
+
+  - name: BLACKOUT_DAYS_BEFORE_END
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    value: 0
+    unit: days
+    notes: "Window before cycle end during which switching is blocked (anti-bandwagon). 0 = feature disabled by default. Live-tunable; activate after 1st cycle data."
+    added: 2026-04-27
+    revised: ""
+
+  - name: FACTION_COUNT
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    value: 5
+    unit: factions
+    notes: "PLACEHOLDER — final value awaits leadership decision (5 vs 6, OQ-1). System supports both via CBS config."
+    added: 2026-04-27
+    revised: ""
+
+  - name: FACTION_HEALTH_DECAY_ALERT_PCT
+    status: active
+    source: design/gdd/faction-system.md
+    referenced_by:
+      - design/gdd/faction-system.md
+    value: 0.02
+    unit: fraction
+    notes: "Threshold of FactionPoolDecayRate (D4) that triggers ops alert. >threshold for 3+ cycles → faction unhealthy → re-engagement campaign. Live-tunable."
+    added: 2026-04-27
+    revised: ""
 
 # Example:
 #
