@@ -304,7 +304,7 @@ Layer 4 — Meta/Polish
 | FT6 | Matchmaking | ✅ Done | design/gdd/matchmaking-system.md |
 | FT7 | Game Mode Manager | 🔄 Needs Revision (5v5 standard, 25v25 deferred) | design/gdd/game-mode-manager.md |
 | FT8 | Dungeon Mode | 🔄 Needs Revision (Personal/Side Quest 1-5 + bot) | design/gdd/dungeon-mode.md |
-| FT9 | Town System | ✅ Done | design/gdd/town-system.md |
+| FT9 | Town System | ⛔ Deprecated 2026-04-27 — superseded by FT12 (per FT12 R14, Q1=A hard deprecate) | design/gdd/town-system.md |
 | P1 | HUD & In-Game UI | ✅ Done | design/gdd/hud-ingame-ui.md |
 | P2 | Item Shop UI | ✅ Done | design/gdd/item-shop-ui.md |
 | P3 | Hero Select UI | ✅ Done | design/gdd/hero-select-ui.md |
@@ -323,8 +323,8 @@ Layer 4 — Meta/Polish
 | ~~FT10~~ | ~~Territory War~~ | ⛔ Superseded 2026-04-23 (mark in GDD) | design/gdd/territory-war.md |
 | ~~FT10a~~ | ~~Citizen System~~ | ⛔ Removed 2026-04-23 (never authored) | — |
 | ~~FT10b~~ | ~~Mercenary System~~ | ⛔ Removed 2026-04-23 (never authored) | — |
-| FT11 | Faction System | ✅ Designed (pending review) | design/gdd/faction-system.md |
-| FT12 | World Map (10 Neutral Cities) | 🆕 Not Started (pivot 2026-04-23) | — |
+| FT11 | Faction System | ✅ Approved (2026-04-27, lean review) | design/gdd/faction-system.md |
+| FT12 | World Map (10 Neutral Cities) | ✅ Designed (pending review, 2026-04-27) | design/gdd/world-map-system.md |
 | FT13 | Tournament System | 🆕 Not Started (pivot 2026-04-23) | — |
 | FT14 | Fragment & Meta-Game System | 🆕 Not Started (pivot 2026-04-23) | — |
 | FT15 | Wager Mode | 🆕 Not Started (pivot 2026-04-23) | — |
