@@ -1,9 +1,10 @@
 # World Map (10 Neutral Cities)
 
-> **Status**: In Design
+> **Status**: In Design (revised post first review 2026-04-28)
 > **Author**: User + Claude Code agents
-> **Last Updated**: 2026-04-27
+> **Last Updated**: 2026-04-28
 > **System ID**: FT12
+> **Revisions**: 2026-04-28 — addressed 8 blocking items from /design-review (D1 ceiling+freshness fix, R12 atomicity, G.5 fairness window, G.6 knob constraint, R3.1 vignette rotation, R15 ambient affordances, OQ-9 stranger interaction)
 > **Implements Pillar**: Universe-Spanning Meta-Game (P4 — primary), Team Synergy (P3 — supporting), Anti-Toxicity Core (P5 — supporting)
 > **Source Decision**: [Tournament Pivot 2026-04-23](../decisions/meeting-2026-04-23-tournament-pivot.md)
 > **Supersedes**: FT9 Town System (hard deprecate after FT12 approval)
@@ -122,6 +123,16 @@ stat bonus, faction-pool boost, Tournament-rank modifier, queue priority,
 lore reveals, และ flavor interactions ที่ไม่เปลี่ยน numeric state ของ player.
 *(Anchor Content คือเหตุผลให้ผู้เล่นจำเมืองได้ ไม่ใช่กลไกบังคับ traversal)*
 
+**R3.1 — Rotating Lore Vignette (repeat-visit hook)**
+แต่ละ Anchor ต้องมี **lore vignette pool ขนาด ≥ 4 ชิ้น/เมือง** หมุนเวียน
+ตามตารางเวลาคงที่ (default: รายสัปดาห์ ; knob `ANCHOR_VIGNETTE_ROTATION_DAYS`
+ใน Section G). Vignette ปัจจุบันแสดงเมื่อผู้เล่น interact กับ Anchor —
+ไม่มี reward, ไม่ใช่ quest, ไม่บังคับ. **เหตุผลของ rotation:** ป้องกัน
+Anchor Content ทำงานเป็น one-and-done lore tourism ; ผู้เล่นที่กลับมา
+เยือนเมืองหลังหลายสัปดาห์เห็น vignette ใหม่. Vignette pool authoring =
+narrative ownership (OQ-3 ขยาย scope). Rotation เกิดบน server clock
+(UTC), ทุก instance ของเมืองเห็น vignette ปัจจุบันพร้อมกัน.
+
 **R4 — Single Presence + Persistent City**
 ผู้เล่นอยู่ใน city เดียวเท่านั้น ณ เวลาใดก็ตาม. `last_city_id` เป็น
 persistent server-authoritative field — เมื่อ disconnect/session expire
@@ -180,11 +191,25 @@ FT12 ไม่มี combat, dueling, หรือ PvP mechanic ใดๆ ใน
 จัดการ violation ผ่าน M11 Reputation. Chat events จาก R10 pass ไปยัง M11 API
 สำหรับ filter + reputation accounting. FT12 ไม่ implement filter เอง.
 
-**R12 — Server Authority**
-`last_city_id`, `last_city_entry_timestamp`, `current_instance_id`, presence
-state ทุก field เป็น server-authoritative. Client ส่ง teleport request →
-server validate → server update → server broadcast presence ไปยัง instance
-channel. Client ไม่มี write authority บน presence/location state.
+**R12 — Server Authority + Player Record Atomicity**
+`last_city_id`, `last_city_entry_timestamp`, `current_instance_id`,
+`ft12_migrated`, presence state ทุก field เป็น server-authoritative.
+Client ส่ง teleport request → server validate → server update → server
+broadcast presence ไปยัง instance channel. Client ไม่มี write authority
+บน presence/location state.
+
+**Atomicity contract:** ทั้ง 4 fields บน Player Record ต้องเขียนใน
+**single transactional Azure Function call** (atomic write). Partial
+failure ห้าม commit field ใดๆ — ทั้ง 4 fields rollback พร้อมกัน.
+
+**Read-repair behavior (compensating):** ทุก consumer ของ
+`current_instance_id` (รวม D1 step 1, R9 co-location, presence broadcast)
+ต้อง resolve `instance_id` ผ่าน `LookupInstance(id, t)` ก่อนใช้งาน —
+ถ้า instance ที่ id ชี้ไปไม่มีอยู่จริง (torn down / never spawned),
+consumer ต้อง treat as null และ fall through ไป step ถัดไป (D1 step 2,
+หรือ EC-13 fallback chain). ห้าม assume `current_instance_id` valid
+โดยไม่ lookup. *(ป้องกัน dangling reference จาก partial-write หรือ
+race ระหว่าง EC-04 teardown กับ co-location read)*
 
 **R13 — Capacity: Soft Cap + Instance Sharding**
 แต่ละ city มี soft cap `CITY_INSTANCE_SOFT_CAP` (default 150, parametric ใน CBS).
@@ -199,6 +224,29 @@ City_Astra_02, …).
 หลัง FT12 approved, FT9 Town System mark deprecated — ไม่มี parallel operation.
 รายละเอียด feature migration list อยู่ใน Section C.3 Interactions (FT9 row).
 ผู้เล่นที่มี save state จาก FT9 ก่อน patch: ดู Section E (EC สำหรับ migration).
+
+**R15 — Plaza Ambient Social Affordances (linger reason)**
+ทุก plaza ต้องมี **non-mechanical social affordances อย่างน้อย 4 ประเภท**
+เพื่อให้ผู้เล่นมีเหตุผลอยู่ใน plaza ระหว่าง Fragment Event:
+1. **Sit-on-bench / shared seating** — ม้านั่ง 2–3 ที่ที่ผู้เล่นนั่งร่วมกันได้,
+   trigger sitting emote pose
+2. **Emote spots** — จุด environmental ที่ trigger emote เฉพาะที่ (ไหว้
+   หน้าระฆัง, ปักธงพักหน้า Banner Rack)
+3. **Fountain / interactable focal point** — interaction passive ที่
+   trigger particle/audio cue (โยนเหรียญ, แตะน้ำ)
+4. **Ambient gathering hooks** — จุดที่ NPC + player co-mingle ใน
+   formation ที่อ่านเป็น "ลานชุมนุม" จาก camera angle ปกติ
+
+**กฎร่วมของ R15:**
+- ห้าม grant XP, Fragment, currency, stat, queue priority ใดๆ (R3 rule
+  ขยายไป R15)
+- Affordance ทุกอย่าง opt-in — ผู้เล่นที่เดินผ่านไม่ trigger
+- ห้าม block traversal — ทุก affordance วาง offset จาก main pathway
+- Detail spec ของแต่ละ affordance defer ไป UX spec + Asset Spec phase
+
+*(Rationale: P5 Anti-Toxicity + P3 Team Synergy fantasy require ผู้เล่น
+*มีอยู่จริง* ใน plaza ไม่ใช่แค่ผ่านทาง ; ถ้าทุกคน teleport ออกทันทีหลังเปิด
+service menu, fantasy "ลานวิหาร" ที่ Section B วาดไว้จะไม่ดำเนินการจริง)*
 
 ### States and Transitions
 
@@ -352,19 +400,32 @@ co-location (R9) ก่อน soft cap (R13)
 InstanceAssignment(player, city_id, t):
   party = GetParty(player)                       // M1 lookup ; size 1 = solo
   party_size = party.member_count
+  hard_ceiling = floor(CITY_INSTANCE_SOFT_CAP * CITY_INSTANCE_HARD_CEILING_RATIO)  // R9 + EC-06
 
-  // (1) Party co-location override (R9)
+  // (1) Party co-location override (R9) — gated on freshness, state, AND hard ceiling
+  // EC-07 fix: predicate must require state == InCity (EnteringCity has transient instance_id)
   for each member in party:
     if member.current_instance_city_id == city_id
-      AND member.current_instance_id is not null:
-      return member.current_instance_id          // join existing party instance
+      AND member.current_instance_id is not null
+      AND member.state == "InCity"                       // EC-07: exclude transient states
+      AND member.last_heartbeat_age_seconds <= 5:        // EC-07 freshness window
+      target = LookupInstance(member.current_instance_id, t)
+      if target is null:
+        continue                                         // stale ref — instance torn down
+      // EC-06 hard ceiling enforcement (in-algorithm, not just prose)
+      if (target.current_population + party_size) <= hard_ceiling:
+        return target.instance_id                        // join existing party instance
+      else:
+        emit_signal("party_co_location_ceiling_exceeded", target.instance_id)
+        break                                            // fall through to step 2
 
   // (2) Pack into existing instances ที่มีที่ว่างพอ (descending by population)
   candidates = ListInstancesOfCity(city_id, t)
-  candidates.sort_desc(by: current_population)
+  // EC-01 tie-break: primary desc by population, secondary asc by instance_id (lex)
+  candidates.sort(by: (-current_population, instance_id_lex_asc))
   for each i in candidates:
     if (i.current_population + party_size) <= CITY_INSTANCE_SOFT_CAP:
-      return i.instance_id                       // assign
+      return i.instance_id                               // assign
 
   // (3) Fallback: spawn new instance
   new_id = SpawnNewInstance(city_id)
@@ -638,7 +699,7 @@ State C: City "Nova" ยังไม่มี instance (everyone offline)
 | `STARTER_CITY_ID` | **TBD** *(placeholder — รอ leadership)* | 1 ใน 10 cities | เมืองแรกสำหรับ first-ever spawn (R4) และ fallback ใน EC-13. ค่าจริง = decision ของ narrative + leadership | ❌ One-time per cycle |
 | `STARTER_CITY_INSTANCE_PREWARM_COUNT` | **5** | 1 – 20 | จำนวน instance ของ starter city ที่ pre-warm ก่อน server accept connections (EC-19). 5 รองรับ 750 concurrent new players | ⚠️ Verify ก่อน launch event |
 | `IDLE_INSTANCE_TEARDOWN_SECONDS` | **300** (5 นาที) | 60 – 1800 | Window ที่ instance pop=0 ก่อน teardown (EC-04). ต่ำเกิน = thrashing เมื่อมี player สลับเข้า ; สูงเกิน = waste resource | ✅ Live-tune |
-| `D2_SCHEDULER_TICK_SECONDS` | **5** | 1 – 60 | ความถี่ที่ D2 overflow predicate run. ต่ำ = pre-warm responsive แต่ scheduler load สูง ; สูง = D1 step 3 fallback บ่อย | ⚠️ Verify scheduler budget |
+| `D2_SCHEDULER_TICK_SECONDS` | **5** | 1 – 6 | ความถี่ที่ D2 overflow predicate run. ต่ำ = pre-warm responsive แต่ scheduler load สูง ; สูง = D1 step 3 fallback บ่อย. **Hard upper bound 6**: G.6 constraint `EVENT_ANNOUNCE_LEAD_SECONDS ≥ 5×tick` ต้องเป็น CBS validation rule — ที่ default LEAD=30, tick > 6 จะละเมิด | ⚠️ Verify scheduler budget |
 
 ### G.2 Travel & Transition
 
@@ -654,6 +715,8 @@ State C: City "Nova" ยังไม่มี instance (everyone offline)
 |---|---|---|---|---|
 | `EVENT_ANNOUNCE_LEAD_SECONDS` | **30** | 10 – 300 | Delay จาก Fragment Event announce → event เริ่มจริง (EC-20). ให้ pre-warm instance + spread thundering herd ของ player travel ; สั้นเกิน = server spike, ยาวเกิน = ลด urgency | ✅ A/B กับ event participation |
 | `MIN_AMBIENT_NPC_PER_CITY` | **5** | 0 – 20 | Floor non-functional NPCs ที่เดิน/idle ในเมือง (EC-22). ป้องกัน "empty plaza" fantasy break ใน off-peak | ✅ Live-tune ตาม city pop data |
+| `ANCHOR_VIGNETTE_ROTATION_DAYS` | **7** | 1 – 30 | Cadence ของ Anchor lore vignette rotation (R3.1). ต่ำ = vignette pool หมดเร็ว (narrative authoring overhead สูง) ; สูง = ผู้เล่นเห็นซ้ำบ่อย ทำลาย repeat-visit hook | ✅ Live-tune ตาม narrative budget |
+| `ANCHOR_VIGNETTE_POOL_MIN` | **4** | 4 – 12 | จำนวน vignette ขั้นต่ำต่อ Anchor (R3.1). Floor 4 รองรับ 1 รอบเดือนที่ rotation=7 วัน | ❌ Content-driven |
 
 ### G.4 Spatial / Render
 
@@ -667,7 +730,7 @@ State C: City "Nova" ยังไม่มี instance (everyone offline)
 
 | Knob | Default | Safe Range | What it affects | Live-tune? |
 |---|---|---|---|---|
-| `CITY_VISIT_FAIRNESS_INDEX_ALERT` | **0.3** (gini-style) | 0.1 – 0.7 | Threshold ของความไม่เท่ากันของ city traffic distribution (EC-21). > threshold ต่อเนื่อง 7 วัน ⇒ "Anchor concentration warning" → re-engagement campaign / event redistribution review | ✅ Live-tune |
+| `CITY_VISIT_FAIRNESS_INDEX_ALERT` | **0.3** (gini-style) | 0.1 – 0.7 | Threshold ของความไม่เท่ากันของ city traffic distribution (EC-21). **Computation:** Gini coefficient ของ `unique_visitors_per_city` (10 cities — รวมเมืองที่ visits=0) ; sample = rolling 24h window ; aggregate = daily snapshot at 00:00 UTC. **Trigger:** 7 consecutive daily samples ≥ threshold ⇒ "Anchor concentration warning" → re-engagement campaign / event redistribution review | ✅ Live-tune |
 | `CITY_INSTANCE_OVERFLOW_RATE_ALERT` | **0.05** (5%) | 0.01 – 0.20 | Fraction ของ travel attempts ที่ trigger D1 step 3 (SpawnNewInstance fallback). > threshold ⇒ pre-warm policy ไม่ effective ; pre-warm count ต้อง bump | ✅ Live-tune |
 
 ### G.6 Knob Interactions
@@ -679,7 +742,10 @@ State C: City "Nova" ยังไม่มี instance (everyone offline)
   → tolerable. ที่ CAP=300, RADIUS=15 → 60-80 คน → chat flood
 - `EVENT_ANNOUNCE_LEAD_SECONDS` × `D2_SCHEDULER_TICK_SECONDS` → effective
   pre-warm response time. ถ้า scheduler tick ใกล้ lead time → race
-  เกิด overflow ก่อน pre-warm. Rule: lead ≥ 5 × tick
+  เกิด overflow ก่อน pre-warm. **Rule: lead ≥ 5 × tick — CBS ต้อง enforce
+  เป็น validation rule (reject config ที่ละเมิด ก่อน apply)** ; safe ranges
+  ของ tick (1–6) คำนวณจาก default LEAD=30 ; ถ้า ops จะลด LEAD ต่ำกว่า 30,
+  CBS validator ลด max tick ตามสูตร floor(LEAD/5) ก่อน accept
 - `STARTER_CITY_INSTANCE_PREWARM_COUNT` × `IDLE_INSTANCE_TEARDOWN_SECONDS`
   → ของเสีย launch ; pre-warm สูง + teardown ช้า = idle resource หลัง
   launch peak. แนะนำ launch playbook: bump prewarm สำหรับ launch day
@@ -951,3 +1017,20 @@ Priority order (สูง → ต่ำ):
 - **Default ใน GDD:** ไม่มี parallel operation (ทันที)
 - **Trigger:** Engineering review + production planning
 - **Impact:** EC-15 migration urgency ; FT9 GDD deprecation header timing
+
+### OQ-9 — Cross-faction stranger interaction affordance
+- **Owner:** UX Designer + Game Designer
+- **Question:** ใน plaza, ผู้เล่นต่างฝ่ายที่ไม่รู้จักกันมี affordance อะไร
+  ในการ acknowledge ซึ่งกันและกันโดยไม่ต้องผ่าน chat / party invite?
+  (ตัวเลือกที่พิจารณา: faction greeting emote กดที่ player target,
+  shared-bench co-sit recognition cue, ฯลฯ)
+- **Default ใน GDD:** ยังไม่มี — strangers จาก factions ต่างกันมี spatial
+  proximity แต่ไม่มี designed interaction. R15 ambient affordances
+  (bench, emote spot) เป็นจุดเริ่มต้น แต่ยังไม่ระบุ targeted stranger
+  recognition
+- **Trigger:** /ux-design plaza-affordances + /ux-design city-menu phase
+- **Impact:** Section B Player Fantasy ("ทุกฝ่ายมาเจอกันโดยไม่ต้องเป็น
+  ศัตรู") — ถ้าไม่มี affordance, framing นี้รับได้แค่ระดับ presence
+  ไม่ใช่ encounter ; ส่งผลต่อ P3 Team Synergy supporting pillar
+- **Cross-ref:** R15 ambient affordances (linger reason) ; UX spec
+  ภายหลัง
