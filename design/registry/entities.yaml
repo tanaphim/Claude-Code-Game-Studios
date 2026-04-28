@@ -37,7 +37,7 @@
 #   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
 
 version: 1
-last_updated: 2026-04-27
+last_updated: 2026-04-27  # FT12 World Map referenced_by update for FACTION_COUNT
 
 # ─── ENTITIES ────────────────────────────────────────────────────────────────
 # Named game-world objects: enemies, NPCs, characters, factions, bosses.
@@ -271,6 +271,7 @@ constants:
     source: design/gdd/faction-system.md
     referenced_by:
       - design/gdd/faction-system.md
+      - design/gdd/world-map-system.md  # FT12 reads for faction badge variety (G.6 cross-ref note)
     value: 5
     unit: factions
     notes: "PLACEHOLDER — final value awaits leadership decision (5 vs 6, OQ-1). System supports both via CBS config."
