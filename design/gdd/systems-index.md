@@ -324,7 +324,7 @@ Layer 4 — Meta/Polish
 | ~~FT10a~~ | ~~Citizen System~~ | ⛔ Removed 2026-04-23 (never authored) | — |
 | ~~FT10b~~ | ~~Mercenary System~~ | ⛔ Removed 2026-04-23 (never authored) | — |
 | FT11 | Faction System | ✅ Approved (2026-04-27, lean review) | design/gdd/faction-system.md |
-| FT12 | World Map (10 Neutral Cities) | 🔄 Revised, pending re-review (2026-04-28 — first review NEEDS REVISION; 8 blockers addressed; awaiting full specialist coverage) | design/gdd/world-map-system.md |
+| FT12 | World Map (10 Neutral Cities) | 🔄 In Review (2026-04-30 — second review MAJOR REVISION NEEDED with 6 specialists; 27 items resolved including R12 single-doc atomicity, R16 stranger acknowledge primitive, Section B fantasy reframe; awaiting third-pass specialist verification) | design/gdd/world-map-system.md |
 | FT13 | Tournament System | 🆕 Not Started (pivot 2026-04-23) | — |
 | FT14 | Fragment & Meta-Game System | 🆕 Not Started (pivot 2026-04-23) | — |
 | FT15 | Wager Mode | 🆕 Not Started (pivot 2026-04-23) | — |
