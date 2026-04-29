@@ -34,3 +34,84 @@ Prior verdict resolved: First review
 
 ### Next step
 Re-review in fresh session: `/clear` then `/design-review design/gdd/world-map-system.md` to obtain full specialist coverage on the revised draft.
+
+---
+
+## Review — 2026-04-29 — Verdict: NEEDS REVISION
+Scope signal: XL (unchanged)
+Specialists: game-designer ✓, systems-designer ✓, network-programmer ✓, ux-designer ✓, qa-lead ✓, narrative-director ✓, creative-director ✓ (full coverage achieved)
+Blocking items: 22 | Recommended: 18 | Nice-to-have: 4
+Summary: Second review of FT12 with full specialist coverage. systems-designer verified 5 first-pass fixes but found 3 prose-vs-architecture gaps (R12 atomicity overpromised PlayFab/Azure Functions stack; EC-06 hard ceiling has TOCTOU race; STARTER_CITY_ID null-crashes EC-13 fallback). game-designer found 3 unresolved fantasy holes from first review's recommended items (R15 set-dressing without pull mechanism; R8 Anchor moment instance-scoped not city-scoped; P3/P4 cross-faction Fragment routing perverse incentive). network-programmer raised 4 R13-ADR-blocking items (R8 fan-out mechanism, R12 PlayFab co-location constraint, LookupInstance hot-row, EC-08 sync filter SLA). ux-designer raised 5 blockers (Accessibility section absent, OQ-7 platform deferral, EC-09 silent decision window, Galaxy Map mode confusion, first-visit beat conflation). qa-lead found 5 AC gaps (R3.1, R12, R15, EC-14, EC-18 + performance staging spec undefined). narrative-director raised 4 (faction history hall vs neutrality, OQ-2 ownership, 80 writer-day vignette scope uncosted, EC-11 broken Thai). creative-director synthesis: NEEDS REVISION — architecture recoverable, no fundamental rework required, 22 blockers cluster around 4-5 root causes.
+
+Prior verdict resolved: Yes — first review's 8 blockers verified by systems-designer; first review's coverage gaps (network/ux/qa/narrative/creative-director) all closed this pass.
+
+### Blocking items (resolved in same session 2026-04-29)
+**Cluster A — R12 Atomicity Architecture (3 voices)**
+1. [systems-designer] R12 atomicity overpromises platform → PlayFab single `UpdateUserData` blob constraint added; multi-call pattern explicitly forbidden
+2. [network-programmer] R12 architectural constraint → all 4 fields must stay co-located in one PlayFab user-data partition (stated as constraint, not implementation note)
+3. [qa-lead] R12 rollback no AC → TR-WMS-037 added (fault-injection test for partial-write rollback)
+
+**Cluster B — R8 Cross-Instance Anchor Moment (2 voices, pillar-level)**
+4. [game-designer] R8 + R10 + R13 = instance-scoped Anchor moment → R8 reframed as 30-second bell-as-linger sequence with cross-instance presence flash; R15 demoted to secondary linger layer
+5. [network-programmer] R8 fan-out unspecified → `R8_CROSS_INSTANCE_SKEW_BUDGET_SECONDS` knob (default 3, range 1-5) + behavioral contract; mechanism deferred to R13 ADR with named constraint
+
+**Cluster C — Sanctuary Fantasy / Pillar Integrity**
+6. [game-designer + narrative-director] R3 "faction history hall" violates R1 → replaced with chronicle-of-the-war + neutral examples; faction-privilege Anchor pattern explicitly banned
+7. [game-designer] R15 affordances are prop list → R15 reframed as secondary; bell sequence is primary linger
+8. [game-designer] P3/P4 perverse incentive → OQ-10 added flagging FT13/FT14 to address Fragment routing exception for cross-faction Casual
+
+**Cluster D — Data Integrity / Race Conditions**
+9. [systems-designer] EC-06 TOCTOU race → CAS via PlayFab version token / CosmosDB ETag stated; D1 step 1 pseudocode updated to `TryClaimSlots`; TR-WMS-038 added
+10. [systems-designer] STARTER_CITY_ID null-crash → provisional `city_01` default + server-startup config validator (refuse boot if invalid); OQ-1 + EC-13 + G.1 updated
+11. [network-programmer] LookupInstance hot-row → read-through cache (TTL ≤ 5s) constraint added to R12
+12. [network-programmer] EC-08 filter latency → `M11_FILTER_LATENCY_BUDGET_MS` (default 150) + 500ms timeout + degraded-mode fallback (broadcast + flag pending async review)
+
+**Cluster E — UX / Onboarding / Accessibility**
+13. [ux-designer] Accessibility section [TO BE CONFIGURED] → 4 mandatory minimums populated (subtitle for diegetic bell, colorblind-safe faction differentiation, input remapping, text scale 100-150%)
+14. [ux-designer] OQ-7 platform deferral → provisional PC + mouse+keyboard documented + revision-pass budget required for any platform change
+15. [ux-designer] EC-09 deferred countdown silently reduces decision window → effective floor 8s mandated; popup fires no later than t=2s (countdown_total − 8s) regardless of input focus
+16. [ux-designer] Galaxy Map dual-purpose mode confusion → mandatory Browse mode (default, detail panel only) vs Travel mode (explicit toggle, confirm dialog) separation
+17. [game-designer + ux-designer] First-visit beat conflates tone + functional → Section B explicitly splits: environmental beat = tone-only (atmospheric); Keeper NPC = default functional orientation mechanism
+
+**Cluster F — AC Coverage Gaps**
+18. [qa-lead] R3.1 vignette rotation no AC → TR-WMS-036 added
+19. [qa-lead] R15 affordances no AC → TR-WMS-039 added (no-reward verification)
+20. [qa-lead] EC-14 + EC-18 state-machine ACs missing → TR-WMS-040 (network-drop retry → OutOfUniverse), TR-WMS-041 (EnteringCity timeout 30s) added
+21. [qa-lead] Performance ACs not reproducible → staging environment spec mandate added (`production/qa/environment-spec.md` reference); single-threaded harness specified for TR-034; TR-WMS-042 added for 751-999 mid-range overflow gap
+
+**Cluster G — Narrative**
+22. [narrative-director] EC-11 broken Thai phrasing "ออกจากลานเมืองโดยกำเนิด" → replaced with "ออกจากลานแล้ว" (neutral, dignity-preserving)
++ [narrative-director] OQ-2 owner switched from Art-led → Narrative-led (lead) + World Builder + Art Director (co-own); cascade-block on OQ-3 + R3.1 made explicit
++ [narrative-director] OQ-3 producer notification added: 40-vignette MVP load = ~80 narrative writer-days; explicit producer flag before sprint commit
+
+### Recommended (NOT all addressed this session)
+- [systems-designer] D1 first-fit-descending fragmentation alert/knob — defer to R13 ADR
+- [systems-designer] G.1 SOFT_CAP=300 vs HARD_CEILING_RATIO=1.2 contradiction — accept as documented trade-off
+- [systems-designer] G.6 validator formal predicate — defer to CBS validator implementation
+- [network-programmer] D2 5s scheduler tick infeasible on PlayFab CloudScript native — defer to R13 ADR (execution environment selection)
+- [network-programmer] EC-25 client-side compensation model — defer to FT14 schema
+- [network-programmer] EC-16 graceful drain timeout knob — defer to ops playbook
+- [ux-designer] Travel-Queue dialog should display queue type + elapsed wait — defer to UX spec
+- [ux-designer] 17 surfaces consolidation review — defer to /ux-design city-menu
+- [ux-designer] "ลานร่วม Y" label ambiguous — defer to UX spec
+- [ux-designer] EC-26 cardinal direction camera-rotation-unsafe — defer to UX spec
+- [qa-lead] TR-008 static-analysis tool unspecified — defer to CI setup
+- [qa-lead] Manual ACs no sign-off owner — defer to QA process doc
+- [qa-lead] EC-09/12/13 incorrectly deferred — partial: EC-13 fix included; EC-09/12 still in H.7
+- [qa-lead] Mock M11 latency budget absent — partial: M11_FILTER_LATENCY_BUDGET_MS knob added but mock contract not pinned
+- [game-designer] R3.1 28-day repeat cycle thin — narrative team to address ahead-of-rotation pool
+- [narrative-director] FT11/FT12 onboarding line underperforms tone — defer to UX spec narrative writer pass
+- [narrative-director] Ambient NPCs need theme/behavior spec — defer to Asset Spec
+- [narrative-director] FT11 OQ-5 (faction identity) is FT12 pre-production gate — flag to producer
+
+### Nice-to-have (deferred)
+- [game-designer] G.5 Gini=0.3 worked example
+- [game-designer] EC-22 ambient NPCs cluster near Monument
+- [narrative-director] 10 unique bell sounds — flag to audio-director
+- [systems-designer] EC-19 751–999 player gap — partially addressed via TR-WMS-042
+
+### Coverage gaps
+None this pass — all 6 specialists + senior synthesis ran successfully.
+
+### Next step
+Re-review in fresh session: `/clear` then `/design-review design/gdd/world-map-system.md` to verify revisions hold under cold-context specialist re-evaluation. Validation criteria: all 22 Required items closed with architecture-backed (not prose-backed) resolutions; STARTER_CITY_ID provisional confirmed; accessibility minimums confirmed; 7 new ACs (TR-036 through TR-042) confirmed testable.
