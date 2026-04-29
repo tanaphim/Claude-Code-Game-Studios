@@ -115,3 +115,34 @@ None this pass — all 6 specialists + senior synthesis ran successfully.
 
 ### Next step
 Re-review in fresh session: `/clear` then `/design-review design/gdd/world-map-system.md` to verify revisions hold under cold-context specialist re-evaluation. Validation criteria: all 22 Required items closed with architecture-backed (not prose-backed) resolutions; STARTER_CITY_ID provisional confirmed; accessibility minimums confirmed; 7 new ACs (TR-036 through TR-042) confirmed testable.
+
+---
+
+## Additive Follow-up — 2026-04-30 — Verdict: ADDITIVE PATCH (no review re-run)
+Scope signal: M (additive only — no contradictions to 2026-04-29 design)
+Specialists: parallel /design-review session (6 specialists + creative-director synthesis) ran on a separate branch before merge of #15 ; this patch applies only the items that do NOT conflict with the 2026-04-29 revisions
+Items: 7 additive (5 new specs + 7 new ACs + 2 new G.5 knobs)
+Summary: Parallel review session conducted on separate branch produced overlapping findings with the 2026-04-29 review (PR #15) but using different design choices in some areas (R15 cat 5 vs R15 demote; EC-09 auto-blur vs 8s floor; OQ-9 → R16 vs OQ-9 left open). PR #16 was reopened against main with only the truly additive items extracted — no contradictions to PR #15. The 2026-04-29 design decisions (R8 bell-as-linger, R15 secondary-linger, EC-09 8s floor, OQ-10 FT13/FT14 deferral) are preserved in full.
+Prior verdict resolved: Yes for OQ-9 (now R16) ; partial for prior-log items 9 (D1 fragmentation — now has CITY_INSTANCE_FRAGMENTATION_ALERT knob) and 13 (cross-faction Fragment perverse incentive — now has CROSS_FACTION_PARTY_MATCH_PCT_ALERT telemetry as interim while OQ-10 awaits FT13/FT14)
+
+### Additive items applied (2026-04-30)
+1. **R5.1 — Galaxy Map dual-purpose interrupt rule** — refines R5 mode separation from /design-review #2: defines passive update behavior when Fragment Event arrives during active Travel-mode selection
+2. **R9.1 — Cross-faction Fragment routing telemetry position** — interim metric while OQ-10 awaits FT13/FT14 design decision; closes prior-log item 13 at the telemetry layer (not the design layer)
+3. **R16 — Cross-Faction Stranger Acknowledge Primitive** — resolves OQ-9 by committing 1-button acknowledge action with no mechanical reward, cross-faction visual emphasis, 60s per-target cooldown, M11-routed opt-out
+4. **EC-26 sequencing rule** — bell t=0, indicator t=+0.3s, Galaxy Map passive
+5. **G.5 `CITY_INSTANCE_FRAGMENTATION_ALERT`** — closes prior-log item 9
+6. **G.5 `CROSS_FACTION_PARTY_MATCH_PCT_ALERT`** — backs R9.1 metric exposure
+7. **G knobs `R16_ACKNOWLEDGE_RADIUS_UNIT` + `R16_ACKNOWLEDGE_COOLDOWN_SECONDS`** — back R16 contract
+8. **7 new ACs (TR-WMS-043 to 049)** — cover R5.1, R9.1 telemetry, R16 (×3 covering primitive/cooldown/opt-out passthrough), EC-26 sequencing, G.5 fragmentation alert
+
+### Items NOT brought into this patch (would conflict with 2026-04-29 design)
+- R15 cat 5 Monument ambient countdown — conflicts with 2026-04-29 R15 demotion (bell sequence is primary linger ; R15 is secondary)
+- EC-09 auto-blur — conflicts with 2026-04-29 EC-09 8s countdown floor approach
+- Section B "ผู้เล่นหลากฝ่าย" rewording — already addressed via 2026-04-29 R8 bell-as-linger reframe
+- TR numbering (parallel session used TR-WMS-036 to 051) — conflicts with 2026-04-29 numbering (TR-WMS-036 to 042) ; this patch uses TR-WMS-043 onwards to avoid collision
+
+### Coverage gaps
+None this pass — additive only.
+
+### Next step
+Re-review in fresh session: `/clear` then `/design-review design/gdd/world-map-system.md` to verify the combined post-#15 + additive state holds. Particular focus areas for verification: (a) R16 design contract completeness vs 2026-04-29 R8 bell-as-linger interaction, (b) R9.1 telemetry sufficiency given OQ-10 still open, (c) AC coverage for new R5.1/R9.1/R16/EC-26 sequencing/G.5 fragmentation hooks, (d) absence of contradictions between R15 secondary-linger framing and any plaza R16 acknowledgment overlap.
