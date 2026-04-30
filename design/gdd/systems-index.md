@@ -324,7 +324,7 @@ Layer 4 — Meta/Polish
 | ~~FT10a~~ | ~~Citizen System~~ | ⛔ Removed 2026-04-23 (never authored) | — |
 | ~~FT10b~~ | ~~Mercenary System~~ | ⛔ Removed 2026-04-23 (never authored) | — |
 | FT11 | Faction System | ✅ Approved (2026-04-27, lean review) | design/gdd/faction-system.md |
-| FT12 | World Map (10 Neutral Cities) | 🔄 In Review (revised 2026-04-29 + additive follow-up 2026-04-30) — second review NEEDS REVISION addressed 22 blockers; additive 2026-04-30 patch resolved OQ-9 via R16, added R5.1/R9.1/EC-26 sequencing, 2 G.5 alert knobs, 7 new ACs (TR-WMS-043 to 049). All additive; preserves 2026-04-29 design decisions | design/gdd/world-map-system.md |
+| FT12 | World Map (10 Neutral Cities) | ⛔ MAJOR REVISION NEEDED (third review 2026-04-30, post-PR #17 additive patch) — 19 blockers across 8 root-cause clusters incl. 3 pillar-threats (P3 R8 bell, P5 repeat-visit, P3-vs-P4 OQ-10), methodology failure on capacity math, R12 PlayFab API mismatch. PR #17 (ad9a442) closed OQ-9 via R16 + fragmentation alert; does NOT touch the 19 blockers. qa-lead + narrative-director did NOT run (org limit) — re-run required before lock. Revision must be top-down walkthrough-driven | design/gdd/world-map-system.md |
 | FT13 | Tournament System | 🆕 Not Started (pivot 2026-04-23) | — |
 | FT14 | Fragment & Meta-Game System | 🆕 Not Started (pivot 2026-04-23) | — |
 | FT15 | Wager Mode | 🆕 Not Started (pivot 2026-04-23) | — |
