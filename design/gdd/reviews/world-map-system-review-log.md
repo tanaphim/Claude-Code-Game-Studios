@@ -146,3 +146,101 @@ None this pass — additive only.
 
 ### Next step
 Re-review in fresh session: `/clear` then `/design-review design/gdd/world-map-system.md` to verify the combined post-#15 + additive state holds. Particular focus areas for verification: (a) R16 design contract completeness vs 2026-04-29 R8 bell-as-linger interaction, (b) R9.1 telemetry sufficiency given OQ-10 still open, (c) AC coverage for new R5.1/R9.1/R16/EC-26 sequencing/G.5 fragmentation hooks, (d) absence of contradictions between R15 secondary-linger framing and any plaza R16 acknowledgment overlap.
+
+---
+
+## Review — 2026-04-30 — Verdict: MAJOR REVISION NEEDED
+Scope signal: XL (unchanged)
+Specialists: game-designer ✓, systems-designer ✓, network-programmer ✓, ux-designer ✓, creative-director ✓ (synthesis) — **qa-lead ✗, narrative-director ✗ (org monthly usage limit hit during spawn)**
+Blocking items: 19 | Recommended: 19 | Nice-to-have: 2
+
+> **GDD snapshot caveat:** This review ran on a branch cut **before** PR #17 (ad9a442) was merged. PR #17 closes recommended-list **OQ-9 stranger interaction** via R16 and prior-log item 9 (D1 fragmentation alert) via G.5 `CITY_INSTANCE_FRAGMENTATION_ALERT`. Those items in this review's Recommended/prior-log scope are now CLOSED. PR #17 is purely additive and does NOT touch any of the 19 blockers below (R8 bell, R12 atomicity, R3.1 vignette, R15, R9 Fragment routing, capacity math, D1 algorithm). PR #17's R9.1 adds telemetry for cluster 5 blocker 13 but does NOT resolve the design issue (OQ-10 still open, perverse incentive still live).
+
+Summary: Third cold-context review of FT12. Round-2 fixes structurally hold but cold-context adversarial re-read surfaces deeper issues across 8 root-cause clusters. Pattern identified by creative-director: round 2 added mechanisms (bell sequence, vignette rotation, R15 demotion, D1 simplification) **without adding the player-facing or implementation-facing affordances that make those mechanisms deliver** — "added the noun, not the verb" failure mode. Three pillar-threats live in current GDD (P3 collective moment via R8 bell-as-counter, P5 repeat-visit via invisible vignette rotation + zero-pull R15, P3-vs-P4 conflict via R9 Fragment routing perverse incentive). Methodology failure on capacity math (3 independent arithmetic errors all under-counting load: EC-19 prewarm 15% coverage, EC-14 ghost slots 67% phantom occupancy, D1 PlayFab API rate budget exceeded). R12 mutually inconsistent with own tests (TR-037 partial-success) and PlayFab API reality (atomicity claim overstated; CAS conflates per-key user-data version with instance population CAS — different stores). Coverage gap material: qa-lead would likely escalate AC contradictions across TR-034/037/038; narrative-director would likely escalate Keeper info-dump tone + bell collective-moment delivery to pillar-threat. Verdict cannot be locked without re-running both gates.
+
+Prior verdict resolved: Partial — round 2's 22 blockers structurally addressed, but several were "noun added, verb missing" (bell mechanism present, behavioral cue missing; vignette rotation present, freshness signal missing; R15 demoted, primary linger now bell-only-during-events; D1 simplified, CAS-conflict path silently merged with ceiling-exceeded path).
+
+### Blocking items (NOT addressed this session — open for revision pass)
+
+**Cluster 1 — R8 Bell Collective Moment (P3 pillar-threat)**
+1. [game-designer] R8 delivers density counter not collective moment — no avatar behavioral cue spec; "ทุกคนหันมามองกัน" undeliverable
+2. [network-programmer] R8 skew range lower bound 1s unachievable on Azure Function Consumption (cold-start 200–800ms)
+3. [network-programmer] R8 bell + RadiusChat cross-channel ordering undefined — hybrid Photon+SignalR fragments collective moment within skew budget
+
+**Cluster 2 — R12 PlayFab CAS / Test Reality (implementer trap)**
+4. [systems-designer + network-programmer] R12 atomicity claim overstated — PlayFab UpdateUserData has no "partial-success" response; TR-WMS-037 tests non-existent failure mode
+5. [systems-designer] R12 conflates two CAS systems — PlayFab user-data per-key version (Player Record) vs instance population CAS (CosmosDB/Redis/lock — different store)
+6. [network-programmer] R12 cache layer: distributed cache (Redis) required, not "any cache"; named constraint missing
+
+**Cluster 3 — Capacity Math Internally Inconsistent (methodology failure)**
+7. [systems-designer] EC-19 prewarm 750/5000 = 15%; TR-WMS-034 "<10% step-3 invoke rate" mathematically impossible (real ~85%)
+8. [network-programmer] EC-14 ghost slots 60s @ 10% disconnect = 67% phantom occupancy of pre-warmed launch capacity; uncounted in EC-19
+9. [network-programmer] D1 ~4 PlayFab calls/req × 500 RPS = ~2000 calls/s exceeds default PlayFab rate limits; not in TR-034 / staging spec
+
+**Cluster 4 — Linger / Repeat-Visit Hook Broken (P5 pillar-threat)**
+10. [game-designer + ux-designer] R3.1 vignette rotation locked server-clock + no per-player seen-state + no player-facing freshness signal → habitual visitors see same vignette indefinitely
+11. [game-designer] R15 affordances zero pull mechanics; demotion to "secondary" makes it the only linger when no Fragment Event
+12. [ux-designer] Post-first-visit City Menu entry path UNSPECIFIED — Keeper interaction prompt first-visit only; no documented hotkey/HUD button for returning players
+
+**Cluster 5 — OQ-10 Live Perverse Incentive (P3 vs P4 pillar-threat)**
+13. [game-designer] R9 cross-faction party + Fragment routing per `player.faction_id` = high-skill players punish own faction Fragment pool. Live in FT12 rules today, not deferred. P3 actively undermined by P4 in current R9
+
+**Cluster 6 — Execution Environment Pinning (deferred-to-ADR but blocks GDD)**
+14. [network-programmer] D2 5s tick requires Azure Functions Premium + pre-warmed; Consumption tier infeasible. Must be pinned in GDD as binding constraint (not deferred to R13 ADR) because timing budgets are pillar-load-bearing for P3
+
+**Cluster 7 — D1 Algorithm Defects (implementer trap)**
+15. [systems-designer] D1 `break` (line 520) conflates CAS-conflict retry with ceiling-exceeded; co-location silently fails at step 2; signal `party_co_location_ceiling_exceeded` does not fire on CAS-conflict path
+16. [systems-designer] G.6 LEAD min=10s + tick=2s = exactly 5 ticks zero jitter headroom; formula `floor(LEAD/5)` permits fragile boundary
+
+**Cluster 8 — UX / Onboarding Tone Conflict**
+17. [game-designer] Keeper NPC at spawn = classic info-dump anti-pattern; chosen as default functional orientation without justifying why this serves sanctuary tone (narrative-director not consulted — likely pillar-threat escalation)
+18. [ux-designer] EC-09 auto-blur on Priority-1 modal: text draft fate (discard vs preserve) UNSPECIFIED
+19. [ux-designer] OQ-7 platform decision has no gate blocking `/ux-design galaxy-map` start; provisional assumption silent commitment
+
+### Recommended (NOT addressed this session)
+- [systems-designer] Slots in (SOFT_CAP, hard_ceiling] permanently dead for step 2; undocumented operational invisibility
+- [systems-designer] G.5 Gini=0.3 baseline under intended Fragment Event distribution = ~0.42 (computed); threshold fires routinely; recalibrate
+- [systems-designer] TR-WMS-038 self-contradicts in-line ("actually:" parenthetical correction); rewrite as clean Given-When-Then
+- [systems-designer] PARTY_MAX unenforceable — not in entities.yaml; CBS validator cannot enforce G.6 constraint
+- [network-programmer] EC-08 SLA 150/500ms achievable only when Photon + M11 co-located in same Azure region; constraint missing
+- [network-programmer] R9 hard ceiling 180 not validated against Photon Fusion 2 NetworkObject bandwidth at 150–180 players
+- [network-programmer] M1 friend-list ghost-presence not covered by "syncing presence..." mitigation (party-only)
+- [game-designer] 9 cities mostly irrelevant on non-Fragment-Event days; R3 Anchor strips mechanical weight; P4 pillar claim inconsistent
+- [game-designer] P5 Anti-Toxicity single-point-of-failure on undesigned M11; degraded mode = unfiltered broadcast (not explicitly acknowledged)
+- ~~[game-designer] OQ-9 stranger interaction affordance must be in Detailed Rules~~ **CLOSED by PR #17 (ad9a442) R16 Cross-Faction Stranger Acknowledge Primitive** — merged after this review's GDD snapshot
+- [ux-designer] 17-surface navigation load — tournament-queue critical path needs to be named as UX spec constraint
+- [ux-designer] Galaxy Map Browse-default inverts majority-case travel intent; consider mode-by-state
+- [ux-designer] Keeper NPC walk-past fallback floor unspecified
+- [ux-designer] Motor (hold-to-confirm) + cognitive accessibility absent from mandatory minimums
+- [ux-designer] Cross-instance Y counter intent (ambient social proof vs decision-support) UNSPECIFIED
+- [ux-designer] Travel-Queue dialog omits queue type identification
+- [ux-designer] EC-03 toast auto-dismiss + retry affordance UNSPECIFIED
+- [ux-designer] R15 sightline-from-spawn layout minimum missing
+- [ux-designer] Manual-WMS-01 criterion 3 tester-subjective; needs golden-text ref or vocabulary constraint
+
+### Nice-to-have
+- [systems-designer + game-designer] R12 read-repair paragraph duplicated (lines ~275–282 = ~296–303); copy-paste artifact
+- [game-designer] R3 Anchor examples all solo-consumption types; no relational/social Anchor types in cross-faction-encounter hub
+
+### Coverage gaps (CRITICAL)
+- **qa-lead** did not run — would likely escalate AC contradictions across TR-034/037/038 (three independent test/architecture inconsistencies); high confidence additional BLOCKING AC items
+- **narrative-director** did not run — would likely escalate Keeper info-dump tone, bell collective moment, vignette content scope, 9-cities worldbuilding-payoff vs mechanical-irrelevance to pillar-threat severity
+
+### Senior synthesis [creative-director]
+Pattern: round 2 added nouns (mechanisms) without verbs (player-facing/implementation-facing affordances). Three pillar-threats live + methodology failure on capacity math + R12 mutually inconsistent with tests and PlayFab API. Not "two more weeks of polish" — needs "one more design pass with a different methodology" (top-down, walkthrough-driven).
+
+Required for next revision pass:
+- Pillar-delivery walkthroughs for 4 scenarios (first-visit, return-visit-no-event, return-visit-with-event, cross-faction-party, launch-spike) — moment-by-moment table: trigger → server → client → audio → visual → AC
+- Top-down launch-spike capacity model with explicit ghost-slot accounting + PlayFab rate-limit headroom
+- R12 re-authored with second CAS store named (Redis/Cosmos/lock); TR-WMS-037 removed or rewritten to test what architecture actually does
+- Execution-environment binding constraint section (Functions Premium, Redis, region co-location)
+- OQ-10 closed before R9 ships, or R9 explicitly gated behind OQ-10
+- Re-run qa-lead and narrative-director gates before next pass
+
+### Next step
+**Do NOT lock verdict yet.** Revision must happen in a separate session (out of scope for this review) and must:
+1. Re-run qa-lead + narrative-director after monthly usage limit resets to confirm coverage
+2. Apply methodology change (top-down walkthrough-driven) per creative-director synthesis
+3. Re-review with `/design-review design/gdd/world-map-system.md` (full mode) after revision
+
+This session ends with findings logged and FT12 status flagged MAJOR REVISION NEEDED in systems-index.
