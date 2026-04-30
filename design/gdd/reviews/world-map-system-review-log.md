@@ -244,3 +244,90 @@ Required for next revision pass:
 3. Re-review with `/design-review design/gdd/world-map-system.md` (full mode) after revision
 
 This session ends with findings logged and FT12 status flagged MAJOR REVISION NEEDED in systems-index.
+
+---
+
+## Coverage Closure Pass — 2026-04-30 — qa-lead independent assessment
+Specialist: qa-lead ✓ (closes coverage gap from third review)
+Blocking items: 9 (3 confirm prior + rewrite specs ; 6 net-new) | Recommended: 10
+Prior verdict resolved: No — third review's 19 blockers all stand; this pass adds 6 net-new blockers. Total now: **25 BLOCKING / 29 RECOMMENDED**.
+
+Summary: qa-lead ran independently after main session re-spawn (rate limit was burst-throttle on parallel spawn, not monthly quota). Independent AC audit covered all 49 ACs (TR-WMS-001 to 042 + TR-043 to 049 from PR #17). Confirms 3 prior blockers (TR-034/037/038) with specific rewrite guidance, and surfaces 6 net-new BLOCKING items not visible to other specialists: 3 missing AC sets (R12 read-repair/cache TTL, R5 Browse-mode no-travel, R8 cross-instance skew), 1 process gap (`production/qa/` directory does not exist — blocks performance + manual ACs from execution), 1 GDD-level gap (PlayFab rate limit must be AC + env-spec), 1 untestable AC (TR-048 timing tolerance without Unity instrumentation hook spec).
+
+### Blocking items (NOT addressed this session)
+
+**Confirms prior + rewrite specs**
+1. TR-WMS-034 "<10% step-3 invoke rate" mathematically impossible at EC-19 5000/750 capacity → rewrite to separate pre-warm cohort (assert step-3 = 0%) from overflow cohort (assert count-ceiling for ~85% overflow rate)
+2. TR-WMS-037 "mock PlayFab partial-success response" tests phantom failure mode → rewrite to test HTTP 500 total failure; remove "partial-success" language
+3. TR-WMS-038 self-contradicting Given-When-Then → split into TR-038a (170+12 both-reject) and TR-038b (156+12 sequential CAS success)
+
+**Net-new from qa-lead independent audit**
+4. R12 read-repair behavior + cache TTL (≤5s) have no ACs → add TR-053 (null-instance fallthrough verification) + TR-054 (cache TTL boundary)
+5. R5 Browse-mode no-travel rule + Travel-mode explicit-toggle requirement have no ACs → add TR-050 (Browse mode click does NOT trigger travel) + TR-051 (Travel mode requires explicit toggle)
+6. R8 cross-instance skew budget (3s) has no AC → add TR-052 (multi-instance bell timestamp within 3s budget)
+7. `production/qa/` directory does not exist on disk; `environment-spec.md` referenced by TR-034/035/042 absent → directory + stub must be created before any performance or manual test can execute
+8. PlayFab API rate limit (~2000 calls/s at 500 RPS D1 path vs ~1000 calls/s default plan) → add rate-limit assertion to TR-034/035; spec PlayFab CCU plan in env-spec.md
+9. TR-048 timing tolerance untestable without instrumentation spec → downgrade to Manual/Visual OR specify Unity instrumentation hook for ±50ms client-side signal-ordering measurement
+
+### Recommended (NOT addressed this session)
+- TR-WMS-002 fragile count assertion ("response includes all 8 services") — refactor to assert specific service-IDs to prevent silent regression on future service additions
+- EC-09 partial deferral inconsistent — H.7 lists EC-09 as deferred but TR for input-focus deferral exists; reconcile
+- TR-WMS-013 ambiguous precondition ("client sends request bypassing validation") — what mechanism? Forged HTTP header? Direct PlayFab call? Specify
+- TR-WMS-036 vignette rotation verification non-terminating — "verify next visit shows different vignette" requires unbounded simulation; specify max iterations or rotation cycle assertion
+- 6 ECs silently uncovered: EC-04 (idle teardown), EC-16 (server restart soft kick), EC-17 (account deletion mid-instance), EC-21 (Anchor concentration alert), EC-24 (clock skew display), EC-27 (texture pop-in grace) — flag in H.7 as deferred or add ACs
+- TR-WMS-045 (R16 acknowledge) conflates Logic + Visual story types — split
+- Manual AC sign-off ownership absent (Manual-WMS-01, 02) — process gap
+- Integration test infrastructure gap — no documented mock harness for PlayFab, Photon Fusion, M11 endpoints; integration ACs untestable until provided
+- AC story-type ratio: Logic 28 / Integration 13 / Performance 3 / Manual 2 — Integration count low for a system with 7 cross-system handoffs; mocking may be overused
+- TR-WMS-029 EC-23 faction switch live update tolerance "within 2s" — verify against actual presence broadcast SLA (R12 read-through cache TTL ≤ 5s); 2s may be tighter than infrastructure delivers
+
+### Coverage gap remaining
+- **narrative-director** still has not run — pending for next session
+
+### Next step
+- Append narrative-director coverage closure pass in next session (independent run; same pattern as this entry)
+- Then proceed to Phase 2 walkthrough authoring per third-review creative-director synthesis
+- Update systems-index FT12 blocker count from 19 to 25 to reflect this entry
+
+---
+
+## Coverage Closure Pass — 2026-04-30 — narrative-director independent assessment
+Specialist: narrative-director ✓ (closes final coverage gap from third review)
+Blocking items: 3 net-new | Recommended: 4 net-new | Nice-to-have: 3 (1 escalated from prior nice-to-have)
+Prior verdict resolved: No — third review's 19 + qa-lead's 6 still stand. Total now: **28 BLOCKING / 33 RECOMMENDED**.
+
+Summary: narrative-director ran independently same session as qa-lead after burst rate-limit cleared. Confirms Cluster 1 (R8 bell) + Cluster 8 (Keeper) blockers from tone side and **upgrades Cluster 8 Keeper to pillar-threat severity** (Keeper is the only character with a voice in the system; no voice profile = sanctuary fantasy fails at first impression). Surfaces 3 net-new BLOCKING items all clustering around a single root cause: **narrative production infrastructure is underprepared for the scope FT12 commits to** — Keeper has no voice, Section B sample line is dev placeholder, OQ-2 has no deliverable spec, vignette scope is unplanned. GDD authoring is sound; the gap is production briefs not yet authored.
+
+### Blocking items (NOT addressed this session)
+
+10. [narrative-director] Keeper NPC has no voice profile, demeanor brief, or sample line at GDD level — writer receiving this slot will default to tutorial NPC, puncturing sanctuary tone at first impression. **Pillar-threat upgrade from third review Cluster 8 blocker #17.** Required: one-paragraph Keeper voice profile + one golden sample line embedded in Section B; remove "active only on first visit" framing in favor of "most prominent on first visit"
+11. [narrative-director] EC-11 ban broadcast "ออกจากลานแล้ว" is indistinguishable from voluntary leave/disconnect — design rationale undocumented. Two valid philosophies (invisible moderation OR diegetic keeper ejection) not chosen. Required: document intent OR adopt Keeper-voiced phrasing "ผู้ดูแลลานได้ขอให้ผู้ถือธงท่านหนึ่งออกจากลาน" (instance-broadcast only) + distinct phrasing for voluntary leave ("ออกเดินทางแล้ว") and disconnect ("ขาดการติดต่อชั่วคราว")
+12. [narrative-director] OQ-2 deliverable spec missing — cascade blocks Art + Audio + Asset Spec phases (3 production departments on hard-gate). Required additions: (a) 10 city identities with distinct cultural/thematic registers, (b) one Anchor Content type per city respecting R3 neutrality, (c) per-city ritual instrument designation, (d) per-city first-visit beat text. Producer notification needed: 80 writer-days (OQ-3) is vignette-only — theme spec itself is separate staffing requirement currently unplanned
+
+### Recommended (NOT addressed this session)
+
+- [narrative-director] Section B sample line "คุณกำลังเข้าสู่ลานเมือง [City Name]..." is dev placeholder — violates own instruction (line 93: "Phrasing ต้องผ่าน narrative writer pass ไม่ใช่ developer placeholder"). **Golden draft proposed:** *"ลานแห่งนี้ไม่มีประตูกั้นฝ่าย — ระฆังจะบอกให้รู้เองว่าอะไรกำลังจะมา"* (diegetic environmental observation, no system-speak, foreshadows R8 bell mechanic). Replace template token with note that city-specific variants are OQ-2 deliverable
+- [narrative-director] R3 Anchor Content all solo-consumption types (lore archive, observatory, etc.) — tonal mismatch for cross-faction encounter hub. **Escalated from third review nice-to-have to RECOMMENDED.** OQ-3 brief must include ≥2 shared-witness/relational Anchor types (faction-count-aware narration, proximity-triggered relics, cooperative observatory triggers — leverage existing R12/R13 presence state, no new mechanic)
+- [narrative-director] R16 action verb "Salute" is militarily coded — Section B explicitly prohibits military vocabulary (line 53–55). Thai working name "ผ่านลาน" is correct; English "Traveler's Salute" should be "Wayfarer's Nod" or "Courtyard Bow." Vocabulary note required in R16 before UX spec authoring (use นบ/วันทา/แสดงคารวะ/ทักทาย; avoid military registers)
+- [narrative-director] "ลาน" vocabulary overloading: (a) "ลานร่วม Y" cross-instance counter UI label is spatially ambiguous → propose "ผู้ถือธงทั้งเมือง Y" ; (b) "ลานชุมนุม" in R15 has political-protest connotation → use "ลานกลาง" or simply "ลาน" ; (c) "ลานเมือง" in Section B sample line is bureaucratic vs. sacred "ลานวิหาร" — golden draft above sidesteps via standalone "ลาน"
+
+### Nice-to-have
+
+- [narrative-director] R7 Banner Racks display proportional faction colors → art direction note: design for *plurality* (always show ≥1 of each represented faction) over *majority* (proportional to population). Prevents "ลานวิหาร" reading as faction base when 120/150 instance is one faction
+- [narrative-director] 10 cities × instrument designation: add to OQ-2 deliverable list. Bell defaults to identical sound type unless narrative specifies per-city ritual instrument (e.g., maritime city = ship's bell/conch; observatory city = singing bowl/glass harmonica; forge city = anvil strike/gong)
+- [narrative-director] Caravanserai metaphor exists only in FT12 (Section B lines 59–63) but not in game-concept.md or FT11 — propagate back to shared world tone vocabulary in next revision pass
+
+### Severity adjustments to prior findings
+
+- Third review Cluster 1 blocker #1 (R8 bell density counter): CONFIRMED from tone side. R8 does not operationalize Section B Anchor moment ("ทุกคนหันมามองกันครู่หนึ่ง") into production brief — animation/audio/dialogue departments will fill 30s window independently without coordinated beat. Add 1-sentence behavioral cue to R8 rationale paragraph
+- Third review Cluster 8 blocker #17 (Keeper info-dump): CONFIRMED and UPGRADED to pillar-threat (see Blocking #10 above)
+- Third review nice-to-have (R3 solo-consumption Anchors): ESCALATED to RECOMMENDED (see Recommended #2 above)
+
+### Coverage gap remaining
+- **NONE.** All 7 specialists from third review now have findings on record (game/systems/network/ux qa-lead/narrative-director + creative-director synthesis). Coverage closure complete for third review.
+
+### Next step
+- **Phase 1 (coverage closure) is COMPLETE.** Total blocker landscape locked: 28 BLOCKING / 33 RECOMMENDED across 8 root-cause clusters + 1 production-infrastructure cluster (narrative briefs)
+- Update systems-index FT12 blocker count from 25 to 28
+- Proceed to Phase 2 walkthrough authoring per creative-director synthesis (5 scenarios: first-visit, return-no-event, return-with-event, cross-faction-party, launch-spike) — methodology change to top-down walkthrough-driven before any GDD edits begin
+- Phase 2 should NOT spawn specialists (single-session main thread); reserves spawning quota for Phase 3 cluster-by-cluster revision (8-10 sessions, 1-2 specialists per cluster)
