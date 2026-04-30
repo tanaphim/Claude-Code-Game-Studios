@@ -244,3 +244,47 @@ Required for next revision pass:
 3. Re-review with `/design-review design/gdd/world-map-system.md` (full mode) after revision
 
 This session ends with findings logged and FT12 status flagged MAJOR REVISION NEEDED in systems-index.
+
+---
+
+## Coverage Closure Pass — 2026-04-30 — qa-lead independent assessment
+Specialist: qa-lead ✓ (closes coverage gap from third review)
+Blocking items: 9 (3 confirm prior + rewrite specs ; 6 net-new) | Recommended: 10
+Prior verdict resolved: No — third review's 19 blockers all stand; this pass adds 6 net-new blockers. Total now: **25 BLOCKING / 29 RECOMMENDED**.
+
+Summary: qa-lead ran independently after main session re-spawn (rate limit was burst-throttle on parallel spawn, not monthly quota). Independent AC audit covered all 49 ACs (TR-WMS-001 to 042 + TR-043 to 049 from PR #17). Confirms 3 prior blockers (TR-034/037/038) with specific rewrite guidance, and surfaces 6 net-new BLOCKING items not visible to other specialists: 3 missing AC sets (R12 read-repair/cache TTL, R5 Browse-mode no-travel, R8 cross-instance skew), 1 process gap (`production/qa/` directory does not exist — blocks performance + manual ACs from execution), 1 GDD-level gap (PlayFab rate limit must be AC + env-spec), 1 untestable AC (TR-048 timing tolerance without Unity instrumentation hook spec).
+
+### Blocking items (NOT addressed this session)
+
+**Confirms prior + rewrite specs**
+1. TR-WMS-034 "<10% step-3 invoke rate" mathematically impossible at EC-19 5000/750 capacity → rewrite to separate pre-warm cohort (assert step-3 = 0%) from overflow cohort (assert count-ceiling for ~85% overflow rate)
+2. TR-WMS-037 "mock PlayFab partial-success response" tests phantom failure mode → rewrite to test HTTP 500 total failure; remove "partial-success" language
+3. TR-WMS-038 self-contradicting Given-When-Then → split into TR-038a (170+12 both-reject) and TR-038b (156+12 sequential CAS success)
+
+**Net-new from qa-lead independent audit**
+4. R12 read-repair behavior + cache TTL (≤5s) have no ACs → add TR-053 (null-instance fallthrough verification) + TR-054 (cache TTL boundary)
+5. R5 Browse-mode no-travel rule + Travel-mode explicit-toggle requirement have no ACs → add TR-050 (Browse mode click does NOT trigger travel) + TR-051 (Travel mode requires explicit toggle)
+6. R8 cross-instance skew budget (3s) has no AC → add TR-052 (multi-instance bell timestamp within 3s budget)
+7. `production/qa/` directory does not exist on disk; `environment-spec.md` referenced by TR-034/035/042 absent → directory + stub must be created before any performance or manual test can execute
+8. PlayFab API rate limit (~2000 calls/s at 500 RPS D1 path vs ~1000 calls/s default plan) → add rate-limit assertion to TR-034/035; spec PlayFab CCU plan in env-spec.md
+9. TR-048 timing tolerance untestable without instrumentation spec → downgrade to Manual/Visual OR specify Unity instrumentation hook for ±50ms client-side signal-ordering measurement
+
+### Recommended (NOT addressed this session)
+- TR-WMS-002 fragile count assertion ("response includes all 8 services") — refactor to assert specific service-IDs to prevent silent regression on future service additions
+- EC-09 partial deferral inconsistent — H.7 lists EC-09 as deferred but TR for input-focus deferral exists; reconcile
+- TR-WMS-013 ambiguous precondition ("client sends request bypassing validation") — what mechanism? Forged HTTP header? Direct PlayFab call? Specify
+- TR-WMS-036 vignette rotation verification non-terminating — "verify next visit shows different vignette" requires unbounded simulation; specify max iterations or rotation cycle assertion
+- 6 ECs silently uncovered: EC-04 (idle teardown), EC-16 (server restart soft kick), EC-17 (account deletion mid-instance), EC-21 (Anchor concentration alert), EC-24 (clock skew display), EC-27 (texture pop-in grace) — flag in H.7 as deferred or add ACs
+- TR-WMS-045 (R16 acknowledge) conflates Logic + Visual story types — split
+- Manual AC sign-off ownership absent (Manual-WMS-01, 02) — process gap
+- Integration test infrastructure gap — no documented mock harness for PlayFab, Photon Fusion, M11 endpoints; integration ACs untestable until provided
+- AC story-type ratio: Logic 28 / Integration 13 / Performance 3 / Manual 2 — Integration count low for a system with 7 cross-system handoffs; mocking may be overused
+- TR-WMS-029 EC-23 faction switch live update tolerance "within 2s" — verify against actual presence broadcast SLA (R12 read-through cache TTL ≤ 5s); 2s may be tighter than infrastructure delivers
+
+### Coverage gap remaining
+- **narrative-director** still has not run — pending for next session
+
+### Next step
+- Append narrative-director coverage closure pass in next session (independent run; same pattern as this entry)
+- Then proceed to Phase 2 walkthrough authoring per third-review creative-director synthesis
+- Update systems-index FT12 blocker count from 19 to 25 to reflect this entry
