@@ -79,15 +79,67 @@ A scenario is complete when:
 
 ## Scenario A — First-Visit
 
-**Player POV:** New account, just completed FT11 faction selection (state = `OutOfUniverse` → transition to `EnteringCity`). Has no `last_city_id`, no equipment, no Fragment history. Default `STARTER_CITY_ID = city_01`.
+**Player POV:** New account, just completed FT11 faction selection. `faction_id = "faction_b"` committed to Player Record. No `last_city_id`, no equipment, no `ft12_migrated` flag, no Fragment history. State = `OutOfUniverse`. Provisional `STARTER_CITY_ID = "city_01"` (per OQ-1). No FT9 `last_town_state` (net-new account ; for migrated FT9 accounts EC-15 applies but UX is identical from this point).
 
-**Time origin:** t=0 = login success after FT11 selection.
+**Time origin:** t=0 = login success after FT11 selection (FT11 emits `faction_committed` ; FT12 first session begins).
+
+**Knob context:** `STARTER_CITY_INSTANCE_PREWARM_COUNT = 5`, `ENTERING_TIMEOUT_SECONDS = 30`, `MIN_AMBIENT_NPC_PER_CITY = 5`, EC-27 grace period = 0.5s after scene streaming complete.
+
+**Platform assumption:** PC + mouse+keyboard (provisional per OQ-7 — every interaction below carries platform-revision risk per **BLOCKER #19**).
 
 | t | Player input/state | Server | Client visual | Audio | UI surface | AC ref / blocker |
 |---|---|---|---|---|---|---|
-| _TBD — to be authored in Scenario A session_ |
+| **t < 0** (setup) | At FT11→FT12 handoff screen | FT11 server commits `faction_id` to Player Record ; emits `faction_committed` event to FT12 server-side listener | FT11 final screen ("ผู้ถือธงคนใหม่ของฝ่าย X") | FT11 commit cue | FT11 confirmation modal | FT11 ACs (out of FT12 scope) |
+| **t = 0** (login success) | (no input — auto-transition) | FT12 server reads Player Record ; `last_city_id` is null → fall-through to `STARTER_CITY_ID` ; allocate instance via D1 with party_size=1, target=`city_01` ; D1 step 2 picks pre-warmed instance city_01_01 (or whichever has lowest pop among 5 pre-warmed) ; state transitions `OutOfUniverse` → `EnteringCity` ; `current_instance_id` written via single PlayFab `UpdateUserData` (R12 atomicity contract) | Loading screen fades in | Loading-screen ambient cue | Loading-screen UI (out-of-FT12-scope handoff) | TR-WMS-005 (R4 first-ever spawn) ; **BLOCKER #4** (R12 atomicity claim — TR-WMS-037 tests phantom failure mode here) ; **BLOCKER #5** (R12 conflates Player Record CAS with instance-population CAS — D1 step 2 does both in this row) |
+| **t = 0 to t = T_load** (T_load typically 3–8s on PC) | (no input) | Scene streaming progresses ; `ENTERING_TIMEOUT_SECONDS = 30` countdown active per EC-18 | Loading-screen progress | Loading-screen ambient | Loading screen | TR-WMS-041 (EC-18 EnteringCity timeout — fires at 30s if scene loader hangs) |
+| **t = T_load** (scene streaming complete) | (no input) | Server confirms instance assignment ; `state = InCity` written to Player Record ; presence broadcast to in-instance peers | Plaza render begins ; player avatar materializes at spawn point near Keeper NPC ; Faction Banner Racks visible (auto-flag with `faction_id` per R7 + EC-23) ; Monument visible (dormant) ; ≥5 ambient NPCs (`MIN_AMBIENT_NPC_PER_CITY`) | Ambient soundscape onset (theme-bound — **OQ-2 deliverable, undefined → narr-3**) | HUD minimal (no menus open yet) | TR-WMS-005 spawn destination ; TR-WMS-031 (FT11 read-only, badge renders for player A) ; **narr-3** (theme-bound soundscape) |
+| **t = T_load + 0.5s** (EC-27 grace period) | (no input) | Server emits `first_visit_environmental_beat` trigger to client (one-shot, never refires) | First-visit environmental beat: **diegetic text fade-in + ambient lighting cue** per Section B (lines 90–93). Per Section B: "atmospheric only — ห้ามอธิบาย service / UI / wayfinding" | Bell ring (single soft strike — distinct from R8 Fragment Event bell) ? — **bell type/instrument theme-bound, undefined → narr-10 nice-to-have** | Non-popup text overlay, fade in/out (per UI Requirements line 959) ; **PLACEHOLDER TEXT in GDD: "คุณกำลังเข้าสู่ลานเมือง [City Name]..."** — **dev placeholder per narr-3** ; golden draft proposed: *"ลานแห่งนี้ไม่มีประตูกั้นฝ่าย — ระฆังจะบอกให้รู้เองว่าอะไรกำลังจะมา"* | Manual-WMS-01 (first-visit fantasy smoke check) ; **BLOCKER narr-3** (Section B sample line is dev placeholder) ; **narr-1** (per-city beat text from OQ-2 deliverable absent) ; EC-27 (texture pop-in grace — passes by waiting 0.5s) |
+| **t ≈ T+5s** (player observes plaza) | Idle ; player surveys environment ; mouse-look around plaza | Heartbeat to Player Record continues (EC-07 freshness window — `last_heartbeat` updated every 5s) | Player avatar idle ; plaza camera shows Keeper NPC ~8 units from spawn (visible per Section B placement spec) ; Faction Banner Racks decorated with current instance's faction mix (proportional — flagged by **narr-6 nice-to-have** as art direction note) ; Monument dormant ; cross-faction strangers visible (not in proximity yet) | Plaza ambient ; ambient NPC chatter | HUD minimal ; cross-instance counter visible at plaza entrance ("ลานนี้ X / ลานร่วม Y") | TR-WMS-031 ; **narr-9** ("ลานร่วม Y" label ambiguity) ; **narr-6 nice-to-have** (Banner Racks display proportional vs plurality) |
+| **t ≈ T+10s** (approaches Keeper) | Walk toward Keeper NPC | Server tracks proximity ; when player within Keeper interaction radius → emit `keeper_prompt_active` to client | Keeper NPC visible ; **interaction prompt highlights ("กดเพื่อพูดคุย" or similar — BUT the prompt phrasing has no narrative writer pass — narr-1)** | Footsteps ; Keeper has no voice line until interacted | Interaction prompt UI (button hint) appears | (no AC for Keeper interaction at GDD level) ; **BLOCKER #17** (Keeper info-dump anti-pattern — info-dump pattern is here, no rationale why this serves sanctuary tone) ; **BLOCKER narr-1** (Keeper has NO voice profile, NO demeanor brief, NO sample line at GDD level — writer fills the slot blind) |
+| **t ≈ T+11s** (clicks Keeper) | Click Keeper / press interact key | Server logs `keeper_first_interact(player_id, city_id)` ; one-shot flag `keeper_first_visit_consumed = true` written to Player Record (atomicity? — currently NOT specified in R12's 4-field atomicity contract → **BLOCKER #4 + #5 implication**) | City Menu UI fade-in ; Keeper avatar plays "open arms" or "gestures to menu" — **animation undefined**, no narrative directive | UI open sound ; Keeper voice line — **NONE SPECIFIED** | **City Menu opens** (1 of 17 UI surfaces — see UI Requirements line 944) ; menu shows 8 Universal Services per R2 | TR-WMS-002 (R2 Universal Services list) ; **BLOCKER #17** confirmed live (Keeper functions purely as a menu opener — info-dump pattern delivered) ; **BLOCKER narr-1** confirmed live (Keeper has zero voice in this critical first encounter — writer cannot author what GDD does not brief) |
+| **t ≈ T+12s** (browses City Menu) | Hover/scroll over service buttons | Server: no state mutation (read-only menu) | City Menu shows 8 service buttons: Hero/Skin, Equipment, Lobby Creation, Tournament Queue, Personal Dungeon, Party Formation, Social/Chat, Faction Profile | UI hover sounds | City Menu — 8 buttons | TR-WMS-002 (verify all 8 services available, no `available=false`) ; **qa-rec1** (TR-002 fragile count assertion — per qa-lead recommended) |
+| **t ≈ T+30s** (picks Tournament Queue) | Click "Tournament Queue" | Server records menu navigation (telemetry) ; opens Tournament Queue UI subsystem | Tournament Queue UI fade-in ; City Menu may stay or transition (UX spec deferred) | UI open sound | Tournament Queue UI (1 of 17 surfaces) — Casual / Ranked / Custom selection | TR-WMS-032 (FT13 mock — applies once player confirms queue) |
+| **t ≈ T+45s** (confirms Casual queue) | Click "Confirm Casual Queue" | Server sends `(player_id, queue_type=casual, origin_city_id="city_01")` to FT13 mock endpoint ; state transition `InCity` → `InCity+Queued` ; `origin_city_id = "city_01"` snapshot per EC-13 fallback chain | Tournament Queue UI confirms ; queue indicator appears on HUD ; player avatar idle | Confirmation cue | Queue indicator persistent on HUD | TR-WMS-032 ; ties to **BLOCKER #19** (OQ-7 — gamepad/touch confirmation requires different interaction model than this mouse-click flow) |
+| **t ≈ T+~5min** (while waiting, types in friend-search field) | Open friend list, type in search box | M1 surface — friend search active ; FT12 doesn't track this directly | Friend list UI open ; text input focused ; cursor blinking | Typing sounds | Friend list UI (M1 surface, FT12 displays) ; text input has focus | (no FT12-specific AC) ; sets up **BLOCKER #18** for next row |
+| **t ≈ T+~5min + ε** (FT13 emits match_found while text focused) | (no input — async event) | FT13 emits `match_found(player_id, match_id)` ; FT12 receives ; per EC-09: defer countdown popup up to 3s if input focused, but modal must fire by t = countdown_total − 8s (effective floor 8s) | Match-found countdown modal interrupts ; text input field auto-blurs per EC-09 | Match-found alert audio (interrupt-priority) | Match-found countdown modal (Priority 1 per UI hierarchy line 963) | **BLOCKER #18** (EC-09 auto-blur — what happens to text DRAFT in friend-search field? Discarded? Preserved? UNSPECIFIED in EC-09. Player loses unsent message with no recovery) ; TR for EC-09 exists but tests countdown timing, not draft fate |
+| **t ≈ T+~5min + 8s** (player accepts match) | Click "Accept" | Server: state → `InMatch` ; FT13 owns from here ; `origin_city_id = "city_01"` retained | Match-found modal closes ; loading into match | Match-load cue | Match loading screen (out-of-FT12-scope) | TR-WMS-032 |
+| **(t = match in progress — out of FT12 scope)** | — | — | — | — | — | — |
+| **t = match_end** (FT13 emits match_end) | (no input — auto-transition) | FT12 receives `match_end(player_id, match_id, return_payload)` ; state → `ReturningFromMatch` ; `return_payload` includes Fragment Event city list (active events) per C3 FT13 OUT row | Post-match screen fade-in | Post-match cue | Post-match screen — Fragment award, stats, "เดินทางไป [Event City]" shortcut button if Fragment Event active | TR for state transition |
+| **t = match_end + 30s** (auto-timeout to gohome) | Auto-timeout (per C3 ReturningFromMatch row: "auto-timeout (~30s)") | State → `EnteringCity` ; destination = `origin_city_id = "city_01"` ; allocate via D1 (likely same instance city_01_01 if still active) | Loading screen | Loading cue | Loading screen | TR-WMS-004 (R4 reconnect path — uses `last_city_id` which equals `origin_city_id` here) |
+| **t = match_end + ~35s** (returns InCity, second visit to city_01) | (no input — auto-spawn) | State `InCity` ; `last_city_id = "city_01"` (unchanged) ; presence broadcast | Player avatar appears at spawn point ; **Keeper NPC visible BUT interaction prompt INACTIVE per Section B "active เฉพาะ first-visit"** ; Monument dormant ; plaza ambient | Plaza ambient | HUD minimal | TR-WMS-004 ; **BLOCKER #12 — CRITICAL EXPOSURE** (post-first-visit City Menu access path UNSPECIFIED — Keeper prompt is gone, no documented hotkey, no persistent HUD button. Player has NO documented path to access Universal Services. Section B does not specify post-first-visit affordance) |
+| **t ≈ match_end + 40s** (player wants to queue again) | Looks for queue UI ; finds nothing obvious | Server: no relevant state | Player avatar idle ; no UI prompt ; player must walk to find some other landmark? — **WHICH landmark? GDD does not specify which of 8 fixed landmarks (line 891) is the menu entry post-first-visit** | — | **NO UI surface accessible without documentation** | **BLOCKER #12** confirmed load-bearing — second visit and beyond fail at this row. The GDD specifies 8 fixed landmarks per city (Tournament Queue Terminal, Personal Dungeon Gate, Equipment Alcove, Hero/Skin Shrine, etc.) but does not state whether each landmark opens its own service UI directly OR whether City Menu is required as a hub. If individual landmarks open their own service UI, player must memorize 8 spatial locations. If City Menu is required, no documented entry path exists post-first-visit |
 
-**Empty-cell blockers (to be filled during authoring):** TBD
+### Empty-cell blockers exposed by Scenario A
+
+| Blocker | Severity | Where exposed | What's missing in cell |
+|---|---|---|---|
+| **#4** R12 atomicity claim overstated | BLOCKING | t=0 (login spawn writes 4 fields atomically) | TR-WMS-037 tests "partial-success" response that PlayFab API does not emit ; AC is testing phantom failure mode ; first-visit is the FIRST place this contract is exercised |
+| **#5** R12 conflates Player Record + instance-pop CAS | BLOCKING | t=0 (D1 step 2 does both) | First-visit hits both stores in same atomic-feeling operation but they are different stores ; implementer trap surfaces here |
+| **#12** Post-first-visit City Menu access UNSPECIFIED | BLOCKING (pillar P5) | t=match_end+~35s through +40s | Keeper prompt gone ; no documented hotkey ; no persistent HUD button ; player cannot reach Universal Services on second visit and beyond ; **load-bearing for entire returning-player UX** |
+| **#17** Keeper NPC info-dump anti-pattern | BLOCKING (pillar) | t=T+10s, T+11s | Keeper functions as menu opener at the moment Section B promises sanctuary tone ; design rationale why info-dump serves sanctuary absent |
+| **#18** EC-09 auto-blur text draft fate UNSPECIFIED | BLOCKING (UX) | t=T+~5min+ε (match-found while typing) | Player's typed message in friend-search loses ; discard vs preserve not specified ; common UX failure |
+| **#19** OQ-7 platform decision no gate | BLOCKING | All input rows (T+10s, T+11s, T+30s, T+45s, etc.) | Every interaction assumes mouse+keyboard ; gamepad/touch shift requires substantive redesign ; provisional commitment becomes silent commitment |
+| **narr-1** Keeper voice profile absent | BLOCKING (pillar narrative) | t=T+10s, T+11s | At the moment most critical for sanctuary fantasy delivery, the only voiced character has no voice ; writer fills slot blind |
+| **narr-3** OQ-2 theme spec deliverable absent | BLOCKING (production) | t=T_load (ambient soundscape), t=T+0.5s (per-city beat text), t=T+0.5s (bell instrument), t=T+5s (Banner Rack faction visuals) | 4 cells require theme-bound content with no deliverable spec ; cascade-blocks Art + Audio + Asset Spec phases |
+| **qa-5** R5 Browse-mode no-travel no AC | BLOCKING (qa) | t=match_end (post-match shortcut "เดินทางไป Event City") | If Galaxy Map opens automatically post-match, Browse vs Travel mode rules apply but no AC verifies behavior |
+
+### Scenario A complete-row summary
+
+- **Total rows:** 17 (including out-of-scope match-in-progress placeholder)
+- **Rows with all 5 cells filled, no blocker reference:** 1 (t=T_load + 0.5s ambient soundscape minor — but still references narr-3)
+- **Rows with at least one empty/TBD/blocker-marked cell:** 16
+- **Distinct BLOCKING blockers exposed:** 9 (2 of which are Scenario A primary: #17 Keeper info-dump, #12 post-first-visit access — the other 7 are touched but better-exposed in other scenarios)
+- **AC coverage:** TR-WMS-002, 004, 005, 031, 032, 041 + Manual-WMS-01 — 7 ACs reference this scenario directly
+
+### Implication for revision pass (Phase 3)
+
+**Cluster 8 (UX/Onboarding Tone)** must be addressed in this scenario's terms:
+- **Blocker #17 + narr-1** are the same gap viewed from two angles: the Keeper has a mechanical role (open menu) but no narrative role (sanctuary keeper). Fix requires both: (a) voice profile + sample line at GDD level (in Section B or new dedicated subsection), (b) reframe Keeper's purpose from "tutorial NPC who hands out menu" to "ambient sanctuary keeper whose menu-opening is one of several offered services." This must precede UX spec authoring.
+- **Blocker #12** is structural and must be answered before Phase 3 even begins. Decision needed: do the 8 fixed landmarks each open their own service UI directly (no City Menu hub), OR does City Menu remain a hub with a persistent hotkey/HUD button? GDD currently implies the latter without specifying access. Recommend: explicit hotkey + persistent HUD pin, with Keeper as decorative-and-optional supplementary entry post-first-visit. This unblocks Scenario B which depends on this answer.
+- **Blocker #18** (EC-09 draft fate) is a one-line addition to EC-09: "text field content at time of auto-blur is [discarded / preserved as draft pending modal resolution]." Decide and document.
+- **Blocker #19** (OQ-7 platform gate) needs a producer decision before any UX spec phase begins, OR an explicit revision-pass budget for gamepad/touch deferred to a later sprint with cost.
+
+**Production gate (narr-3):** First-visit cannot ship without per-city environmental beat text (10 cities × ~50-word beat = ~500 narrative words minimum, but each must be tonally precise per Section B caravanserai metaphor). Currently unstaffed and uncosted. Producer notification needed parallel to the existing 80-writer-day vignette estimate.
 
 ---
 
@@ -236,7 +288,7 @@ Production-side narr-3 (OQ-2) must produce theme spec including: per-city ambien
 
 - [x] Skeleton created (2026-05-02)
 - [x] **Scenario C authored (2026-05-02)** — 16 rows, 9 distinct BLOCKING blockers exposed (Clusters 1, 4, 8 + qa + narr)
-- [ ] Scenario A authored
+- [x] **Scenario A authored (2026-05-02)** — 17 rows, 9 distinct BLOCKING blockers exposed (primaries: #17 Keeper info-dump, #12 post-first-visit access)
 - [ ] Scenario B authored
 - [ ] Scenario D authored
 - [ ] Scenario E authored
@@ -247,7 +299,10 @@ Production-side narr-3 (OQ-2) must produce theme spec including: per-city ambien
 
 ## Next session
 
-Author **Scenario A — First-Visit** (post-FT11 selection). Primary blocker coverage:
-Cluster 8 (Keeper info-dump tone — narr-1 voice profile gap), Section B onboarding
-beat (narr-3 theme spec dependency), EC-15 FT9 migration, EC-19 launch flood scenario
-(distinct from launch-spike Scenario E — single-player slice, not aggregate).
+Author **Scenario B — Return-Visit-No-Event**. Primary blocker coverage: Cluster 4
+(R3.1 vignette rotation freshness signal — exposed in C but more deeply in B since
+this is the canonical "habitual visitor" scenario ; R15 zero pull mechanics during
+non-event time when bell sequence is not the primary linger), Cluster 7 (D1 algorithm
+worked example for typical instance pack), and **continuation of #12 from Scenario A**
+(post-first-visit City Menu access — Scenario B is the first session that lives
+entirely in this state).
