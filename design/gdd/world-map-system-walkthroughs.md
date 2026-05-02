@@ -107,15 +107,62 @@ A scenario is complete when:
 
 ## Scenario C — Return-Visit-With-Event
 
-**Player POV:** Existing account, already `InCity` at city_nova for ~2 minutes browsing services. FT14 announces Fragment Event at city_nova. Player is in the same city as the announce.
+**Player POV:** Player A — `faction_id = "faction_b"`, `state = InCity`, in city_nova_01 (1 of 3 active instances of city_nova; pop = 87/150). Has visited city_nova twice before; last Anchor vignette seen = V2 (5 days ago). Currently browsing Hero/Skin Shrine UI (Universal Service R2). Two cross-faction strangers within `CITY_CHAT_RADIUS_UNIT = 15` units. No Fragment Event active anywhere at session start.
 
-**Time origin:** t=0 = FT14 emits `fragment_event_started(city_nova, evt_001)`.
+**Time origin:** t=0 = FT14 server-authoritative timestamp at which `fragment_event_started(city_id="city_nova", event_id="evt_001")` is emitted.
+
+**Knob context:** `BELL_SEQUENCE_DURATION_SECONDS = 30`, `R8_CROSS_INSTANCE_SKEW_BUDGET_SECONDS = 3`, `EVENT_ANNOUNCE_LEAD_SECONDS = 30`, `M11_FILTER_LATENCY_BUDGET_MS = 150`.
 
 | t | Player input/state | Server | Client visual | Audio | UI surface | AC ref / blocker |
 |---|---|---|---|---|---|---|
-| _TBD — to be authored in Scenario C session (next, per recommended order)_ |
+| **t < 0** (setup) | `InCity`, browsing Hero/Skin Shrine | Heartbeat to PlayFab Player Record (`current_instance_id = nova_01`, `last_heartbeat`) every 5s per EC-07 freshness window | Plaza ambient render; player avatar idle near Hero/Skin Shrine landmark; 2 strangers within 15u; ambient NPCs (≥5 per `MIN_AMBIENT_NPC_PER_CITY`) | Plaza ambient soundscape (theme-bound — **OQ-2 deliverable, currently undefined** → **narr-3**) | Hero/Skin Shrine UI open (1 of 8 Universal Services); cross-instance counter "ลานนี้ 87 / ลานร่วม 240" visible at plaza entrance | TR-WMS-002 (R2 Universal Services) ; **narr-3** (city theme spec) ; **narr-9** ("ลานร่วม Y" label ambiguous) |
+| **t = 0** | (no input) | FT14 emits `fragment_event_started(city_nova, evt_001)` to FT12 event-bus listener (Azure Function or Photon sidecar — **deferred to R13 ADR**) | (no change yet — propagation in flight) | (no audio yet) | (no UI change yet) | OQ-4 (FT14 schema TBD) ; OQ-5 (network pattern ADR) |
+| **t = 0 + δ₁** (δ₁ = Azure Function cold-start to first instance, ~200–800ms) | (no input) | FT12 fan-out begins: SignalR / Photon mgmt API push to all 3 instances of city_nova. **Mechanism deferred to R13 ADR.** Read-through cache (≤5s TTL) on instance roster → enumerate nova_01, nova_02, nova_03 | (no change on player A's screen yet — instance not yet notified) | — | — | **BLOCKER #2** (R8 skew lower bound 1s unachievable on Function Consumption due to cold-start) ; **qa-7** (production/qa env-spec absent) |
+| **t = T** (T ∈ [δ₁, 3s] per skew budget; representative T ≈ 0.6s for nova_01) | (no input) | nova_01 instance receives event ; server-side trigger of bell + Monument transform ; instance broadcasts bell to all 87 in-instance clients via Photon Fusion room channel | Monument transforms (particle + glow + height per Visual touch-points line 894) ; **Section B prescribes "ทุกคนในจัตุรัสหันมามองกัน" — NO avatar behavioral cue specified in R8** | Bell audio fires (diegetic 360-degree, **theme-bound bell sound — OQ-2 + audio direction undefined** → **narr-3, nice-to-have narr-10 instrument designation**) | Cross-instance counter highlights + animates ; Galaxy Map indicator (if open) flips to "active" | TR-WMS-009 (R8 — but **AC asserts ≤500ms not ≤3s skew**, see qa-6) ; **BLOCKER #1** (R8 collective moment undeliverable — counter ≠ moment, no avatar cue) ; **qa-6** (R8 cross-instance skew has no AC at 3s budget) ; **narr-1+10** (no instrument designation, no orchestration of moment) |
+| **t = T to T+0.3s** | (no input) | (no further state mutation) | Monument continues transform animation (visual prominence ramping) | Bell continues (30-degree sound profile per EC-26) | Cross-instance counter pulse animation in progress | EC-26 (per PR #17 sequencing rule: bell t=0, indicator t=+0.3s, Galaxy Map passive) ; TR-WMS-046 (PR #17 EC-26 sequencing AC) |
+| **t = T+0.3s** | (no input) | — | Galaxy Map indicator passive update (if Galaxy Map closed: indicator queued for next open) | — | Galaxy Map indicator badge for city_nova flips to "active" state per EC-26 sequencing | TR-WMS-046 |
+| **t = T to T+30s** (bell sequence window) | Player A may: (a) keep browsing service menu, (b) close menu and watch plaza, (c) try to chat | Photon Fusion room channel delivers Monument-prominence-active state ; if player chats: client → Photon host → Azure Function chat handler → M11 filter (≤150ms SLA) → broadcast to in-radius peers | Monument prominence stays high ; **other players' avatars: no specified behavioral change — players who would "look" at Monument have no animation directive** ; in-instance peer chat messages render in proximity bubble | Bell audio continues full duration (default 30s) ; ambient soundscape volume ducked? — **not specified** | Service menu still open if player did not close ; chat composer bottom of screen | TR-WMS-033 (M11 RadiusChat forward) ; **BLOCKER #1** (collective moment) ; **BLOCKER #3** (R8 SignalR bell vs Photon RadiusChat cross-channel ordering — chat referencing bell may arrive on peer screens before bell does) |
+| **t ≈ T+10s** (player A closes Hero/Skin menu, walks toward Monument) | Click "Close" on service menu ; walk input forward | Movement input handled by C3 Movement (out-of-FT12-scope) ; presence delta broadcast to in-instance peers | Service menu fades out ; player avatar walks toward plaza center ; Monument visible foreground | Footsteps + ambient ; bell still ringing | Service menu hides ; HUD minimal | (no AC — generic movement) ; **BLOCKER #11** (R15 secondary linger has zero pull — player walks toward Monument because of bell, not because R15 affordances drew them) |
+| **t ≈ T+15s** (player A passes ambient bench R15, ignores it) | Walk past bench (R15 affordance #1) | Server registers proximity to affordance ; no state mutation since R15 has no rewards (TR-WMS-039) | Bench renders (cosmetic only) ; no interaction prompt unless player explicitly stops | Footsteps continue | None | TR-WMS-039 (R15 no-reward) ; **BLOCKER #11** (no pull — bench has no discoverability signal during bell window per ux-designer rec #11) |
+| **t ≈ T+22s** (player A stands at Monument, looks up at it) | Idle at Monument ; no input | (no server state — Monument is one-way display per R8 boundary) | Monument visual prominence at peak ; player avatar idle | Bell audio still active (last ~8s of window) | None — Monument is not interactable | **BLOCKER #1** (no designed shared-witness moment — player A standing alone reading prominence ; "ทุกคนหันมามอง" requires others doing the same simultaneously, but no cue commands their avatars to do so) |
+| **t = T+30s** (bell sequence end) | Idle | Server emits internal `bell_sequence_complete` (no FT14 round-trip — local end of fan-out window) | Monument retains "active visual" (no further transform — stays glowing per R8 step 3) | Bell audio fades out ; ambient soundscape returns to normal volume | Cross-instance counter pulse animation stops | TR-WMS-009 partial coverage (asserts visual active) ; **qa-6** still applies — no AC for "Monument stays after bell" timing |
+| **t = T+30s + ~5s** (player A approaches Faction Anchor — chronicle of war for city_nova) | Walk to Anchor landmark | Client requests current Anchor vignette ID from server (per R3.1 — server-clock UTC rotation) | Anchor visual present ; vignette panel UI opens with current text (= V3 if rotation advanced past V2 ; could still be V2 if within current 7-day window) | Anchor ambient (theme-bound — undefined) | Anchor vignette panel | TR-WMS-036 (R3.1 rotation) ; **BLOCKER #10** (no per-player seen-state ; if last visit was 5 days ago and rotation is 7 days, player sees same V2 — no freshness signal indicates whether content changed) ; **narr-3** (vignette content scope OQ-3 unstaffed) |
+| **t ≈ T+45s** (player A interacts with Anchor — reads vignette V2 again) | Click Anchor read | Server logs `anchor_interacted(player_id, city_id, vignette_id)` for telemetry | Vignette text panel renders ; lore content displays | Voiceover? — **not specified** ; ambient | Vignette panel persistent until close | TR-WMS-036 ; **BLOCKER #10** confirmed (player has no signal that vignette is unchanged from prior visit ; repeat-visit hook fails silently) |
+| **t ≈ T+90s** (player A closes Anchor, decides to queue Tournament) | Click Tournament Queue terminal landmark → opens Tournament Queue UI | Player UI request → FT13 endpoint forecast (FT13 undesigned — mock response). Confirm queue → state transition `InCity` → `InCity+Queued` ; `origin_city_id = "city_nova"` snapshot | Service menu opens (Tournament Queue UI subset) ; queue confirmation dialog | Standard UI sounds | Tournament Queue UI surface ; subsequent confirmation modal | TR-WMS-032 (FT13 queue handoff mock) ; **qa-5** (R5 Browse-mode no-travel has no AC — but doesn't apply here since player queueing not travelling) |
+| **t = T+90s+** (player remains InCity+Queued, Monument still glowing) | Idle in Tournament queue | Heartbeat continues ; if FT13 emits `match_found` → state → `InMatch` | Plaza render continues ; Monument retains active visual ; queue indicator on HUD | Ambient ; queue ambient cue if any | Queue indicator persistent | TR-WMS-032 ; future FT13 lifecycle |
+| **t = T + ~3600s** (event ends per FT14 duration — out of FT12 control) | (player may be in match by now ; if still InCity+Queued, observes event end) | FT14 emits `fragment_event_ended(city_nova, evt_001)` ; FT12 broadcasts to all instances ; Monument resets | Monument visual returns to dormant state (no particle, no glow) | Reset cue? — **not specified** ; could be subtle bell-fade or silence | Galaxy Map indicator clears for city_nova ; cross-instance counter no special state | TR-WMS-009 partial (Monument reset) ; **qa-9** (TR-048 timing tolerance untestable without instrumentation hook spec) ; OQ-4 (FT14 ended-event schema) |
 
-**Empty-cell blockers (to be filled during authoring):** TBD
+### Empty-cell blockers exposed by Scenario C
+
+This scenario walk surfaces the following review-log blockers as load-bearing — i.e., the GDD as-written does not deliver the moment without them being closed:
+
+| Blocker | Severity | Where exposed | What's missing in cell |
+|---|---|---|---|
+| **#1** R8 collective moment undeliverable | BLOCKING (pillar P3) | t=T (bell), t=T+22s (player at Monument) | Avatar behavioral cue at bell time ("ทุกคนหันมามองกัน" has no animation directive) ; Monument has no shared-witness mechanic (player standing alone reading prominence) |
+| **#2** R8 skew lower bound 1s unachievable | BLOCKING | t=0+δ₁ (Function fan-out) | Cold-start budget exceeds 1s lower bound ; ADR must constrain to mechanism-feasible range |
+| **#3** R8 cross-channel ordering undefined | BLOCKING | t=T to T+30s (chat about bell) | If SignalR bell + Photon chat use different real-time channels, peer Y sees chat referencing bell before peer Y receives bell event ; no constraint preventing this |
+| **#10** R3.1 freshness signal absent | BLOCKING (pillar P5) | t=T+30s+5s (Anchor approach) | Habitual visitor sees same vignette ; no UI indicator distinguishes "new since last visit" from "unchanged" — repeat-visit hook fails silently |
+| **#11** R15 zero pull mechanics | BLOCKING (pillar P5) | t=T+15s (walks past bench) | No discoverability signal during bell window ; bench passed without acknowledgment ; Section B "linger" intent has no behavioral incentive |
+| **qa-6** R8 cross-instance skew no AC | BLOCKING (qa) | t=T (bell fire) | TR-WMS-009 asserts ≤500ms intra-instance ; no AC asserts ≤3s cross-instance skew budget |
+| **qa-9** TR-048 timing tolerance untestable | BLOCKING (qa) | t=T+0.3s (sequencing per EC-26), t = event end | EC-26 specifies bell→indicator t=+0.3s sequencing but no instrumentation hook to verify ±50ms client-side |
+| **narr-1** Keeper voice profile (peripheral here) | BLOCKING (pillar narrative) | t<0 (ambient) — Keeper as ambient persistent presence has no voice spec | Even non-first-visit, Keeper is observable in plaza ; voice profile absence means writers cannot author ambient lines |
+| **narr-3** OQ-2 theme spec deliverable absent | BLOCKING (production) | t<0 (ambient soundscape), t=T (bell sound), t=T+30s+5s (Anchor ambient), t=T+~3600s (event-end cue) | 4 separate cells require theme-bound audio/visual content that does not yet have a deliverable spec ; 3 production departments (audio, art, narrative) blocked |
+
+### Scenario C complete-row summary
+
+- **Total rows:** 16
+- **Rows with all 5 cells filled, no blocker reference:** 0 (every row references at least one blocker, AC, or OQ — expected for a system in MAJOR REVISION state)
+- **Rows with at least one empty/TBD/blocker-marked cell:** 16
+- **Distinct BLOCKING blockers exposed:** 9 (cluster spread: 1, 4, 8 + qa + narr)
+- **AC coverage:** TR-WMS-009 (R8), TR-WMS-033 (M11), TR-WMS-039 (R15), TR-WMS-036 (R3.1), TR-WMS-046 (EC-26), TR-WMS-032 (FT13 mock) — **6 of 49 ACs reference this scenario directly** ; revised AC suite from qa-lead would add TR-052 (cross-instance skew) for full coverage
+
+### Implication for revision pass (Phase 3)
+
+To close Scenario C, Cluster 1 (R8) must address all three sub-items: (1) avatar behavioral cue specification at bell time — small addition to R8 step 1 ; (2) skew range mechanism-bound — ADR constraint plus knob range adjustment ; (3) cross-channel ordering constraint — ADR constraint with naming.
+
+Cluster 4 (linger/repeat-visit) must address Blockers #10 + #11 with player-facing affordances, not just internal mechanisms — freshness UI signal for vignette change ; pull mechanic for R15 (e.g., line-of-sight environment placement minimum from spawn point per ux-designer rec #11).
+
+Production-side narr-3 (OQ-2) must produce theme spec including: per-city ambient soundscape, per-city ritual instrument for bell, per-city Anchor ambient, per-city event-end cue. This is 4 distinct audio briefs per city × 10 cities = 40 audio direction specs as a derived deliverable from OQ-2 — currently unstaffed and uncosted.
 
 ---
 
@@ -188,7 +235,7 @@ A scenario is complete when:
 ## Status / Progress
 
 - [x] Skeleton created (2026-05-02)
-- [ ] Scenario C authored
+- [x] **Scenario C authored (2026-05-02)** — 16 rows, 9 distinct BLOCKING blockers exposed (Clusters 1, 4, 8 + qa + narr)
 - [ ] Scenario A authored
 - [ ] Scenario B authored
 - [ ] Scenario D authored
@@ -200,5 +247,7 @@ A scenario is complete when:
 
 ## Next session
 
-Author **Scenario C — Return-Visit-With-Event** (highest blocker density: Cluster 1
-R8 bell collective moment + R3.1 freshness + R15 secondary linger + EC-26 sequencing).
+Author **Scenario A — First-Visit** (post-FT11 selection). Primary blocker coverage:
+Cluster 8 (Keeper info-dump tone — narr-1 voice profile gap), Section B onboarding
+beat (narr-3 theme spec dependency), EC-15 FT9 migration, EC-19 launch flood scenario
+(distinct from launch-spike Scenario E — single-player slice, not aggregate).
