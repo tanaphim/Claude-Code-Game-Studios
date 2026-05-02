@@ -220,15 +220,70 @@ Production-side narr-3 (OQ-2) must produce theme spec including: per-city ambien
 
 ## Scenario D — Cross-Faction-Party Formation
 
-**Player POV:** Player A (`faction_id = "faction_b"`) is `InCity` at city_astra. Friend B (`faction_id = "faction_d"`) is online in city_solis. Player A invites Player B to party, B accepts and travels to city_astra. They form a 2-person Casual Tournament queue.
+**Player POV (dual):** Player A — `faction_id = "faction_b"`, state = `InCity` at city_astra_01 (pop = 87/150). Player B — `faction_id = "faction_d"`, state = `InCity` at city_solis_02 (pop = 92/150). A and B are existing friends (M1 friend list). Both have already finished first-visit (Keeper prompt inactive — so this scenario also depends on **BLOCKER #12** resolution from Scenario A).
 
 **Time origin:** t=0 = Player A clicks "Invite to Party" on Player B's friend list entry.
 
+**Knob context:** `CITY_INSTANCE_SOFT_CAP = 150`, `CITY_INSTANCE_HARD_CEILING_RATIO = 1.2` (hard ceiling = 180), `R16_ACKNOWLEDGE_RADIUS_UNIT` and `R16_ACKNOWLEDGE_COOLDOWN_SECONDS = 60` per PR #17 G.5, `CROSS_FACTION_PARTY_MATCH_PCT_ALERT` per PR #17 R9.1 telemetry.
+
+**Critical context:** This scenario is the canonical exposure of **OQ-10 / Cluster 5** — R9 explicitly allows cross-faction party but Fragment routing per `player.faction_id` punishes the social behavior R9 enables. PR #17 added R9.1 telemetry but does NOT close the design issue.
+
 | t | Player input/state | Server | Client visual | Audio | UI surface | AC ref / blocker |
 |---|---|---|---|---|---|---|
-| _TBD — to be authored in Scenario D session_ |
+| **t < 0** (setup) | A `InCity` city_astra_01, B `InCity` city_solis_02 ; both via M1 friend list see each other online | Heartbeats to PlayFab (EC-07 freshness window) | Each in own plaza ; cross-faction strangers in their respective plazas | Plaza ambient (theme-bound — **narr-3**) | A's HUD: friend list visible (M1 surface) showing B online with city indicator | (no AC — setup) ; **BLOCKER #12** prerequisite (both A and B accessing service menus post-first-visit) |
+| **t = 0** (A clicks "Invite to Party") | Click invite | M1 server processes party-create + invite ; party state: leader=A, members=[A, B], destination=null ; emits invite event to B's session | Friend list shows "invite sent" indicator | UI confirmation cue | A's friend list updated | (M1-owned AC, out-of-FT12-scope) ; **BLOCKER #19** (gamepad/touch invite flow differs) |
+| **t ≈ +2s** (B receives invite) | (no input) | M1 server delivers invite event to B's client via SignalR / Photon | A invite banner slides in on B's HUD ; banner shows A's faction badge (faction_b) per R7 | Invite cue (M1-owned) | Party invite banner (1 of 17 surfaces — line 957, "30s timeout") | (M1-owned) ; banner is FT12 UI consumer surface |
+| **t ≈ +5s** (B accepts) | Click accept on banner | M1 commits party formation ; both clients receive `party_formed(leader=A, members=[A,B])` event | Party UI on both HUDs (M1 surface) ; banner closes on B | UI accept cue | Party panel persistent on both HUDs | (M1-owned) ; FT12 reads party state for D1 step 1 co-location |
+| **t ≈ +6s** (B opens Galaxy Map to travel) | Press Galaxy Map hotkey | Server: no state mutation (read-only browse) | Galaxy Map overlay opens for B | UI overlay open cue | Galaxy Map overlay (1 of 17 surfaces, line 943) — **opens in Browse mode by default per R5 (PR #17 R5.1 refines)** | TR-WMS-050 (R5 Browse mode does not trigger travel — needed per **qa-5** ; AC pending) ; TR-WMS-043 (PR #17 R5.1 dual-purpose interrupt) |
+| **t ≈ +7s** (B toggles to Travel mode) | Click "เลือกเมืองปลายทาง" toggle button | Server: no state mutation | Mode toggle visible ; header reads "กำลังเลือกเมืองปลายทาง" | UI mode-change cue | Galaxy Map header changes ; city nodes now travel-targets | TR-WMS-051 (Travel mode requires explicit toggle — needed per **qa-5**) |
+| **t ≈ +8s** (B clicks city_astra node) | Click city_astra | Server presents confirm dialog (R5 mandate) | Confirm dialog overlays Galaxy Map | UI dialog cue | Confirm dialog: "เดินทางไป city_astra ?" | (R5 confirm dialog AC implicit in TR-WMS-006) |
+| **t ≈ +9s** (B confirms travel) | Click confirm | Server: state `InCity` → `EnteringCity` for B ; D1 runs for B with party_size=2 (party-aware co-location) ; Step 1 co-location: party member A is `state == InCity`, `last_heartbeat ≤ 5s`, `current_instance_city_id == city_astra`, `current_instance_id == city_astra_01` ✓ → target = city_astra_01 ; CAS check: `pop=87+1=88 ≤ hard_ceiling=180` ✓ → CAS success → assign city_astra_01 | Galaxy Map fades out ; loading screen | Loading cue + GALAXY_MAP_TRANSITION_SECONDS=2.5s | Loading screen | TR-WMS-006 (R5 transition timing) ; TR-WMS-010 (R9 co-location) ; **BLOCKER #15** lurking — at higher pop, D1 `break` (line 520 of GDD) conflates CAS-conflict retry with ceiling-exceeded ; in this row CAS succeeds so blocker not exposed but logic path is fragile |
+| **t ≈ +11.5s** (B's scene loads) | (auto) | State `InCity` for B ; presence broadcast to city_astra_01 instance peers | B's avatar materializes in city_astra_01 near A | Plaza ambient soundscape (theme-bound — **narr-3**) | HUD shows B in city_astra ; party panel updates with co-location indicator | TR-WMS-010 verifies `current_instance_id` of B matches A |
+| **t ≈ +13s** (A and B meet visually) | A and B are now in same instance ; not yet in proximity chat range | Server tracks proximity for chat eligibility | A's faction_b badge + B's faction_d badge both visible to each other and to in-instance peers ; Faction Banner Racks update to include both factions per R7 + EC-23 | — | Both badges render in-world | TR-WMS-031 (FT11 read-only) ; **narr-6 nice-to-have** (Banner Racks now show both factions — does this read as "neutrality" or as "two factions claiming space"?) |
+| **t ≈ +15s** (a stranger of faction_a in plaza performs R16 toward A) | (no input from A or B — stranger does it) | M1-routed action ; M11 opt-out check ; if not opted out → emit `r16_acknowledge(source, target)` | Stranger plays acknowledge animation ; A receives directional indicator that stranger acknowledged her ; **animation working name "Traveler's Salute" — narr-8 flags military framing inappropriate ; correct verb register: นบ / วันทา / แสดงคารวะ ; Thai working name "ผ่านลาน" is correct** | Acknowledge audio cue (theme-bound — undefined) | R16 indicator on A's HUD | TR-WMS-044 (R16 primitive) ; TR-WMS-045 (R16 cooldown — Logic+Visual conflated per qa-rec) ; TR-WMS-049 (R16 opt-out passthrough) ; **narr-8** (R16 vocabulary: "Salute" → replace with bow/nod register before UX spec) |
+| **t ≈ +20s** (A opens City Menu to queue Tournament) | Press City Menu hotkey ?? | Server: read-only menu open | City Menu UI (Tournament Queue button highlighted) | UI open cue | City Menu — 8 services | **BLOCKER #12** confirmed exposure — A presses "City Menu hotkey" but GDD does not specify any hotkey ; if Scenario A blocker #12 is unresolved, this row fails. Scenario D depends on Scenario A's #12 fix |
+| **t ≈ +22s** (A picks Tournament Queue, selects party-2 Casual) | Click Tournament Queue → select Casual → "Include party (2)" toggle | Server: opens Tournament Queue UI ; party-aware queue mode | Tournament Queue UI ; party indicator | UI cue | Tournament Queue UI surface | TR-WMS-032 (FT13 mock — but party-aware queue may need separate AC ; coverage gap per qa-lead pattern) |
+| **t ≈ +25s** (A confirms 2-person Casual queue) | Click confirm | Server sends `(player_id_A, player_id_B, queue_type=casual_party_2, origin_city_id="city_astra")` to FT13 mock ; both transition `InCity` → `InCity+Queued` ; both `origin_city_id = "city_astra"` snapshot (B's origin is now city_astra, NOT city_solis where B started) | Both HUDs show queue indicator | Confirmation cue | Queue indicator persistent on both HUDs | TR-WMS-032 ; **note origin_city_id semantics:** B's `last_city_id` was city_solis at session start, became city_astra after travel ; B's `origin_city_id` snapshot at queue = city_astra. After match end (t = match_end + 30s), B will return to city_astra, NOT city_solis |
+| **t ≈ +5min** (match found) | (no input — async) | FT13 emits `match_found` for both ; same priority hierarchy as Scenario A ; if either was typing → EC-09 auto-blur applies → **BLOCKER #18** | Match-found modal on both HUDs | Match-found alert | Match-found countdown modal | TR for state transition ; **BLOCKER #18** (EC-09 auto-blur draft fate UNSPECIFIED — applies to both A and B independently if either was typing) |
+| **t ≈ +5min+8s** (both accept) | Both click Accept | State → `InMatch` for both | Match loading | Match-load cue | Match loading screen | TR-WMS-032 |
+| **(t = match in progress — out of FT12 scope)** | A and B on same Casual team ; A from faction_b, B from faction_d | — | — | — | — | — |
+| **t = match_end** (FT13 emits match_end) | (no input) | FT12 receives `match_end` for both ; **CRITICAL — Fragment routing logic per OQ-10:** A's match contribution routes to faction_b pool, B's match contribution routes to faction_d pool. R9.1 telemetry (PR #17) increments `CROSS_FACTION_PARTY_MATCH_PCT_ALERT` counter. **OQ-10 DESIGN ISSUE LIVE: if A is high-skill, A's wins are diluting A's own faction_b Fragment pool because A is partying with faction_d B. R9 social behavior is mechanically punished by R9-Fragment-routing rule.** | Post-match screen | Post-match cue | Post-match screen — Fragment award per individual faction routing | TR for state transition ; **BLOCKER #13 — CRITICAL EXPOSURE** (OQ-10 Fragment routing perverse incentive — live in current rules) ; TR-WMS-047 (R9.1 telemetry — PR #17, but only telemetry not fix) |
+| **t = match_end + 30s** (auto-return) | (no input — auto) | Both transition `ReturningFromMatch` → `EnteringCity` ; destination = `origin_city_id = "city_astra"` for BOTH (B's city_solis "home" is no longer the return city) ; both spawn in city_astra_01 | Loading screen for both | Loading cue | Loading screen | TR-WMS-004 ; note for production: B may be confused that they returned to A's city, not their own — **UX risk worth flagging in /ux-design post-match-screen** |
+| **t = match_end + 35s** (both back at city_astra) | Both `InCity` city_astra_01 ; B is away from B's pre-party home city_solis | Server presence broadcast | Both back in plaza ; can re-queue or travel separately | Plaza ambient | HUD minimal | TR-WMS-004 ; the system has no UX affordance for "B is now far from home" ; if B wants to return to city_solis, B must Galaxy Map travel back manually |
 
-**Empty-cell blockers (to be filled during authoring):** TBD
+### Empty-cell blockers exposed by Scenario D
+
+| Blocker | Severity | Where exposed | What's missing in cell |
+|---|---|---|---|
+| **#12** Post-first-visit City Menu access (cascade from A) | BLOCKING | t=+20s (A opens City Menu) | Same as Scenario A — A's queue flow requires hotkey/HUD access that GDD does not specify |
+| **#13** OQ-10 Fragment routing perverse incentive | BLOCKING (pillar P3 vs P4) | t=match_end | Live in current GDD rules ; R9 enables cross-faction Casual social behavior ; Fragment routing rule punishes that behavior ; PR #17 R9.1 telemetry monitors but does not fix ; FT13/FT14 design must close — but FT13/FT14 are undesigned |
+| **#15** D1 break/CAS-conflict path (lurking, not directly hit here) | BLOCKING (latent) | t=+9s (D1 step 1 CAS) | In Scenario D's setup pop=87, CAS succeeds trivially. At higher pop near hard_ceiling 180, D1 `break` (line 520) conflates CAS-conflict retry with ceiling-exceeded ; co-location can silently fail at step 2 with no signal. Scenario D shows the happy path ; the failing path requires Scenario E aggregate exposure |
+| **#18** EC-09 auto-blur text draft fate | BLOCKING (UX) | t=+5min (match-found while either typing) | Same gap as Scenario A — applies independently to both party members |
+| **#19** OQ-7 platform decision | BLOCKING | All input rows from t=0 onward | Every interaction (invite click, banner accept, Galaxy Map toggle, hotkey for City Menu, queue confirm) assumes mouse+keyboard ; gamepad/touch shift requires substantial redesign |
+| **narr-3** OQ-2 theme spec | BLOCKING (production) | t=+11.5s (city_astra plaza ambient), t=+15s (acknowledge audio cue), Banner Rack visuals | Theme-bound content for B's first arrival at A's city ; cross-city travel is the moment city-to-city tonal contrast is most visible to player |
+| **narr-6** nice-to-have | NICE-TO-HAVE | t=+13s (Banner Racks show both factions) | Plurality vs proportional faction display matters most when 2+ factions co-present in small instance |
+| **narr-8** R16 "Salute" military framing | RECOMMENDED | t=+15s (R16 acknowledge animation) | Working name "Traveler's Salute" violates Section B prohibition on military vocabulary ; replace with นบ/วันทา/แสดงคารวะ register before UX spec |
+| **qa-5** R5 Browse-mode no-travel AC | BLOCKING (qa) | t=+6s, +7s, +8s (Galaxy Map mode toggle sequence) | Three rows of Galaxy Map mode behavior, no AC verifies Browse mode does NOT trigger travel ; needs TR-WMS-050/051 |
+
+### Scenario D complete-row summary
+
+- **Total rows:** 19 (including out-of-scope match-in-progress)
+- **Rows with all 5 cells filled, no blocker reference:** 0
+- **Rows with at least one empty/TBD/blocker-marked cell:** 19
+- **Distinct BLOCKING blockers exposed:** 6 (Cluster 5 primary: #13 ; Cluster 8 + qa + narr secondary)
+- **AC coverage:** TR-WMS-006, 010, 031, 032, 004, 044, 045, 047, 049 + TR-WMS-043 (PR #17 R5.1) — 10 ACs reference this scenario directly (denser AC coverage than C/A — reflects more cross-system interactions)
+
+### Implication for revision pass (Phase 3)
+
+**Cluster 5 (OQ-10 Fragment routing) must be addressed before R9 ships:**
+- Decision required: (a) Cross-faction Casual parties get Fragment routing exception (split evenly or to leader's faction) — closes perverse incentive but adds FT13/FT14 design complexity ; (b) Cross-faction party formation restricted to non-Fragment-bearing modes — preserves pillar but limits R9 social value ; (c) Accept dilution as documented design trade-off — must be explicit in GDD with rationale (e.g., "P3 social value > P4 mechanical purity")
+- Whatever decision: GDD R9 must state the rule explicitly. Currently R9 enables the behavior and OQ-10 defers the resolution to undesigned FT13/FT14 — this is a live contradiction in shipping rules.
+
+**Cluster 7 #15 (D1 break path)** is latent in Scenario D but load-bearing in Scenario E. Fix the `break` to split CAS-conflict retry from ceiling-exceeded paths, with explicit signal `party_co_location_ceiling_exceeded` firing on the latter. (Carries to Scenario E.)
+
+**narr-8 R16 vocabulary** is a one-line fix in R16 spec — replace working name "Traveler's Salute" with "Wayfarer's Nod" or "Courtyard Bow" (English) ; preserve "ผ่านลาน" (Thai). This must precede UX spec animation authoring.
+
+**Production note:** B returning to A's city after match (not B's pre-party home) is a UX consequence of `origin_city_id` semantics. Not a blocker, but worth flagging to /ux-design post-match-screen — possible improvement: post-match dialog offers "stay at city_astra (default)" vs "return to my last city (city_solis)" as explicit choice. Currently silent default.
 
 ---
 
@@ -289,8 +344,8 @@ Production-side narr-3 (OQ-2) must produce theme spec including: per-city ambien
 - [x] Skeleton created (2026-05-02)
 - [x] **Scenario C authored (2026-05-02)** — 16 rows, 9 distinct BLOCKING blockers exposed (Clusters 1, 4, 8 + qa + narr)
 - [x] **Scenario A authored (2026-05-02)** — 17 rows, 9 distinct BLOCKING blockers exposed (primaries: #17 Keeper info-dump, #12 post-first-visit access)
-- [ ] Scenario B authored
-- [ ] Scenario D authored
+- [x] **Scenario D authored (2026-05-02)** — 19 rows, 6 distinct BLOCKING blockers exposed (primary: #13 OQ-10 Fragment routing perverse incentive — pillar P3-vs-P4)
+- [ ] Scenario B authored (depends on #12 resolution)
 - [ ] Scenario E authored
 - [ ] Blocker → Walkthrough Mapping verified against authored content
 - [ ] Phase 2 complete; Phase 3 (cluster-by-cluster GDD revision) can begin
@@ -299,10 +354,14 @@ Production-side narr-3 (OQ-2) must produce theme spec including: per-city ambien
 
 ## Next session
 
-Author **Scenario B — Return-Visit-No-Event**. Primary blocker coverage: Cluster 4
-(R3.1 vignette rotation freshness signal — exposed in C but more deeply in B since
-this is the canonical "habitual visitor" scenario ; R15 zero pull mechanics during
-non-event time when bell sequence is not the primary linger), Cluster 7 (D1 algorithm
-worked example for typical instance pack), and **continuation of #12 from Scenario A**
-(post-first-visit City Menu access — Scenario B is the first session that lives
-entirely in this state).
+Author **Scenario E — Launch-Spike** (server-aggregate view). Primary blocker
+coverage: **Cluster 2 (R12 PlayFab CAS / atomicity)** + **Cluster 3 (capacity
+math — EC-19 prewarm coverage, EC-14 ghost slots, PlayFab API rate limit)** +
+Cluster 6 (D2 5s tick execution environment) + Cluster 7 #15 D1 break path
+(load-bearing here, latent in D). Differs from Scenarios A/C/D in being aggregate
+(5000 simultaneous players) rather than single-player slice — surfaces capacity
+issues only visible at scale.
+
+Then **Scenario B — Return-Visit-No-Event** last (depends on #12 resolution from
+Scenario A — Scenario B's entire session lives in post-first-visit state, so
+authoring before #12 has a proposed fix would produce a placeholder-heavy table).
