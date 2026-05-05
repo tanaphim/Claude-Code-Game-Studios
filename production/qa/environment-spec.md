@@ -50,14 +50,25 @@
 | Concurrent room ceiling | **TBD** (recommend ≥ 50 rooms per starter city) | Covers prewarm + overflow + EC-04 idle-teardown grace |
 | Bandwidth per room | **TBD** | Verify against R9 hard ceiling 180 players × per-player update rate (network-programmer round 2 recommended item) |
 
-## Azure Functions Tier (cross-references Cluster 6 #14)
+## Azure Functions Tier (closes Cluster 6 #14 — pinned per R13.1)
 
 | Field | Value | Notes |
 |---|---|---|
-| **Functions tier** | **TBD — Cluster 6 #14 unresolved** | Consumption tier has 200–800ms cold-start that violates D2 5s tick budget per Scenario E exposure ; recommend **Premium + pre-warmed** ; producer cost approval required ; binding decision needed before TR-035 + Scenario E perf ACs execute |
-| Pre-warmed instance count | **TBD** (recommend ≥ 3 if Premium chosen) | Eliminates cold-start latency for D2 scheduler tick |
-| Region (must match Azure region above) | **TBD** | Co-location constraint per network-programmer |
-| Function timeout | **TBD** (recommend 30s matching `ENTERING_TIMEOUT_SECONDS`) | Must not race EC-18 timeout |
+| **Functions tier** | **Premium (EP1 minimum) — PINNED per R13.1** | Closes Cluster 6 #14 + Cluster 1 #2 (same cold-start mechanism). Consumption tier explicitly forbidden by R13.1 binding constraint. Producer cost approval **PENDING** but design decision committed |
+| Pre-warmed instance count | **3 (minimum) per region** | R13.1 binding ; covers D2 scheduler + R8 fan-out + general CRUD with no contention at steady state |
+| Region (must match Azure region above) | **Same as Azure region row above** | Co-location constraint with PlayFab + Photon + Redis per R13.1 |
+| Function timeout | **30s** matching `ENTERING_TIMEOUT_SECONDS` | Must not race EC-18 timeout |
+| Scale-out limits | EP1 default (per Azure plan tier docs) | Verify against launch-mode peak load (5000 reqs/10s × 3 PlayFab calls + Redis CAS calls) |
+
+## Redis Tier (closes Cluster 2 #5 + #6 — pinned per R13.1)
+
+| Field | Value | Notes |
+|---|---|---|
+| **Redis SKU** | **Azure Cache for Redis Premium P1 (minimum) — PINNED per R13.1** | Closes Cluster 2 #5 (instance population CAS store named) + #6 (cache layer named single-shared instance). Standard SKU has insufficient throughput for 500 RPS CAS; Premium provides clustering + replication for production resilience |
+| Region (must match Azure region above) | **Same as Azure region row above** | Co-location constraint with Functions Premium per R13.1 — sub-ms latency depends on it |
+| Keyspace separation | `inst-pop:*` (no TTL, CAS) + `cache:*` (TTL ≤ 5s, read-through) | Per R12 + R13.1 ; eviction policy `volatile-lru` (only TTL'd keys evict) |
+| Lua-script CAS pattern | EVAL with `KEYS[1]` = pop key, `ARGV[1]` = party_size, `ARGV[2]` = hard_ceiling | Atomic read-check-write within single Redis op ; verified by TR-WMS-038a/b |
+| Producer approval | **PENDING** (cost) | P1 SKU price differential must be approved ; ops playbook must include Redis health-check |
 
 ## Network Bandwidth & Connection Limits
 
@@ -92,13 +103,15 @@
 ## Producer Decisions Outstanding
 
 1. **PlayFab plan tier upgrade** (cost approval) — minimum "Indie Studio" tier (~2500 calls/s) per FT12 Cluster 3 #9
-2. **Azure Functions Premium tier** (cost approval) — required by FT12 Cluster 6 #14 for D2 5s tick + R8 1s skew lower bound
-3. **Photon Fusion 2 plan tier** (cost approval) — must accommodate launch-mode CCU
-4. **Hardware tier for staging** — match production class so that TR-034 results are meaningful baseline
-5. **Launch-mode playbook authoring** (ops) — codified switch from steady-state to `LAUNCH_MODE_PREWARM_COUNT=35` ; revert process ; verification checklist
+2. ~~Azure Functions Premium tier~~ **PINNED per R13.1 (Phase 3 Cluster 6 closure 2026-05-05)** — cost approval still pending but design decision committed
+3. ~~Redis Premium SKU~~ **PINNED per R13.1 (Phase 3 Cluster 2 closure 2026-05-05)** — cost approval still pending but design decision committed
+4. **Photon Fusion 2 plan tier** (cost approval) — must accommodate launch-mode CCU
+5. **Hardware tier for staging** — match production class so that TR-034 results are meaningful baseline
+6. **Launch-mode playbook authoring** (ops) — codified switch from steady-state to `LAUNCH_MODE_PREWARM_COUNT=35` ; revert process ; verification checklist
 
 ## Change Log
 
 | Date | Change | Trigger |
 |---|---|---|
 | 2026-05-05 | Initial stub authored | FT12 Phase 3 Cluster 3 revision (closes qa-7 + qa-8 partial — TBD fields must be filled by producer before perf ACs execute) |
+| 2026-05-05 | Functions tier + Redis SKU pinned (Premium for both) | FT12 Phase 3 Cluster 6 + Cluster 2 paired pass — R13.1 binding constraint authored ; producer cost approval still required but design choice committed |
