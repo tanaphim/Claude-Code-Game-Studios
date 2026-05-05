@@ -469,7 +469,8 @@ Production-side narr-3 (OQ-2) must produce theme spec including: per-city ambien
 - [x] **Scenario B authored (2026-05-05)** — 16 rows, 4 distinct BLOCKING blockers exposed (Cluster 4 primary: #10 R3.1 freshness signal, #11 R15 zero pull ; secondary #19 platform, narr-3 production). TR-WMS-056 verified twice confirming #12 resolution holds end-to-end.
 - [x] **Phase 2 COMPLETE** — all 5 scenarios authored ; methodology change to top-down walkthrough-driven per third-review creative-director synthesis fully executed.
 - [ ] Blocker → Walkthrough Mapping verified against authored content (run after Scenario B integration)
-- [ ] Phase 3 (cluster-by-cluster GDD revision) — next: Cluster 3 (capacity math) per Scenario E densest exposure
+- [x] **Phase 3 Cluster 3 closed (2026-05-05)** — capacity math revised: launch-mode override knob, cohort-tiered SLA, ghost-slot accounting formula, R12 call-budget cap, TR-034 split into a/b/c, TR-055 ghost-slot AC added, env-spec.md authored. 6 BLOCKING items closed (Cluster 3 #7/#8/#9 + qa-1/7/8). Total blocker count 27 → 21.
+- [ ] Phase 3 next: Cluster 6 (#14 D2 execution env) + Cluster 2 R12 unit (#4/#5/#6 + qa-2/3/4) paired pass
 
 ---
 

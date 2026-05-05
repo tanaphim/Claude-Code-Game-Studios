@@ -376,3 +376,75 @@ Hybrid (c) chosen because it delivers P5 sanctuary tone (landmarks have presence
 
 ### Next step
 Author Scenario B (Return-Visit-No-Event) per Phase 2 plan now that #12 is resolved. Then proceed to Phase 3 Cluster 3 (capacity math) — densest blocker exposure per Scenario E findings.
+
+---
+
+## Phase 3 Cluster 3 — 2026-05-05 — Capacity math revision pass
+Specialist: main session (no specialist spawn — quantitative defects with clear arithmetic fixes per Phase 3 protocol for narrow blocker clusters)
+Blockers closed: 6 (Cluster 3 #7 EC-19 prewarm coverage, #8 EC-14 ghost slots, #9 PlayFab API rate, qa-1 TR-034 rewrite, qa-7 production/qa/ directory, qa-8 PlayFab rate-limit env-spec)
+Items: 6 GDD edits + 3 net-new ACs + 1 net-new file + 1 review log entry
+
+Summary: Phase 3 Cluster 3 closes the densest blocker cluster from Phase 2 (Scenario E exposure). Addresses 3 root quantitative defects (#7/#8/#9), 1 AC contradiction (qa-1), and 2 process gaps (qa-7/qa-8) in a single coordinated pass. Decisions per user-approved 5-item proposal: (1) hybrid launch-mode playbook for #7, (2) two-part fix for #8 (math + ENTERING_HOLD reduction), (3) two-part fix for #9 (PlayFab plan + R12 call-cost reduction), (4) TR-034 split into a/b/c per qa-lead pattern, (5) env-spec stub authored.
+
+### Decisions applied (2026-05-05)
+
+**Decision 1 — #7 EC-19 prewarm coverage gap (15% → cohort-tiered with launch-mode override)**
+- New knob `LAUNCH_MODE_PREWARM_COUNT = 35` (range 10–50) added to G.1 — ops switches via CBS hot-reload ≥1h before launch event, reverts ≤24h after, hard limit 48h
+- Cohort-tiered SLA codified in EC-19: prewarm cohort ≤200ms p95, overflow cohort ≤2000ms p95 with EC-03 toast tolerated
+- Launch-mode playbook authoring flagged to producer (operational artifact, currently unstaffed)
+
+**Decision 2 — #8 EC-14 ghost slot accounting (67% phantom → mathematical model + reduced hold)**
+- `ENTERING_HOLD_SECONDS` default 60 → 30 (safe range narrowed 30–60, lower bound = `ENTERING_TIMEOUT_SECONDS`)
+- Ghost-slot subtraction formula added to EC-19: `effective_capacity = (prewarm × cap) − peak_ghost_slots` where `peak_ghost_slots ≈ disconnect_rate × spike_size × ENTERING_HOLD/spike_window`
+- Effective capacity at launch-mode 35 prewarm ≈ 5100 (covers full 5000 spike) ; at steady-state 5 prewarm ≈ 600 (cohort-tiered SLA covers degraded mode)
+
+**Decision 3 — #9 PlayFab API rate (~2000 vs ~1000 → plan upgrade + call-cost reduction)**
+- R12 patched: PlayFab call-count budget capped at 3 calls/req happy-path (was 4) ; combine `LookupInstance` + `TryClaimSlots` into single CAS call ; cache-hit case = 2 calls/req
+- env-spec.md mandates "Indie Studio" tier minimum (~2500 calls/s) — producer cost approval flagged
+
+**Decision 4 — TR-WMS-034 split (qa-1)**
+- TR-WMS-034 → 034a (prewarm cohort assertion) + 034b (overflow cohort assertion) + 034c (PlayFab rate-limit assertion)
+- TR-WMS-042 updated to use ghost-slot-adjusted capacity (601–900 instead of 751–999)
+- TR-WMS-055 added (ghost-slot accounting under spike — verifies EC-19 formula within ±10%)
+
+**Decision 5 — production/qa/environment-spec.md (qa-7 + qa-8)**
+- New file `production/qa/environment-spec.md` authored — stub with mandatory fields
+- Directory `production/qa/` created (closes qa-7 process gap)
+- PlayFab plan tier pinned in spec (closes qa-8)
+- Several fields TBD pending producer/DevOps decisions — explicitly flagged with owner + decision-required notes
+
+### Patch applied (2026-05-05)
+1. **R12 patched** — added "PlayFab call-count budget" paragraph capping happy-path at 3 calls/req, combined LookupInstance+TryClaimSlots into single CAS call, references env-spec.md
+2. **EC-19 patched** — added launch-mode override section, cohort-tiered SLA section, ghost-slot accounting formula
+3. **EC-14 patched** — `ENTERING_HOLD_SECONDS` default reduced 60 → 30 with safe range tightened, tradeoff acknowledged
+4. **G.1 patched** — added `LAUNCH_MODE_PREWARM_COUNT` knob row, updated existing `STARTER_CITY_INSTANCE_PREWARM_COUNT` row to reference effective-capacity adjustment
+5. **G.2 patched** — `ENTERING_HOLD_SECONDS` knob row updated with new default + narrowed safe range
+6. **AC suite patched** — TR-WMS-034 split into 034a/b/c ; TR-WMS-042 updated with ghost-slot-adjusted boundary ; TR-WMS-055 added ; AC count 50 → 53
+7. **production/qa/environment-spec.md created** — stub with PlayFab plan tier pinned + 4 producer decisions outstanding flagged
+
+### Cascading effects
+- **Scenario E** — capacity math now arithmetically self-consistent ; primary blockers #7/#8/#9 resolved at design-spec level ; performance verification blocked only on producer decisions in env-spec
+- **Cluster 6 #14 (D2 execution environment)** — env-spec flags Functions Premium as TBD ; cross-references the still-open Cluster 6 blocker
+- **Cluster 2 R12 (Cluster 2 #4/#5/#6)** — partial close via the call-budget patch ; named-store + CAS-conflicts-rewrite still pending in next Phase 3 pass
+- **qa-3 (TR-038 self-contradicting)** — not addressed this pass ; pairs naturally with Cluster 2 R12 work
+- **qa-4 (R12 read-repair / cache TTL no AC)** — not addressed this pass ; pairs naturally with Cluster 2 R12 work
+
+### Items NOT in scope of this patch
+- Cluster 6 #14 D2 execution environment binding constraint (pending — next Phase 3 pass)
+- Cluster 2 R12 named-store + TR-037 rewrite + TR-053/054 (pending — pairs with #14 because both touch the PlayFab/Cosmos boundary)
+- Cluster 7 #15 D1 break path (pending — small algorithmic patch, low priority after Cluster 3 closes the upstream rate exposure)
+
+### Updated blocker landscape
+- Total now: **21 BLOCKING / 33 RECOMMENDED** (was 27 — closed Cluster 3 #7/#8/#9 + qa-1/qa-7/qa-8 = 6 closed)
+- Cluster 3 fully closed at design-spec level ; verification depends on producer decisions in env-spec
+- Next priority: Cluster 6 #14 + Cluster 2 R12 unit (pair for next Phase 3 pass)
+
+### Producer notifications outstanding
+- PlayFab plan tier upgrade (cost) — required for Cluster 3 #9 verification
+- Azure Functions Premium tier (cost) — required for Cluster 6 #14 + Scenario E verification
+- Photon Fusion 2 plan tier (cost) — required for launch-mode CCU
+- Launch-mode playbook authoring (ops) — required for EC-19 launch-mode override execution
+- Hardware tier for staging environment (DevOps) — required for any TR-034 family AC execution
+
+### Next step
+Phase 3 Cluster 6 (#14 D2 execution environment binding constraint, 1-paragraph pin in GDD R13/D2/G.1) + Cluster 2 R12 unit (#4/#5/#6 + qa-2/3/4) as paired pass — both touch PlayFab/Cosmos boundary, naturally co-author.
