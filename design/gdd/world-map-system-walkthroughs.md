@@ -470,7 +470,9 @@ Production-side narr-3 (OQ-2) must produce theme spec including: per-city ambien
 - [x] **Phase 2 COMPLETE** — all 5 scenarios authored ; methodology change to top-down walkthrough-driven per third-review creative-director synthesis fully executed.
 - [ ] Blocker → Walkthrough Mapping verified against authored content (run after Scenario B integration)
 - [x] **Phase 3 Cluster 3 closed (2026-05-05)** — capacity math revised: launch-mode override knob, cohort-tiered SLA, ghost-slot accounting formula, R12 call-budget cap, TR-034 split into a/b/c, TR-055 ghost-slot AC added, env-spec.md authored. 6 BLOCKING items closed (Cluster 3 #7/#8/#9 + qa-1/7/8). Total blocker count 27 → 21.
-- [ ] Phase 3 next: Cluster 6 (#14 D2 execution env) + Cluster 2 R12 unit (#4/#5/#6 + qa-2/3/4) paired pass
+- [x] **Phase 3 Cluster 6 + Cluster 2 paired pass closed (2026-05-05)** — execution environment pinned (Functions Premium + Redis Premium per new R13.1 binding constraints) ; R12 named two CAS systems (PlayFab + Redis) ; cache layer named (same Redis instance, keyspace separation) ; TR-WMS-037 rewritten (HTTP 500 not partial-success), TR-038 split into 038a/b, TR-053/054 added ; duplicated R12 read-repair paragraph removed. 8 BLOCKING items closed (Cluster 6 #14, Cluster 1 #2 cross-mechanism, Cluster 2 #4/#5/#6, qa-2/3/4). Total blocker count 21 → 13. AC suite 53 → 56.
+- [x] **Phase 3 Cluster 7 closed (2026-05-05)** — D1 step 1 split into 3 branches (success/ceiling/CAS-conflict signals) ; D1 step 2 explicit CAS with `instance_pop_cas_conflict` signal ; G.6 LEAD jitter formula raised 5× → 6× tick + LEAD lower bound 10 → 12 ; new `CAS_CONFLICT_RATE_ALERT` knob ; TR-WMS-057/058 added. 2 BLOCKING items closed (Cluster 7 #15 + #16). Total blocker count 13 → 11. AC suite 56 → 58.
+- [ ] Phase 3 enters **external-coordination phase** — remaining 11 blockers all need narrative-director / ux-designer / producer / FT13-FT14 input, not spec-only fixes
 
 ---
 

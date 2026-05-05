@@ -448,3 +448,145 @@ Summary: Phase 3 Cluster 3 closes the densest blocker cluster from Phase 2 (Scen
 
 ### Next step
 Phase 3 Cluster 6 (#14 D2 execution environment binding constraint, 1-paragraph pin in GDD R13/D2/G.1) + Cluster 2 R12 unit (#4/#5/#6 + qa-2/3/4) as paired pass — both touch PlayFab/Cosmos boundary, naturally co-author.
+
+---
+
+## Phase 3 Cluster 6 + Cluster 2 paired pass — 2026-05-05
+Specialist: main session (no specialist spawn — both clusters touch PlayFab/Azure boundary, naturally co-author per Phase 3 protocol)
+Blockers closed: 8 (Cluster 6 #14, Cluster 1 #2 cross-mechanism, Cluster 2 #4/#5/#6, qa-2, qa-3, qa-4)
+Items: 4 GDD edits (incl. dedupe of duplicated read-repair paragraph) + 4 net-new/rewritten ACs + 1 new knob + env-spec.md update
+
+Summary: Phase 3 Cluster 6 + Cluster 2 paired pass closes the PlayFab/Azure execution-environment uncertainty in one coordinated stroke. Decisions per user-approved 6-item proposal: (1) Functions Premium + 3 pre-warmed pinned, (2) Azure Cache for Redis as second CAS store, (3) same Redis instance for read-through cache (keyspace separation), (4) TR-WMS-037 rewritten for HTTP 500 total failure, (5) TR-WMS-038 split into 038a/b, (6) TR-WMS-053/054 added for read-repair + cache TTL. Closes #14 + #2 (same cold-start mechanism), #4/#5/#6 (R12 cluster), qa-2/3/4 (AC contradictions). Total 8 BLOCKING closed.
+
+### Decisions applied (2026-05-05)
+
+**Decision 1 — Cluster 6 #14 + Cluster 1 #2: Azure Functions Premium binding**
+- New **R13.1 section** (Execution Environment Binding Constraints) authored
+- Functions tier = Premium + 3 pre-warmed instances per region (was deferred to R13 ADR — now binding)
+- Same fix closes Cluster 1 #2 (R8 1s skew lower bound depends on same cold-start mechanism)
+- New `D2_FUNCTIONS_TIER` knob row added to G.1 with "Premium-only, no live-tune, architecture-pinned"
+
+**Decision 2 — Cluster 2 #5: Name second CAS store as Redis**
+- R12 patched: explicit "two CAS systems, two stores" subsection — PlayFab user-data per-key version (Player Record) + Azure Cache for Redis (`inst-pop:*` keyspace, Lua script atomic CAS) for instance population
+- CosmosDB ETag explicitly forbidden (5–10ms read latency violates D1 budget)
+- PlayFab CloudScript table explicitly forbidden (shares rate limit Cluster 3 #9 escapes)
+
+**Decision 3 — Cluster 2 #6: Cache layer named as same Redis instance**
+- R12 patched: read-through cache explicitly = same Redis Premium instance as CAS store, keyspace prefix `cache:*`, TTL ≤ 5s, eviction `volatile-lru`
+- Single-shared instance across all Function workers (closes per-worker private cache trap)
+
+**Decision 4 — Cluster 2 #4 + qa-2: TR-WMS-037 rewrite**
+- Removed "partial-success" language (PlayFab API does not emit it)
+- New TR-037 tests HTTP 500 total failure: no Player Record write + Redis CAS reservation released + client error toast
+
+**Decision 5 — qa-3: TR-WMS-038 split into a/b**
+- TR-038a: 170+12 both-reject (Lua script atomic check fails for both regardless of ordering)
+- TR-038b: 156+12 sequential CAS success (Redis sub-ms makes retry deterministic)
+
+**Decision 6 — qa-4: TR-WMS-053 + TR-WMS-054 added**
+- TR-053: read-repair null-instance fallthrough (consumer treats null, falls through, no error)
+- TR-054: cache TTL boundary (cache hit at t=4.9s, cache miss + re-read at t=5.1s)
+
+**Bonus close — third-review nice-to-have:**
+- Duplicated R12 read-repair paragraph removed (was lines 298–305 = 319–326) ; copy-paste artifact closed
+
+### Patch applied (2026-05-05)
+1. **R13.1 added** — new section after R13 with 3 binding constraints (Functions Premium, Redis CAS, Redis cache same instance)
+2. **R12 patched** — Two CAS systems / two stores subsection (closes #5) ; cache layer named (closes #6) ; duplicated read-repair paragraph removed
+3. **G.1 patched** — new `D2_FUNCTIONS_TIER` knob row (Premium-pinned, no live-tune) ; `D2_SCHEDULER_TICK_SECONDS` row updated to reference Functions tier dependency
+4. **AC suite patched** — TR-WMS-037 rewritten (HTTP 500, not partial-success) ; TR-WMS-038 split into 038a/b ; TR-WMS-053 added (read-repair) ; TR-WMS-054 added (cache TTL) ; AC count 53 → 56
+5. **production/qa/environment-spec.md updated** — Functions tier section now PINNED Premium EP1 + 3 pre-warmed ; new Redis Tier section PINNED Premium P1 + keyspace separation ; producer decisions list updated (2 of 5 now PINNED, 3 remaining)
+
+### Cascading effects
+- **Cluster 1 #2 (R8 skew lower bound)** — closed via same Functions Premium fix ; bonus closure not in original Cluster 6 scope
+- **Scenario E perf verification** — env-spec.md now has Functions tier + Redis tier filled ; remaining TBDs are Photon plan, hardware tier, PlayFab plan upgrade approval
+- **Cluster 7 #15 (D1 break path)** — partially addressed indirectly: TR-038a now emits `party_co_location_ceiling_exceeded` signal explicitly per the AC ; full close still requires step-2 CAS-conflict signal added (next pass)
+- **Cluster 1 #1 (R8 collective moment)** — unchanged (not addressed this pass — needs avatar behavioral cue, narrative-director coordination)
+
+### Items NOT in scope of this patch
+- Cluster 7 #15 step-2 CAS-conflict signal (small algorithmic addition — defer to next pass)
+- Cluster 7 #16 G.6 LEAD jitter headroom (defer to next pass — small validator predicate change)
+- Cluster 1 #1 R8 avatar behavioral cue (needs narrative-director, defer)
+- Cluster 4 #10 R3.1 freshness signal + #11 R15 pull (needs UX coordination — fixes drafted in Scenario B implication, defer)
+- Cluster 5 #13 OQ-10 Fragment routing (gated on FT13/FT14 design)
+- Cluster 8 #18 EC-09 draft fate + #19 OQ-7 platform (needs ux-designer + producer)
+- Production-infrastructure (narr-1/2/3) — narrative-director coordination
+
+### Updated blocker landscape
+- Total now: **13 BLOCKING / 33 RECOMMENDED** (was 21 — closed Cluster 6 #14 + Cluster 1 #2 + Cluster 2 #4/#5/#6 + qa-2/3/4 = 8 closed)
+- Remaining BLOCKING: Cluster 1 #1 (R8 collective moment), Cluster 4 #10 + #11, Cluster 5 #13, Cluster 7 #15 + #16, Cluster 8 #17 (reduced), #18, #19 ; production narr-1/2/3
+- Cluster 2 fully closed at design-spec level
+- Cluster 6 fully closed at design-spec level
+
+### Producer notifications outstanding (3 remaining of original 5)
+- PlayFab plan tier upgrade ("Indie Studio" minimum) — cost approval
+- Photon Fusion 2 plan tier — cost approval
+- Hardware tier for staging environment — DevOps decision
+- (Note: Functions Premium + Redis Premium now committed at design level ; producer must approve the cost lines but cannot redirect the architecture)
+
+### Next step
+Phase 3 Cluster 7 (#15 D1 step-2 CAS-conflict signal + #16 G.6 jitter) — small algorithmic patches, low coordination cost. Then Cluster 4 remainder (#10 + #11) which needs UX coordination. Cluster 1 #1 + Cluster 8 #17 final close need narrative-director coordination. OQ-7 (#19) + EC-09 draft fate (#18) need producer + ux-designer respectively.
+
+---
+
+## Phase 3 Cluster 7 — 2026-05-05 — D1 algorithm + G.6 jitter
+Specialist: main session (small algorithmic patches per Phase 3 protocol — no specialist spawn needed)
+Blockers closed: 2 (Cluster 7 #15 D1 break/CAS-conflict path, #16 G.6 LEAD jitter headroom)
+Items: 2 GDD edits (D1 pseudocode + G.6 formula) + 1 new knob + 2 net-new ACs + 2 knob-row updates
+
+Summary: Phase 3 Cluster 7 closes the remaining D1 algorithmic defects with narrow algorithmic patches. Decisions per user-approved 4-item proposal: (1) split D1 step 1 single `break` into ceiling-exceeded vs CAS-conflict signals + add explicit step-2 CAS, (2) raise G.6 LEAD jitter formula from 5× to 6× tick + raise LEAD lower bound 10 → 12, (3) add TR-WMS-057 + TR-WMS-058 ACs, (4) add `CAS_CONFLICT_RATE_ALERT` knob. Closes #15 + #16 (2 BLOCKING).
+
+### Decisions applied (2026-05-05)
+
+**Decision 1 — #15 D1 step 1 + step 2 CAS-conflict signal split**
+- D1 step 1 pseudocode: `else: emit_signal("party_co_location_ceiling_exceeded") ; break` → split into 3 branches: success-and-fits-ceiling (return), success-but-exceeds-ceiling (`party_co_location_ceiling_exceeded` signal + break), CAS-conflict (`party_co_location_cas_conflict` signal + break — distinct from ceiling case)
+- D1 step 2 pseudocode: replace implicit `if pop+size ≤ cap: return` with explicit `TryClaimSlots` CAS pattern ; emit `instance_pop_cas_conflict` signal on CAS failure (was silent in prior pseudocode — load-bearing for Scenario E exposure)
+- Both signals feed `CAS_CONFLICT_RATE_ALERT` ops dashboard counter
+
+**Decision 2 — #16 G.6 LEAD jitter headroom**
+- Validation formula: `lead ≥ 5 × tick` → **`lead ≥ 6 × tick`** (1 tick safety margin)
+- `EVENT_ANNOUNCE_LEAD_SECONDS` lower bound: 10 → 12 (= 6 × min-safe-tick of 2)
+- `D2_SCHEDULER_TICK_SECONDS` safe upper bound: 6 → 5 (under default LEAD=30 + 6× rule, max tick = 5)
+- G.6 interaction text updated to reference 6× rule + Functions Premium (R13.1) eliminating cold-start jitter
+
+**Decision 3 — New ACs**
+- TR-WMS-057 (D1 step 2 CAS-conflict signal verification)
+- TR-WMS-058 (G.6 jitter headroom CBS validator with 4 boundary cases)
+
+**Decision 4 — New knob**
+- `CAS_CONFLICT_RATE_ALERT` in G.5: default 0.10 (10% retry rate over rolling 1h), safe 0.02–0.30, live-tunable
+
+### Patch applied (2026-05-05)
+1. **D1 pseudocode patched** — step 1 split into 3 branches with signal differentiation ; step 2 explicit CAS with instance_pop_cas_conflict signal ; comments cite Cluster 7 #15 + R12 + R13.1 cross-references
+2. **G.6 formula updated** — `lead ≥ 6 × tick` rule documented ; LEAD lower bound 12 + max tick recomputation logic
+3. **G.1 knob updates** — `D2_SCHEDULER_TICK_SECONDS` safe range 1-6 → 1-5 ; `EVENT_ANNOUNCE_LEAD_SECONDS` safe range 10-300 → 12-300
+4. **G.5 knob added** — `CAS_CONFLICT_RATE_ALERT` row (default 0.10, safe 0.02-0.30, live-tunable)
+5. **AC suite** — TR-WMS-057 + TR-WMS-058 added ; AC count 56 → 58
+
+### Cascading effects
+- **Cluster 3 #7 confirmation** — `CAS_CONFLICT_RATE_ALERT` provides ops surface for the contention that emerges at launch-spike scale ; pairs naturally with `CITY_INSTANCE_OVERFLOW_RATE_ALERT` (already exists)
+- **R12 + R13.1 alignment** — D1 pseudocode now explicitly references "Redis Lua script atomic CAS per R13.1 binding" ; old comment about "PlayFab version token / CosmosDB ETag" replaced with R13.1 reference
+- **Scenario E coverage** — TR-WMS-057 directly verifies the failure mode Scenario E rows 4-5 expose (CAS contention with no signal during overflow burst)
+
+### Items NOT in scope of this patch
+- Cluster 1 #1 R8 collective moment (needs narrative-director — no spec-only fix possible)
+- Cluster 4 #10 + #11 (drafted fixes in Scenario B implication — needs UX coordination + 2 net-new ACs)
+- Cluster 5 #13 OQ-10 Fragment routing (gated on FT13/FT14)
+- Cluster 8 #17 (narrative coord), #18 (ux-designer), #19 (producer)
+- Production-infrastructure (narr-1/2/3) — narrative-director coordination
+
+### Updated blocker landscape
+- Total now: **11 BLOCKING / 33 RECOMMENDED** (was 13 — closed Cluster 7 #15 + #16 = 2 closed)
+- Cluster 7 fully closed at design-spec level
+- Remaining BLOCKING all require external coordination (narrative-director / ux-designer / producer / FT13-FT14 design)
+
+### Next step
+Phase 3 enters "external-coordination phase" — remaining 11 blockers all require coordination outside the GDD revision process:
+1. **Cluster 4 #10 + #11** — pair with `/ux-design` phase ; UX spec for HUD pin + R3.1 freshness signal + R15 pull mechanic
+2. **Cluster 1 #1 + Cluster 8 #17** — narrative-director pass for R8 avatar behavioral cue + Keeper voice profile (closes narr-1)
+3. **Cluster 8 #18 EC-09 draft fate** — ux-designer 1-line decision (discard vs preserve)
+4. **Cluster 8 #19 OQ-7 platform** — producer decision (PC vs cross-platform)
+5. **Cluster 5 #13 OQ-10** — gated on FT13/FT14 design ; not actionable in FT12 alone
+6. **Production-infrastructure** — narrative-director + producer for narr-1/2/3 staffing
+
+Recommend: spawn narrative-director session for Cluster 1 #1 + Cluster 8 #17 + narr-1/2/3 next (covers most remaining blockers in single coordinated pass).
