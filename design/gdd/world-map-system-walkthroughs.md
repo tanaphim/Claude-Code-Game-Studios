@@ -416,7 +416,8 @@ Production-side narr-3 (OQ-2) must produce theme spec including: per-city ambien
 - [x] **Scenario A authored (2026-05-02)** — 17 rows, 9 distinct BLOCKING blockers exposed (primaries: #17 Keeper info-dump, #12 post-first-visit access)
 - [x] **Scenario D authored (2026-05-02)** — 19 rows, 6 distinct BLOCKING blockers exposed (primary: #13 OQ-10 Fragment routing perverse incentive — pillar P3-vs-P4)
 - [x] **Scenario E authored (2026-05-05)** — 12 rows (server-aggregate), 17 distinct BLOCKING items exposed (11 design blockers + 6 qa) — densest blocker exposure of any scenario, primaries: capacity-math nexus (#7 prewarm 15%, #8 ghost slots 67%, #9 PlayFab rate ~2× plan) + R12 cluster (#4/#5/#6) + D2 execution-env pinning (#14)
-- [ ] Scenario B authored (depends on #12 resolution)
+- [x] **Blocker #12 resolved (2026-05-05)** — Phase 3 Cluster 4 partial — R2.1 added (3-path hybrid: landmark-direct + hotkey/HUD pin + Keeper-as-ambient) ; Section B + UI Requirements patched ; TR-WMS-056 added ; Scenario B unblocked. See review log entry "Phase 3 Cluster 4 Partial — 2026-05-05"
+- [ ] Scenario B authored (#12 now resolved, ready to author)
 - [ ] Blocker → Walkthrough Mapping verified against authored content
 - [ ] Phase 2 complete; Phase 3 (cluster-by-cluster GDD revision) can begin
 
