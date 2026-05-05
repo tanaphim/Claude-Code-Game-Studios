@@ -331,3 +331,48 @@ Summary: narrative-director ran independently same session as qa-lead after burs
 - Update systems-index FT12 blocker count from 25 to 28
 - Proceed to Phase 2 walkthrough authoring per creative-director synthesis (5 scenarios: first-visit, return-no-event, return-with-event, cross-faction-party, launch-spike) — methodology change to top-down walkthrough-driven before any GDD edits begin
 - Phase 2 should NOT spawn specialists (single-session main thread); reserves spawning quota for Phase 3 cluster-by-cluster revision (8-10 sessions, 1-2 specialists per cluster)
+
+---
+
+## Phase 3 Cluster 4 Partial — 2026-05-05 — Blocker #12 resolution
+Specialist: main session (no specialist spawn — single-document patch per Phase 3 protocol for narrow blockers)
+Blockers closed: 1 (#12) + partial close of #17 (Keeper info-dump anti-pattern reduced from BLOCKING to NEEDS-NARRATIVE-PASS)
+Items: 4 GDD edits + 1 net-new AC + 1 walkthrough status update
+
+Summary: Phase 3 begins with narrow Cluster 4 partial — close blocker #12 (post-first-visit City Menu access UNSPECIFIED) before Scenario B authoring can proceed. Decision: **hybrid 3-path access** — landmark-direct (primary spatial), City Menu hotkey + persistent HUD pin (quick-access), Keeper NPC (ambient supplementary). Closes #12 cleanly + reduces #17 surface area (Keeper no longer functions purely as tutorial info-dump ; functional role overlaps with hotkey/pin so Keeper becomes ambient sanctuary keeper, awaiting narrative writer pass per narr-1).
+
+### Decision rationale
+Three options evaluated:
+- (a) **Landmark-only** (each landmark opens own UI directly, no hub) — preserves spatial discovery + sanctuary fantasy but forces players to memorize 8 spatial locations ; queue-prone players experience friction
+- (b) **City-Menu-only** (hub required, hotkey or Keeper to open) — preserves quick-access but landmarks become decorative without behavioral pull ; regresses Section B fantasy
+- (c) **Hybrid** (both landmark-direct + hotkey/pin in parallel, Keeper as ambient option) — chosen ; preserves both fantasy and accessibility ; Keeper gets purpose tonally consistent with sanctuary
+
+Hybrid (c) chosen because it delivers P5 sanctuary tone (landmarks have presence) AND P4 mechanical access (hotkey for queue-prone players) AND closes the blocker without forcing a single-path commitment that subsequent UX spec phase would have to walk back.
+
+### Patch applied (2026-05-05)
+1. **R2.1 added** to `design/gdd/world-map-system.md` — codifies 3 parallel access paths with explicit "ห้าม design choice ใดๆ ที่ทำให้ Path 1 หรือ Path 2 หายไปหลัง first-visit" constraint
+2. **Section B onboarding text patched** — Keeper interaction prompt framing changed from "active เฉพาะ first-visit" to "most prominent on first-visit, active ทุก visit per R2.1 Path 3" ; alternative mechanisms reframed from "alternative-instead-of" to "available in parallel"
+3. **UI Requirements table updated** — City Menu row updated with 3 paths; new row added for "8 service landmarks (in-world)" as separate UI surface
+4. **TR-WMS-056 added** — Integration AC verifies all 3 paths reachable from any plaza spawn, hotkey/pin active in `InCity+Queued`, Keeper prompt active post-first-visit ; AC suite count 49 → 50
+5. **Walkthrough Status updated** — `design/gdd/world-map-system-walkthroughs.md` Status section: Scenario B unblocked
+
+### Cascading effects on Phase 2 walkthroughs
+- **Scenario A blocker #12** — RESOLVED (Keeper post-first-visit framing fixed, hotkey/pin path explicit)
+- **Scenario A blocker #17 (Keeper info-dump)** — REDUCED ; Keeper is no longer "menu opener that disappears after first-visit" but "ambient sanctuary keeper that overlaps hotkey functionality" ; full close still requires narr-1 voice profile
+- **Scenario D blocker #12 cascade** — RESOLVED (A's #12 fix propagates to D's t≈+20s row "A presses City Menu hotkey")
+- **Scenario E** — unaffected (server-aggregate scope does not exercise UI access paths)
+- **Scenario B** — UNBLOCKED ; can now author per Phase 2 plan with explicit hotkey/pin/landmark/Keeper paths
+
+### Items NOT in scope of this patch
+- Hotkey default key (`M` chosen as PC default) is provisional pending OQ-7 platform decision (#19)
+- HUD pin visual treatment + position defer to `/ux-design hud`
+- Keeper voice profile + ambient lines remain narr-1 (BLOCKING for Cluster 8 narrative production)
+- Discoverability + tutorial explanation of 3-path access defer to `/ux-design first-visit-onboarding`
+
+### Updated blocker landscape
+- Total now: **27 BLOCKING / 33 RECOMMENDED** (was 28 — #12 closed)
+- Cluster 4 still has #10 (R3.1 freshness signal) + #11 (R15 zero pull) open ; #12 was the load-bearing one for Scenario B unblocking
+- Cluster 8 still has #17 (reduced), #18 (EC-09 draft fate), #19 (OQ-7 platform) open
+
+### Next step
+Author Scenario B (Return-Visit-No-Event) per Phase 2 plan now that #12 is resolved. Then proceed to Phase 3 Cluster 3 (capacity math) — densest blocker exposure per Scenario E findings.
