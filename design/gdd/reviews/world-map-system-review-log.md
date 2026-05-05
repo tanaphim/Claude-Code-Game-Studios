@@ -331,3 +331,120 @@ Summary: narrative-director ran independently same session as qa-lead after burs
 - Update systems-index FT12 blocker count from 25 to 28
 - Proceed to Phase 2 walkthrough authoring per creative-director synthesis (5 scenarios: first-visit, return-no-event, return-with-event, cross-faction-party, launch-spike) — methodology change to top-down walkthrough-driven before any GDD edits begin
 - Phase 2 should NOT spawn specialists (single-session main thread); reserves spawning quota for Phase 3 cluster-by-cluster revision (8-10 sessions, 1-2 specialists per cluster)
+
+---
+
+## Phase 3 Cluster 4 Partial — 2026-05-05 — Blocker #12 resolution
+Specialist: main session (no specialist spawn — single-document patch per Phase 3 protocol for narrow blockers)
+Blockers closed: 1 (#12) + partial close of #17 (Keeper info-dump anti-pattern reduced from BLOCKING to NEEDS-NARRATIVE-PASS)
+Items: 4 GDD edits + 1 net-new AC + 1 walkthrough status update
+
+Summary: Phase 3 begins with narrow Cluster 4 partial — close blocker #12 (post-first-visit City Menu access UNSPECIFIED) before Scenario B authoring can proceed. Decision: **hybrid 3-path access** — landmark-direct (primary spatial), City Menu hotkey + persistent HUD pin (quick-access), Keeper NPC (ambient supplementary). Closes #12 cleanly + reduces #17 surface area (Keeper no longer functions purely as tutorial info-dump ; functional role overlaps with hotkey/pin so Keeper becomes ambient sanctuary keeper, awaiting narrative writer pass per narr-1).
+
+### Decision rationale
+Three options evaluated:
+- (a) **Landmark-only** (each landmark opens own UI directly, no hub) — preserves spatial discovery + sanctuary fantasy but forces players to memorize 8 spatial locations ; queue-prone players experience friction
+- (b) **City-Menu-only** (hub required, hotkey or Keeper to open) — preserves quick-access but landmarks become decorative without behavioral pull ; regresses Section B fantasy
+- (c) **Hybrid** (both landmark-direct + hotkey/pin in parallel, Keeper as ambient option) — chosen ; preserves both fantasy and accessibility ; Keeper gets purpose tonally consistent with sanctuary
+
+Hybrid (c) chosen because it delivers P5 sanctuary tone (landmarks have presence) AND P4 mechanical access (hotkey for queue-prone players) AND closes the blocker without forcing a single-path commitment that subsequent UX spec phase would have to walk back.
+
+### Patch applied (2026-05-05)
+1. **R2.1 added** to `design/gdd/world-map-system.md` — codifies 3 parallel access paths with explicit "ห้าม design choice ใดๆ ที่ทำให้ Path 1 หรือ Path 2 หายไปหลัง first-visit" constraint
+2. **Section B onboarding text patched** — Keeper interaction prompt framing changed from "active เฉพาะ first-visit" to "most prominent on first-visit, active ทุก visit per R2.1 Path 3" ; alternative mechanisms reframed from "alternative-instead-of" to "available in parallel"
+3. **UI Requirements table updated** — City Menu row updated with 3 paths; new row added for "8 service landmarks (in-world)" as separate UI surface
+4. **TR-WMS-056 added** — Integration AC verifies all 3 paths reachable from any plaza spawn, hotkey/pin active in `InCity+Queued`, Keeper prompt active post-first-visit ; AC suite count 49 → 50
+5. **Walkthrough Status updated** — `design/gdd/world-map-system-walkthroughs.md` Status section: Scenario B unblocked
+
+### Cascading effects on Phase 2 walkthroughs
+- **Scenario A blocker #12** — RESOLVED (Keeper post-first-visit framing fixed, hotkey/pin path explicit)
+- **Scenario A blocker #17 (Keeper info-dump)** — REDUCED ; Keeper is no longer "menu opener that disappears after first-visit" but "ambient sanctuary keeper that overlaps hotkey functionality" ; full close still requires narr-1 voice profile
+- **Scenario D blocker #12 cascade** — RESOLVED (A's #12 fix propagates to D's t≈+20s row "A presses City Menu hotkey")
+- **Scenario E** — unaffected (server-aggregate scope does not exercise UI access paths)
+- **Scenario B** — UNBLOCKED ; can now author per Phase 2 plan with explicit hotkey/pin/landmark/Keeper paths
+
+### Items NOT in scope of this patch
+- Hotkey default key (`M` chosen as PC default) is provisional pending OQ-7 platform decision (#19)
+- HUD pin visual treatment + position defer to `/ux-design hud`
+- Keeper voice profile + ambient lines remain narr-1 (BLOCKING for Cluster 8 narrative production)
+- Discoverability + tutorial explanation of 3-path access defer to `/ux-design first-visit-onboarding`
+
+### Updated blocker landscape
+- Total now: **27 BLOCKING / 33 RECOMMENDED** (was 28 — #12 closed)
+- Cluster 4 still has #10 (R3.1 freshness signal) + #11 (R15 zero pull) open ; #12 was the load-bearing one for Scenario B unblocking
+- Cluster 8 still has #17 (reduced), #18 (EC-09 draft fate), #19 (OQ-7 platform) open
+
+### Next step
+Author Scenario B (Return-Visit-No-Event) per Phase 2 plan now that #12 is resolved. Then proceed to Phase 3 Cluster 3 (capacity math) — densest blocker exposure per Scenario E findings.
+
+---
+
+## Phase 3 Cluster 3 — 2026-05-05 — Capacity math revision pass
+Specialist: main session (no specialist spawn — quantitative defects with clear arithmetic fixes per Phase 3 protocol for narrow blocker clusters)
+Blockers closed: 6 (Cluster 3 #7 EC-19 prewarm coverage, #8 EC-14 ghost slots, #9 PlayFab API rate, qa-1 TR-034 rewrite, qa-7 production/qa/ directory, qa-8 PlayFab rate-limit env-spec)
+Items: 6 GDD edits + 3 net-new ACs + 1 net-new file + 1 review log entry
+
+Summary: Phase 3 Cluster 3 closes the densest blocker cluster from Phase 2 (Scenario E exposure). Addresses 3 root quantitative defects (#7/#8/#9), 1 AC contradiction (qa-1), and 2 process gaps (qa-7/qa-8) in a single coordinated pass. Decisions per user-approved 5-item proposal: (1) hybrid launch-mode playbook for #7, (2) two-part fix for #8 (math + ENTERING_HOLD reduction), (3) two-part fix for #9 (PlayFab plan + R12 call-cost reduction), (4) TR-034 split into a/b/c per qa-lead pattern, (5) env-spec stub authored.
+
+### Decisions applied (2026-05-05)
+
+**Decision 1 — #7 EC-19 prewarm coverage gap (15% → cohort-tiered with launch-mode override)**
+- New knob `LAUNCH_MODE_PREWARM_COUNT = 35` (range 10–50) added to G.1 — ops switches via CBS hot-reload ≥1h before launch event, reverts ≤24h after, hard limit 48h
+- Cohort-tiered SLA codified in EC-19: prewarm cohort ≤200ms p95, overflow cohort ≤2000ms p95 with EC-03 toast tolerated
+- Launch-mode playbook authoring flagged to producer (operational artifact, currently unstaffed)
+
+**Decision 2 — #8 EC-14 ghost slot accounting (67% phantom → mathematical model + reduced hold)**
+- `ENTERING_HOLD_SECONDS` default 60 → 30 (safe range narrowed 30–60, lower bound = `ENTERING_TIMEOUT_SECONDS`)
+- Ghost-slot subtraction formula added to EC-19: `effective_capacity = (prewarm × cap) − peak_ghost_slots` where `peak_ghost_slots ≈ disconnect_rate × spike_size × ENTERING_HOLD/spike_window`
+- Effective capacity at launch-mode 35 prewarm ≈ 5100 (covers full 5000 spike) ; at steady-state 5 prewarm ≈ 600 (cohort-tiered SLA covers degraded mode)
+
+**Decision 3 — #9 PlayFab API rate (~2000 vs ~1000 → plan upgrade + call-cost reduction)**
+- R12 patched: PlayFab call-count budget capped at 3 calls/req happy-path (was 4) ; combine `LookupInstance` + `TryClaimSlots` into single CAS call ; cache-hit case = 2 calls/req
+- env-spec.md mandates "Indie Studio" tier minimum (~2500 calls/s) — producer cost approval flagged
+
+**Decision 4 — TR-WMS-034 split (qa-1)**
+- TR-WMS-034 → 034a (prewarm cohort assertion) + 034b (overflow cohort assertion) + 034c (PlayFab rate-limit assertion)
+- TR-WMS-042 updated to use ghost-slot-adjusted capacity (601–900 instead of 751–999)
+- TR-WMS-055 added (ghost-slot accounting under spike — verifies EC-19 formula within ±10%)
+
+**Decision 5 — production/qa/environment-spec.md (qa-7 + qa-8)**
+- New file `production/qa/environment-spec.md` authored — stub with mandatory fields
+- Directory `production/qa/` created (closes qa-7 process gap)
+- PlayFab plan tier pinned in spec (closes qa-8)
+- Several fields TBD pending producer/DevOps decisions — explicitly flagged with owner + decision-required notes
+
+### Patch applied (2026-05-05)
+1. **R12 patched** — added "PlayFab call-count budget" paragraph capping happy-path at 3 calls/req, combined LookupInstance+TryClaimSlots into single CAS call, references env-spec.md
+2. **EC-19 patched** — added launch-mode override section, cohort-tiered SLA section, ghost-slot accounting formula
+3. **EC-14 patched** — `ENTERING_HOLD_SECONDS` default reduced 60 → 30 with safe range tightened, tradeoff acknowledged
+4. **G.1 patched** — added `LAUNCH_MODE_PREWARM_COUNT` knob row, updated existing `STARTER_CITY_INSTANCE_PREWARM_COUNT` row to reference effective-capacity adjustment
+5. **G.2 patched** — `ENTERING_HOLD_SECONDS` knob row updated with new default + narrowed safe range
+6. **AC suite patched** — TR-WMS-034 split into 034a/b/c ; TR-WMS-042 updated with ghost-slot-adjusted boundary ; TR-WMS-055 added ; AC count 50 → 53
+7. **production/qa/environment-spec.md created** — stub with PlayFab plan tier pinned + 4 producer decisions outstanding flagged
+
+### Cascading effects
+- **Scenario E** — capacity math now arithmetically self-consistent ; primary blockers #7/#8/#9 resolved at design-spec level ; performance verification blocked only on producer decisions in env-spec
+- **Cluster 6 #14 (D2 execution environment)** — env-spec flags Functions Premium as TBD ; cross-references the still-open Cluster 6 blocker
+- **Cluster 2 R12 (Cluster 2 #4/#5/#6)** — partial close via the call-budget patch ; named-store + CAS-conflicts-rewrite still pending in next Phase 3 pass
+- **qa-3 (TR-038 self-contradicting)** — not addressed this pass ; pairs naturally with Cluster 2 R12 work
+- **qa-4 (R12 read-repair / cache TTL no AC)** — not addressed this pass ; pairs naturally with Cluster 2 R12 work
+
+### Items NOT in scope of this patch
+- Cluster 6 #14 D2 execution environment binding constraint (pending — next Phase 3 pass)
+- Cluster 2 R12 named-store + TR-037 rewrite + TR-053/054 (pending — pairs with #14 because both touch the PlayFab/Cosmos boundary)
+- Cluster 7 #15 D1 break path (pending — small algorithmic patch, low priority after Cluster 3 closes the upstream rate exposure)
+
+### Updated blocker landscape
+- Total now: **21 BLOCKING / 33 RECOMMENDED** (was 27 — closed Cluster 3 #7/#8/#9 + qa-1/qa-7/qa-8 = 6 closed)
+- Cluster 3 fully closed at design-spec level ; verification depends on producer decisions in env-spec
+- Next priority: Cluster 6 #14 + Cluster 2 R12 unit (pair for next Phase 3 pass)
+
+### Producer notifications outstanding
+- PlayFab plan tier upgrade (cost) — required for Cluster 3 #9 verification
+- Azure Functions Premium tier (cost) — required for Cluster 6 #14 + Scenario E verification
+- Photon Fusion 2 plan tier (cost) — required for launch-mode CCU
+- Launch-mode playbook authoring (ops) — required for EC-19 launch-mode override execution
+- Hardware tier for staging environment (DevOps) — required for any TR-034 family AC execution
+
+### Next step
+Phase 3 Cluster 6 (#14 D2 execution environment binding constraint, 1-paragraph pin in GDD R13/D2/G.1) + Cluster 2 R12 unit (#4/#5/#6 + qa-2/3/4) as paired pass — both touch PlayFab/Cosmos boundary, naturally co-author.
