@@ -590,3 +590,50 @@ Phase 3 enters "external-coordination phase" — remaining 11 blockers all requi
 6. **Production-infrastructure** — narrative-director + producer for narr-1/2/3 staffing
 
 Recommend: spawn narrative-director session for Cluster 1 #1 + Cluster 8 #17 + narr-1/2/3 next (covers most remaining blockers in single coordinated pass).
+
+---
+
+## Phase 3 narrative pass — 2026-05-05 — Cluster 1 + Cluster 8 #17 + narr-1/2/3
+Specialist: narrative-director ✓ (spawned by main session per user approval ; research-mode draft → main session patched per collaboration protocol)
+Blockers closed: 5 (Cluster 1 #1 R8 collective moment, Cluster 8 #17 = narr-1 Keeper voice profile, narr-2 EC-11 ban broadcast intent, narr-3 OQ-2 deliverable spec partial, R16 vocabulary recommended item)
+Items: 5 GDD edits + 1 AC update + 1 review log entry + producer notification (4 narrative writer-days for 8 remaining city briefs)
+
+Summary: narrative-director pass closes 5 BLOCKING items in coordinated stroke per Phase 3 external-coordination phase plan. Decisions: (1) R8 avatar "look-up-toward-Monument" head-turn cue 1.5s additive override at t=0+0.3s ; (2) Keeper as archetype across 10 cities (not single named character) with voice profile "ผู้ดูแลสถานที่เก่าแก่" + 4 sample lines (first-visit/return/ambient/bell-time) ; (3) EC-11 Philosophy B chosen — Keeper-voiced ban broadcast no name, distinct from voluntary leave + disconnect ; (4) OQ-2 theme spec template authored + city_01 (STARTER) + city_solis full briefs ; (5) R16 "Traveler's Salute" → "Wayfarer's Nod" (Thai "ผ่านลาน" unchanged).
+
+### Patch applied (2026-05-05)
+1. **R8 patched** — new "Avatar behavioral cue at bell time" paragraph + rationale paragraph updated to reference cue closing collective-witness gap
+2. **Section B (Player Fantasy) patched** — new "Keeper voice profile" subsection with voice register, vocabulary rules, 4 sample lines table, art archetype brief
+3. **EC-11 patched** — single-phrase replaced with 3-case differentiation + Philosophy B rationale ; instance-only scope explicit
+4. **R16 patched** — "Traveler's Salute" → "Wayfarer's Nod" + vocabulary note for UI/tooltip/animation/writer pass
+5. **G.5 knob row** updated for R16 working name change
+6. **OQ-2 patched** — Theme spec template + city_01 + city_solis full briefs + producer notification for 8 remaining cities
+7. **TR-WMS-027 updated** — verifies all 3 EC-11 cases (ban/voluntary/disconnect) distinct phrasing
+
+### Cascading effects
+- **Scenario A blockers #17 + narr-1 + narr-2** — RESOLVED (Keeper has voice profile + sample lines ; EC-11 has Keeper-voiced ban phrasing)
+- **Scenario C blocker #1 (R8 collective moment)** — RESOLVED (avatar cue paragraph delivers Section B "ทุกคนหันมามองกันครู่หนึ่ง" claim)
+- **Scenario C blocker narr-3** — partial (city_solis ambient + Anchor brief now specified ; other 8 cities still pending)
+- **Scenario D blocker R16 vocabulary (recommended)** — RESOLVED ("Wayfarer's Nod")
+- **Audio direction pass** — partially unblocked (bell instruments specified for 2 of 10 cities)
+- **Asset Spec phase** — partially unblocked (ambient soundscape + Banner Rack briefs for 2 cities)
+
+### Items NOT in scope of this patch
+- 8 of 10 city briefs (city_03..city_10) — pending narrative writer-day allocation per producer notification
+- OQ-3 vignette pool authoring (40 vignettes minimum) — separate 80 wd estimate stands ; no patch this pass
+- Cluster 4 #10 R3.1 freshness signal + #11 R15 pull mechanics — needs ux-designer pass
+- Cluster 8 #18 EC-09 draft fate — needs ux-designer 1-line decision
+- Cluster 8 #19 OQ-7 platform — needs producer decision
+- Cluster 5 #13 OQ-10 Fragment routing — gated on FT13/FT14
+
+### Updated blocker landscape
+- Total now: **6 BLOCKING / 33 RECOMMENDED** (was 11 — closed Cluster 1 #1 + Cluster 8 #17 + narr-1 + narr-2 + narr-3 partial = 5 closed)
+- Remaining BLOCKING: Cluster 4 #10 + #11 (ux-designer), Cluster 5 #13 (FT13/FT14), Cluster 8 #18 (ux-designer 1-line), Cluster 8 #19 (producer), narr-3 8-cities-remaining (narrative writer-days)
+- 5 of 6 remaining need external coordination ; 1 (narr-3 8 cities) needs writer-day staffing
+
+### Next step
+Phase 3 external-coordination phase continues:
+1. **ux-designer session** — Cluster 4 #10 + #11 + Cluster 8 #18 (3 BLOCKING in one pass) — most efficient next step
+2. **Producer decision** — Cluster 8 #19 OQ-7 platform (single decision, blocks no other work but unblocks UX spec phase budget)
+3. **Narrative writer-day allocation** — 8 remaining city briefs (4 wd per producer notification)
+4. **OQ-3 vignette pool authoring** — 80 wd, sequence after all 10 city themes locked
+5. **Cluster 5 #13** — gated on FT13/FT14 ; not actionable in FT12 alone
