@@ -145,15 +145,64 @@ A scenario is complete when:
 
 ## Scenario B — Return-Visit-No-Event
 
-**Player POV:** Existing account, `last_city_id = "city_solis"` (set previous session). Logs in. No Fragment Event active anywhere in the universe. Wants to: check faction Anchor for any updates, then queue Casual Tournament.
+**Player POV:** Existing account, `faction_id = "faction_b"`, `last_city_id = "city_solis"`, `state = OutOfUniverse` (logged out previous session). Has visited city_solis 12 times before (post-first-visit veteran) ; last Anchor vignette seen = V2 of city_solis pool (last visit = 5 days ago) ; `ANCHOR_VIGNETTE_ROTATION_DAYS = 7`. **No Fragment Event active anywhere in the universe** at any point in this scenario. Logs in intending to: (1) check city_solis Anchor for content updates, (2) queue Casual Tournament.
 
-**Time origin:** t=0 = login success.
+**Time origin:** t=0 = login success after M6 auth handoff.
+
+**Knob context:** `ANCHOR_VIGNETTE_ROTATION_DAYS = 7`, `ANCHOR_VIGNETTE_POOL_MIN = 4`, `BELL_SEQUENCE_DURATION_SECONDS = 30` (n/a — no event), `MIN_AMBIENT_NPC_PER_CITY = 5`, `CENTRAL_PLAZA_RADIUS_UNIT = 30`.
+
+**Critical context:** This scenario is the canonical exposure of **Cluster 4 (#10 R3.1 vignette freshness signal absent + #11 R15 zero pull)** — habitual returning visitor with stable Anchor expectations is exactly the player profile R3.1 + R15 are supposed to serve. Also serves as **verification scenario for blocker #12 resolution** (R2.1 3-path access) — every service interaction post-first-visit walks through the new paths.
 
 | t | Player input/state | Server | Client visual | Audio | UI surface | AC ref / blocker |
 |---|---|---|---|---|---|---|
-| _TBD — to be authored in Scenario B session_ |
+| **t < 0** (setup) | Logged out ; last session ended at city_solis | Player Record state: `last_city_id="city_solis"`, `current_instance_id=null` (cleared on logout per EC-04 indirect), `ft12_migrated=true`, `last_city_entry_timestamp=session-end` | login screen | login music | login UI | (out-of-FT12-scope handoff) |
+| **t = 0** (login success, R4 returning path) | (no input — auto) | M6 auth completes ; FT12 reads Player Record ; `last_city_id="city_solis"` non-null → R4 returning path (NOT R4-first-ever) ; D1 runs target=city_solis, party_size=1 ; step 1 skip ; step 2 sort+pack candidates of city_solis ; assign instance city_solis_NN ; `current_instance_id` written via single PlayFab `UpdateUserData` call (R12 atomicity) | loading screen fade-in | loading-screen ambient cue | loading screen | TR-WMS-004 (R4 returning) ; TR-WMS-013 (R12 server-authoritative) ; **BLOCKER #4** lurking (R12 atomicity claim — happy path here, but TR-WMS-037 still tests phantom partial-success at this write site per Scenario E exposure) |
+| **t = 0 → t = T_load** (T_load typically 3–8s) | (no input) | scene streaming ; `ENTERING_TIMEOUT_SECONDS=30` countdown active per EC-18 | loading progress | loading ambient | loading screen | TR-WMS-041 (EC-18 timeout — fires at 30s if scene loader hangs) |
+| **t = T_load** (InCity solis, second visit beyond first) | (no input) | state→`InCity` ; presence broadcast to in-instance peers | plaza render begins ; avatar materializes near spawn point ; Keeper visible (interaction prompt **active** per R2.1 Path 3 fix — NOT inactive as old framing said) ; 8 service landmarks visible (Tournament Queue Terminal, Personal Dungeon Gate, Equipment Alcove, etc.) ; Faction Banner Racks render ; **NO Monument transform (no event active anywhere)** | plaza ambient soundscape (theme-bound, **OQ-2 deliverable, narr-3**) | HUD minimal ; **City Menu HUD pin visible per R2.1 Path 2** ; cross-instance counter at plaza entrance | TR-WMS-031 (FT11 read-only badge) ; TR-WMS-056 (R2.1 access paths — pin + Keeper-prompt active verify) ; **narr-3** (city_solis theme spec) |
+| **t ≈ T+5s** (surveys plaza) | idle, mouse-look around plaza | heartbeat continues (EC-07 freshness, `last_heartbeat` updated every 5s) | plaza idle ; cross-faction strangers visible (not in proximity yet) ; ≥5 ambient NPCs per `MIN_AMBIENT_NPC_PER_CITY` ; **R15 affordances visible (bench, fountain, emote spots, gathering hooks) — NO discoverability signal pulling player toward them** ; Monument dormant | plaza ambient | cross-instance counter "ลานนี้ X / ลานร่วม Y" at plaza entrance | TR-WMS-039 (R15 no-reward verify) ; **BLOCKER #11** confirmed live (R15 has zero pull at the exact moment Section B intends linger — no event is live so R15 is *the* primary linger but provides no behavioral signal) ; **narr-9** ("ลานร่วม Y" label ambiguity) |
+| **t ≈ T+10s** (walks toward Anchor) | walks to Anchor landmark (city_solis Anchor — chronicle-of-the-war per R3 neutral-historiography example) | server tracks proximity ; client requests current Anchor vignette ID per R3.1 (server-clock UTC rotation) | Anchor landmark visible foreground ; player approaches ; **NO visual signal indicating whether vignette has rotated since player's last visit 5 days ago** | footsteps + ambient | none (Anchor not yet interacted) | TR-WMS-036 (R3.1 rotation) ; **BLOCKER #10** approaching exposure |
+| **t ≈ T+15s** (interacts with Anchor) | clicks Anchor / press interact key | server logs `anchor_interacted(player_id, city_id, vignette_id)` ; per R3.1 server-clock rotation: 5 days < 7-day rotation → vignette is still V2 (same as last visit) ; **no per-player `vignette_seen_set` to compare against** | vignette panel UI opens with V2 text — **identical to what player saw 5 days ago** ; **no UI indicator distinguishes "new since last visit" from "unchanged"** | voiceover (theme-bound, undefined — narr-3) ; ambient | vignette panel | TR-WMS-036 ; **BLOCKER #10 confirmed live** (player has zero signal that vignette is unchanged ; repeat-visit hook fails silently — at the exact moment R3.1 was added to serve. Two failure modes both live: (a) habitual visitor reads same V2 thinking they missed an update, (b) player not realizing rotation system exists at all) |
+| **t ≈ T+60s** (closes Anchor, decides to queue Tournament) | closes vignette panel ; decides to queue | server: read-only menu close | vignette panel closes ; player avatar idle | UI close cue | none | (no AC for close) ; **player at decision point — uses which R2.1 path?** This is the first post-first-visit access decision in the scenario |
+| **t ≈ T+65s** (uses R2.1 — chooses hotkey path) | presses City Menu hotkey `M` (PC default per R2.1 + UI Requirements table) | server: read-only menu open | City Menu UI fade-in (8-service grid per R2 Universal Services list) | UI open cue | **City Menu (R2.1 Path 2 hotkey)** | TR-WMS-056 (R2.1 hotkey path verify — **#12 fix verification, first exposure**) ; **BLOCKER #19 lurking** (hotkey assumes PC ; OQ-7 unresolved, gamepad/touch hotkey mapping requires substantive redesign — same provisional commitment as Scenarios A and D) |
+| **t ≈ T+67s** (clicks Tournament Queue in City Menu) | click "Tournament Queue" service tile | server opens Tournament Queue UI subsystem | Tournament Queue UI fade-in ; City Menu may stay or transition (UX spec deferred) | UI open cue | Tournament Queue UI (1 of 17 surfaces) | TR-WMS-032 (FT13 mock — Casual / Ranked / Custom selection) |
+| **t ≈ T+75s** (confirms Casual queue) | click "Confirm Casual Queue" | server sends `(player_id, queue_type=casual, origin_city_id="city_solis")` to FT13 mock endpoint ; state→`InCity+Queued` ; `origin_city_id="city_solis"` snapshot per EC-13 fallback chain | Tournament Queue UI confirms ; queue indicator appears on HUD | confirmation cue | Queue indicator persistent ; **City Menu HUD pin still visible per R2.1 (active in `InCity+Queued`)** | TR-WMS-032 ; TR-WMS-056 (R2.1 hotkey/pin still active in `InCity+Queued` verify) ; ties to **BLOCKER #19** |
+| **t ≈ T+80s → T+5min** (waiting in queue, walks plaza) | walks around plaza ; passes R15 bench, R15 fountain, R15 emote spots, R15 gathering hook ; idles near Monument area briefly (out of curiosity) | server tracks proximity to affordances ; per TR-WMS-039 no Player Record mutation ; M11 opt-out check passes (no R16 acknowledge attempted) | player walks past R15 affordances ; affordances render (cosmetic only) ; **no interaction prompt unless player explicitly stops AND looks directly at affordance** ; **no audiovisual signal that affordance is interactable** ; Monument dormant (no event), no visual draw | footsteps + plaza ambient | queue indicator persistent ; nothing else | TR-WMS-039 (R15 no-reward — verifies the rule but does not test the pull mechanic) ; **BLOCKER #11 confirmed live, second exposure** (player is in the *exact* state R15 was designed for — InCity+Queued waiting, no event, multiple minutes of wait — and walks past affordances without engaging because no pull mechanic exists. Worse than Scenario C exposure because no bell sequence competes for attention here ; R15 has *primary* linger duty in this scenario shape) ; **#10 still affecting decision tree** (without freshness signal at Anchor, player has no documented reason to revisit Anchor during wait) |
+| **t ≈ T+5min** (FT13 emits match_found) | (no input — async) | FT13 emits `match_found(player_id, match_id)` ; FT12 receives ; per EC-09: no input focus this scenario, modal fires immediately | match-found countdown modal interrupts | match-found alert audio (interrupt-priority) | match-found countdown modal (Priority 1 per UI hierarchy) | TR for state transition ; **EC-09 baseline path (no text input focus this scenario, so #18 draft fate doesn't fire here — note: #18 still BLOCKING for Scenarios A and D)** |
+| **t ≈ T+5min+8s** (accepts match) | click Accept | state→`InMatch` ; FT13 owns from here ; `origin_city_id="city_solis"` retained | match-found modal closes ; match loading | match-load cue | match loading screen (out-of-FT12-scope) | TR-WMS-032 |
+| **(t = match in progress — out of FT12 scope)** | — | — | — | — | — | — |
+| **t = match_end + 30s** (auto-return to city_solis) | (auto-timeout per C3 ReturningFromMatch row: "auto-timeout (~30s)") | state→`EnteringCity` ; destination = `origin_city_id="city_solis"` ; allocate via D1 (likely same instance city_solis_NN if still active) | loading screen | loading cue | loading screen | TR-WMS-004 (R4 returning path uses last_city_id which equals origin_city_id here) |
+| **t = match_end + ~35s** (back at city_solis) | (no input — auto-spawn) | state `InCity` ; `last_city_id="city_solis"` unchanged ; presence broadcast | plaza render ; avatar at spawn ; **Keeper interaction prompt active per R2.1 Path 3 fix** (NOT inactive as old framing said) ; landmarks visible ; Monument dormant | plaza ambient | HUD minimal + **City Menu HUD pin visible** | TR-WMS-004 ; TR-WMS-056 (R2.1 Keeper post-first-visit + post-match verify — **#12 fix verification, second exposure** — confirms Keeper prompt remains active across the full session arc) |
 
-**Empty-cell blockers (to be filled during authoring):** TBD
+### Empty-cell blockers exposed by Scenario B
+
+| Blocker | Severity | Where exposed | What's missing in cell |
+|---|---|---|---|
+| **#10** R3.1 vignette freshness signal absent | BLOCKING (pillar P5) | t≈T+10s (approach), t≈T+15s (interact, sees same V2), t≈T+80s→5min (no reason to revisit) | Habitual visitor with last-seen=5d-ago + rotation=7d sees identical V2 ; no UI indicator distinguishes "new since last visit" from "unchanged" ; no per-player `vignette_seen_set` to derive the signal from ; repeat-visit hook fails silently at the exact moment it was added to serve |
+| **#11** R15 zero pull mechanics | BLOCKING (pillar P5) | t≈T+5s (passes affordances on first survey), t≈T+80s→5min (queue-wait period — *the* primary linger window when no event) | R15 is supposed to be primary linger when no event ; player walks past affordances without engagement ; no audiovisual pull signal ; no sightline-from-spawn placement minimum ; no ambient social proof (no NPC sitting on bench when player enters) ; Section B "linger" intent has no behavioral incentive — fails worse here than in Scenario C because there is no bell sequence to compete |
+| **#19** OQ-7 platform decision | BLOCKING | t≈T+65s (hotkey assumes PC), t≈T+75s (queue confirm assumes click) | Every R2.1 Path 2 interaction (hotkey + HUD pin click) assumes PC mouse+keyboard ; gamepad/touch shift requires substantive redesign of hotkey/pin mechanism ; provisional commitment becomes silent commitment as the scenario walks through it |
+| **narr-3** OQ-2 theme spec | BLOCKING (production) | t=T_load (city_solis ambient soundscape), t≈T+15s (Anchor voiceover) | Multiple cells require theme-bound content not yet specified ; cascade-blocks Audio + Asset Spec — same root cause as Scenarios A and C |
+
+### Scenario B complete-row summary
+
+- **Total rows:** 16 (including out-of-scope match-in-progress placeholder)
+- **Rows with all 5 cells filled, no blocker reference:** 0
+- **Rows with at least one empty/blocker-marked cell:** 16
+- **Distinct BLOCKING blockers exposed:** 4 (Cluster 4 primary: #10, #11 ; Cluster 8 secondary: #19 ; production: narr-3)
+- **AC coverage:** TR-WMS-004, 013, 031, 032, 036, 039, 041, 056 — 8 ACs reference this scenario directly ; **TR-WMS-056 verified twice (hotkey path at T+65s + Keeper-active path at match_end+~35s) confirming the #12 resolution closes the gap**
+
+### Implication for revision pass (Phase 3 continued)
+
+**Cluster 4 (Linger / Repeat-Visit Hook) must be addressed next** — Scenario B exposes #10 + #11 as load-bearing for the no-event session profile, which is the most common returning-player session shape. Recommended fixes:
+- **#10 R3.1 freshness signal:** Add per-player `vignette_seen_set` to Player Record (or derive from `anchor_interacted` event log) ; UI signal options: (a) "✨ ใหม่" badge on vignette panel header, (b) different visual treatment for unseen vignette, (c) optional "อ่านที่ผ่านมา" history list. Low engineering cost, high pillar-delivery value. Add net-new TR-057 for freshness signal verification.
+- **#11 R15 pull mechanics:** Add at least one of: (a) sightline-from-spawn placement minimum (per ux-designer rec #11), (b) ambient social proof (NPC sitting on bench when player enters per nice-to-have EC-22 extension), (c) subtle visual signal (gentle particle/glow on affordance during queue-wait state) — must not become reward-mechanic per R15 zero-reward rule. Add net-new TR-058 for pull verification (engagement count under no-event session shape).
+
+**#12 fix verification:** This scenario is the first end-to-end test of R2.1 — **PASS.** Hotkey path opens City Menu post-first-visit ; Keeper interaction prompt remains active post-first-visit and post-match. Both paths reachable from any spawn. R2.1 closes #12 as designed. The walkthrough confirms no placeholder-heavy authoring was needed because the design decision was sound.
+
+**#19 still load-bearing** — Scenario B reaffirms that hotkey-driven UI requires platform decision before UX spec phase begins. Producer notification needed parallel to existing OQ-7 deferral ; this is now exposed in 4 of 5 scenarios (A, B, D primary ; E n/a server-aggregate ; C touches but not primary).
+
+**Production gate (narr-3):** city_solis ambient soundscape + Anchor voiceover both unspecified. Cannot ship Scenario B fantasy without OQ-2 theme spec for at least the 1 starter city + 1 narrative-relevant city used in walkthroughs.
+
+---
 
 ---
 
@@ -417,22 +466,44 @@ Production-side narr-3 (OQ-2) must produce theme spec including: per-city ambien
 - [x] **Scenario D authored (2026-05-02)** — 19 rows, 6 distinct BLOCKING blockers exposed (primary: #13 OQ-10 Fragment routing perverse incentive — pillar P3-vs-P4)
 - [x] **Scenario E authored (2026-05-05)** — 12 rows (server-aggregate), 17 distinct BLOCKING items exposed (11 design blockers + 6 qa) — densest blocker exposure of any scenario, primaries: capacity-math nexus (#7 prewarm 15%, #8 ghost slots 67%, #9 PlayFab rate ~2× plan) + R12 cluster (#4/#5/#6) + D2 execution-env pinning (#14)
 - [x] **Blocker #12 resolved (2026-05-05)** — Phase 3 Cluster 4 partial — R2.1 added (3-path hybrid: landmark-direct + hotkey/HUD pin + Keeper-as-ambient) ; Section B + UI Requirements patched ; TR-WMS-056 added ; Scenario B unblocked. See review log entry "Phase 3 Cluster 4 Partial — 2026-05-05"
-- [ ] Scenario B authored (#12 now resolved, ready to author)
-- [ ] Blocker → Walkthrough Mapping verified against authored content
-- [ ] Phase 2 complete; Phase 3 (cluster-by-cluster GDD revision) can begin
+- [x] **Scenario B authored (2026-05-05)** — 16 rows, 4 distinct BLOCKING blockers exposed (Cluster 4 primary: #10 R3.1 freshness signal, #11 R15 zero pull ; secondary #19 platform, narr-3 production). TR-WMS-056 verified twice confirming #12 resolution holds end-to-end.
+- [x] **Phase 2 COMPLETE** — all 5 scenarios authored ; methodology change to top-down walkthrough-driven per third-review creative-director synthesis fully executed.
+- [ ] Blocker → Walkthrough Mapping verified against authored content (run after Scenario B integration)
+- [ ] Phase 3 (cluster-by-cluster GDD revision) — next: Cluster 3 (capacity math) per Scenario E densest exposure
 
 ---
 
 ## Next session
 
-Author **Scenario E — Launch-Spike** (server-aggregate view). Primary blocker
-coverage: **Cluster 2 (R12 PlayFab CAS / atomicity)** + **Cluster 3 (capacity
-math — EC-19 prewarm coverage, EC-14 ghost slots, PlayFab API rate limit)** +
-Cluster 6 (D2 5s tick execution environment) + Cluster 7 #15 D1 break path
-(load-bearing here, latent in D). Differs from Scenarios A/C/D in being aggregate
-(5000 simultaneous players) rather than single-player slice — surfaces capacity
-issues only visible at scale.
+**Phase 2 is COMPLETE.** Begin **Phase 3 cluster-by-cluster GDD revision** per
+third-review creative-director synthesis. Recommended start order based on
+Phase 2 blocker exposure density and dependency chain:
 
-Then **Scenario B — Return-Visit-No-Event** last (depends on #12 resolution from
-Scenario A — Scenario B's entire session lives in post-first-visit state, so
-authoring before #12 has a proposed fix would produce a placeholder-heavy table).
+1. **Cluster 3 (capacity math)** — densest exposure (Scenario E). Quantitative
+   defects with clear arithmetic fixes. Unblocks `production/qa/environment-spec.md`
+   authoring (qa-7) which is hard-prerequisite for Phase 3 verification of any
+   performance AC. Sub-blockers: #7 prewarm 15% coverage, #8 ghost slots 67%
+   phantom, #9 PlayFab API rate ~2× plan + qa-1/2/8.
+2. **Cluster 2 (R12 PlayFab CAS)** — implementer trap ; must be re-authored
+   as a unit (name second store, fix TR-037 phantom mode, name cache layer
+   constraint). Sub-blockers: #4, #5, #6 + qa-2/4. Pairs naturally with
+   Cluster 3 because both touch the PlayFab/Cosmos store boundary.
+3. **Cluster 6 (#14 D2 execution environment)** — 1-paragraph pin in GDD
+   (Functions Premium + pre-warmed). Closes #14 + #2 (R8 skew lower bound)
+   in one stroke.
+4. **Cluster 7 (#15 D1 break path + #16 G.6 jitter)** — 2 small algorithmic
+   patches to D1 step 2 + G.6 validator predicate.
+5. **Cluster 4 remainder (#10 R3.1 freshness, #11 R15 pull)** — Scenario B
+   exposes both as load-bearing for the most common returning-player session ;
+   recommended fixes already drafted in Scenario B implication section.
+6. **Cluster 1 (R8 bell collective moment)** — pillar-threat ; needs avatar
+   behavioral cue + cross-channel ordering constraint.
+7. **Cluster 8 remainder (#17 Keeper info-dump partial-close, #18 EC-09 draft
+   fate, #19 OQ-7 platform)** — narrative-director coordination needed for
+   #17 ; producer decision needed for #19.
+8. **Cluster 5 (#13 OQ-10 Fragment routing)** — pillar P3-vs-P4 conflict ;
+   gated on FT13/FT14 design ; may need to ship FT12 with explicit
+   gate-on-OQ-10 framing for R9.
+
+Production-infrastructure cluster (narr-1, narr-2, narr-3) runs in parallel
+with above ; producer notification needed for theme spec staffing.
