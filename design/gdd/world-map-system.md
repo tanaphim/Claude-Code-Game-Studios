@@ -671,23 +671,39 @@ InstanceAssignment(player, city_id, t):
       target = LookupInstance(member.current_instance_id, t)
       if target is null:
         continue                                         // stale ref — instance torn down
-      // EC-06 hard ceiling enforcement via CAS (NOT plain read-then-write — see R12)
-      // Implementation: compare-and-swap on instance population using PlayFab version token
-      // or CosmosDB ETag. TOCTOU race between concurrent parties is REJECTED at write time.
+      // EC-06 hard ceiling enforcement via CAS (NOT plain read-then-write — see R12 + R13.1)
+      // Implementation: Redis Lua script atomic CAS per R13.1 binding.
       cas_result = TryClaimSlots(target.instance_id, party_size, expected_pop=target.current_population)
       if cas_result.success AND (cas_result.new_pop <= hard_ceiling):
         return target.instance_id                        // join existing party instance
-      else:
+      else if cas_result.success AND (cas_result.new_pop > hard_ceiling):
+        // Genuine ceiling violation — party would overflow even if claim succeeded
         emit_signal("party_co_location_ceiling_exceeded", target.instance_id)
-        break                                            // fall through to step 2 (also retry on CAS conflict)
+        break                                            // fall through to step 2
+      else:
+        // CAS conflict (concurrent party claimed slots first) — retry-eligible
+        // Closes Cluster 7 #15: signal split from ceiling-exceeded for ops triage
+        emit_signal("party_co_location_cas_conflict", target.instance_id)
+        break                                            // fall through to step 2 (no retry on same target ; step 2 picks fresh candidates)
 
   // (2) Pack into existing instances ที่มีที่ว่างพอ (descending by population)
+  // CAS-based per R12 + R13.1 — no plain read-then-write
   candidates = ListInstancesOfCity(city_id, t)
   // EC-01 tie-break: primary desc by population, secondary asc by instance_id (lex)
   candidates.sort(by: (-current_population, instance_id_lex_asc))
   for each i in candidates:
-    if (i.current_population + party_size) <= CITY_INSTANCE_SOFT_CAP:
+    if (i.current_population + party_size) > CITY_INSTANCE_SOFT_CAP:
+      continue                                           // pre-CAS no-fit filter (cheap)
+    cas_result = TryClaimSlots(i.instance_id, party_size, expected_pop=i.current_population)
+    if cas_result.success AND (cas_result.new_pop <= CITY_INSTANCE_SOFT_CAP):
       return i.instance_id                               // assign
+    else if not cas_result.success:
+      // CAS conflict on i (concurrent travel claimed slots first) — try next candidate
+      // Closes Cluster 7 #15: explicit signal for step-2 contention (was silent in prior pseudocode)
+      emit_signal("instance_pop_cas_conflict", i.instance_id)
+      continue                                           // try next candidate
+    // success but new_pop > SOFT_CAP shouldn't happen (pre-CAS filter caught it) — defensive continue
+    continue
 
   // (3) Fallback: spawn new instance
   new_id = SpawnNewInstance(city_id)
@@ -1021,7 +1037,7 @@ State C: City "Nova" ยังไม่มี instance (everyone offline)
 | `STARTER_CITY_INSTANCE_PREWARM_COUNT` | **5** | 1 – 20 | จำนวน instance ของ starter city ที่ pre-warm ก่อน server accept connections (EC-19, steady-state). 5 รองรับ 750 raw / ~600 effective (after ghost-slot subtraction per EC-19). For launch days use `LAUNCH_MODE_PREWARM_COUNT` instead | ⚠️ Verify ก่อน launch event |
 | `LAUNCH_MODE_PREWARM_COUNT` | **35** | 10 – 50 | Override prewarm count สำหรับ launch day / marketing-push events. 35 รองรับ 5250 raw / ~5100 effective (closes Cluster 3 #7). CBS hot-reload toggle ; ops switch on ≥1h ก่อน event start, revert ≤24h หลัง event end (ห้ามเกิน 48h — idle resource cost). **Cost note:** 30 extra instances × Photon CCU price + Azure compute ; producer approval required per launch | ❌ Per-event ops decision |
 | `IDLE_INSTANCE_TEARDOWN_SECONDS` | **300** (5 นาที) | 60 – 1800 | Window ที่ instance pop=0 ก่อน teardown (EC-04). ต่ำเกิน = thrashing เมื่อมี player สลับเข้า ; สูงเกิน = waste resource | ✅ Live-tune |
-| `D2_SCHEDULER_TICK_SECONDS` | **5** | 1 – 6 | ความถี่ที่ D2 overflow predicate run. ต่ำ = pre-warm responsive แต่ scheduler load สูง ; สูง = D1 step 3 fallback บ่อย. **Hard upper bound 6**: G.6 constraint `EVENT_ANNOUNCE_LEAD_SECONDS ≥ 5×tick` ต้องเป็น CBS validation rule — ที่ default LEAD=30, tick > 6 จะละเมิด. **Effective tick depends on `D2_FUNCTIONS_TIER`** — Consumption tier cold-start invalidates ≤5s budget per Cluster 6 #14 ; safe range applies only ที่ Premium tier | ⚠️ Verify scheduler budget |
+| `D2_SCHEDULER_TICK_SECONDS` | **5** | 1 – 5 | ความถี่ที่ D2 overflow predicate run. ต่ำ = pre-warm responsive แต่ scheduler load สูง ; สูง = D1 step 3 fallback บ่อย. **Hard upper bound 5** (tightened from 6 per Cluster 7 #16 fix): G.6 constraint `EVENT_ANNOUNCE_LEAD_SECONDS ≥ 6×tick` ต้องเป็น CBS validation rule — ที่ default LEAD=30, tick > 5 จะละเมิด (ต้อง raise LEAD ≥ 36 to allow tick=6). **Effective tick depends on `D2_FUNCTIONS_TIER`** — Consumption tier cold-start invalidates ≤5s budget per Cluster 6 #14 ; safe range applies only ที่ Premium tier (R13.1) | ⚠️ Verify scheduler budget |
 | `D2_FUNCTIONS_TIER` | **Premium + 3 pre-warmed** | Premium-only (no other valid value) | Azure Functions execution tier สำหรับ D2 scheduler + R8 fan-out. **Binding constraint per R13.1 — closes Cluster 6 #14 + Cluster 1 #2** ; Consumption tier ห้ามใช้ (200–800ms cold-start invalidates D2 5s tick + R8 1s skew lower bound). Pre-warmed instances eliminate cold-start at steady state. ส่งเป็น CBS read-only knob เพื่อให้ ops + perf ACs ตรวจ tier ได้, **ห้าม live-tune** | ❌ Architecture-pinned |
 
 ### G.2 Travel & Transition
@@ -1036,7 +1052,7 @@ State C: City "Nova" ยังไม่มี instance (everyone offline)
 
 | Knob | Default | Safe Range | What it affects | Live-tune? |
 |---|---|---|---|---|
-| `EVENT_ANNOUNCE_LEAD_SECONDS` | **30** | 10 – 300 | Delay จาก Fragment Event announce → event เริ่มจริง (EC-20). ให้ pre-warm instance + spread thundering herd ของ player travel ; สั้นเกิน = server spike, ยาวเกิน = ลด urgency | ✅ A/B กับ event participation |
+| `EVENT_ANNOUNCE_LEAD_SECONDS` | **30** | **12** – 300 | Delay จาก Fragment Event announce → event เริ่มจริง (EC-20). ให้ pre-warm instance + spread thundering herd ของ player travel ; สั้นเกิน = server spike, ยาวเกิน = ลด urgency. **Lower bound 12** (raised from 10 per Cluster 7 #16 fix) preserves jitter headroom under G.6 `lead ≥ 6 × tick` validation | ✅ A/B กับ event participation |
 | `BELL_SEQUENCE_DURATION_SECONDS` | **30** | 15 – 60 | ระยะเวลา bell-as-linger sequence ที่ Monument prominence + cross-instance presence flash คงอยู่ (R8). สั้นเกิน = ผู้เล่นไม่ทัน register collective moment ; ยาวเกิน = service menu interaction ถูก visual interfere | ✅ A/B กับ plaza dwell time |
 | `R8_CROSS_INSTANCE_SKEW_BUDGET_SECONDS` | **3** | 1 – 5 | Maximum acceptable skew ของ bell + Monument transform fire time ข้าม instances ของ city เดียวกัน (R8). ต่ำเกิน = networking infra cost spike ; สูงเกิน = collective moment fragments | ❌ Architecture-driven |
 | `M11_FILTER_LATENCY_BUDGET_MS` | **150** | 50 – 500 | M11 sync filter round-trip SLA ต่อ chat message (EC-08). เกิน budget → degraded mode (broadcast + flag pending review). ต่ำเกิน = M11 cold-start fail บ่อย ; สูงเกิน = chat lag perceptible | ⚠️ Verify against M11 throughput |
@@ -1059,6 +1075,7 @@ State C: City "Nova" ยังไม่มี instance (everyone offline)
 | `CITY_VISIT_FAIRNESS_INDEX_ALERT` | **0.3** (gini-style) | 0.1 – 0.7 | Threshold ของความไม่เท่ากันของ city traffic distribution (EC-21). **Computation:** Gini coefficient ของ `unique_visitors_per_city` (10 cities — รวมเมืองที่ visits=0) ; sample = rolling 24h window ; aggregate = daily snapshot at 00:00 UTC. **Trigger:** 7 consecutive daily samples ≥ threshold ⇒ "Anchor concentration warning" → re-engagement campaign / event redistribution review | ✅ Live-tune |
 | `CITY_INSTANCE_OVERFLOW_RATE_ALERT` | **0.05** (5%) | 0.01 – 0.20 | Fraction ของ travel attempts ที่ trigger D1 step 3 (SpawnNewInstance fallback). > threshold ⇒ pre-warm policy ไม่ effective ; pre-warm count ต้อง bump | ✅ Live-tune |
 | `CITY_INSTANCE_FRAGMENTATION_ALERT` | **0.40** (40% half-empty) | 0.20 – 0.80 | Fraction ของ active instances ที่มี `current_population < SOFT_CAP × 0.5` ใน rolling 1h window. > threshold ⇒ first-fit-descending packing ทิ้ง runt instances สะสมจน server resource เปลือง ; ops ตัดสินใจ defrag (drain instance ที่ pop ต่ำที่สุด → migrate players → teardown). Closes item 9 ของ /design-review #1 prior log (D1 fragmentation no metric) | ✅ Live-tune |
+| `CAS_CONFLICT_RATE_ALERT` | **0.10** (10% retry rate) | 0.02 – 0.30 | Fraction ของ D1 step 1 + step 2 attempts ที่ emit `party_co_location_cas_conflict` หรือ `instance_pop_cas_conflict` signal ใน rolling 1h window. > threshold ⇒ CAS contention significant ; ops investigate: (a) `CITY_INSTANCE_SOFT_CAP` สูงเกินทำให้ packing concentrate, (b) `LAUNCH_MODE_PREWARM_COUNT` ต่ำเกิน ในช่วง spike, (c) traffic pattern เปลี่ยน (Fragment Event อยู่ใกล้เมือง popular). Closes Cluster 7 #15 ops surface | ✅ Live-tune |
 | `CROSS_FACTION_PARTY_MATCH_PCT_ALERT` | **0.70** (70%) | 0.30 – 0.90 | Fraction ของ Tournament matches ที่มี cross-faction premade ≥ 1 party (R9.1 telemetry). > threshold ⇒ R9 cross-faction party formation บ่อยกว่า design assumption ; signal ให้ FT13/FT14 author ทราบเมื่อ resolve OQ-10 | ✅ Live-tune |
 | `R16_ACKNOWLEDGE_RADIUS_UNIT` | **8** | 4 – 15 | Radius รอบ player ที่กด R16 cross-faction acknowledge (Traveler's Salute). ต่ำเกิน = ต้องเดินใกล้เกินไป ; สูงเกิน = trigger จาก stranger ที่ไม่ได้เห็นจริง | ✅ A/B กับ player feedback |
 | `R16_ACKNOWLEDGE_COOLDOWN_SECONDS` | **60** | 30 – 300 | Cooldown ต่อ player target ต่อการ acknowledge ครั้งถัดไป (R16 anti-spam) | ✅ Live-tune |
@@ -1072,10 +1089,15 @@ State C: City "Nova" ยังไม่มี instance (everyone offline)
   → tolerable. ที่ CAP=300, RADIUS=15 → 60-80 คน → chat flood
 - `EVENT_ANNOUNCE_LEAD_SECONDS` × `D2_SCHEDULER_TICK_SECONDS` → effective
   pre-warm response time. ถ้า scheduler tick ใกล้ lead time → race
-  เกิด overflow ก่อน pre-warm. **Rule: lead ≥ 5 × tick — CBS ต้อง enforce
-  เป็น validation rule (reject config ที่ละเมิด ก่อน apply)** ; safe ranges
-  ของ tick (1–6) คำนวณจาก default LEAD=30 ; ถ้า ops จะลด LEAD ต่ำกว่า 30,
-  CBS validator ลด max tick ตามสูตร floor(LEAD/5) ก่อน accept
+  เกิด overflow ก่อน pre-warm. **Rule: lead ≥ 6 × tick — CBS ต้อง enforce
+  เป็น validation rule (reject config ที่ละเมิด ก่อน apply)** ; **formula
+  raised from 5× → 6× per Cluster 7 #16 fix** to add 1 tick of jitter
+  safety margin (closes fragile-boundary case ที่ LEAD=10 + tick=2 = exactly
+  5 ticks zero headroom). Safe ranges ของ tick (1–6) คำนวณจาก default
+  LEAD=30 ; ถ้า ops จะลด LEAD, CBS validator ลด max tick ตามสูตร
+  `floor(LEAD/6)` ก่อน accept ; LEAD lower bound = 12 (= 6 × min-safe-tick
+  of 2). Note: ภายใต้ R13.1 Functions Premium, *actual* tick ≈ *configured*
+  tick (cold-start eliminated) — formula กับ realistic timing match กัน
 - `STARTER_CITY_INSTANCE_PREWARM_COUNT` × `IDLE_INSTANCE_TEARDOWN_SECONDS`
   → ของเสีย launch ; pre-warm สูง + teardown ช้า = idle resource หลัง
   launch peak. แนะนำ launch playbook: bump prewarm สำหรับ launch day
@@ -1228,15 +1250,16 @@ budget revision pass หาก leadership เลือก gamepad / touch / cros
 > test (BLOCKING) ; Performance = load test (ADVISORY pre-milestone) ;
 > Manual = smoke check (ADVISORY)
 >
-> **Coverage:** 56 criteria — Core Rules 15 + 4 (R3.1, R12 atomicity, R12 CAS,
+> **Coverage:** 58 criteria — Core Rules 15 + 4 (R3.1, R12 atomicity, R12 CAS,
 > R15) + 5 additive (R5.1, R9.1, R16 ×3) + 1 (R2.1 service access paths,
-> closes blocker #12) + **3 (TR-038 split into a/b per qa-3 ; TR-053
-> read-repair + TR-054 cache TTL per qa-4)**, Formulas 6, Edge Cases 9 +
-> 2 (EC-14, EC-18) + 1 additive (EC-26 sequencing), Cross-System 3,
-> Performance 4 (TR-034 split a/b/c per Cluster 3 #7 + qa-1 ; TR-042
-> mid-range) + 1 (TR-055 ghost-slot per Cluster 3 #8), Manual 2 + 1
-> additive (G.5 fragmentation alert). ดู H.7 สำหรับ criteria ที่ defer รอ
-> FT13/FT14/M11.
+> closes blocker #12) + 3 (TR-038 split into a/b per qa-3 ; TR-053
+> read-repair + TR-054 cache TTL per qa-4) + **2 (TR-057 D1 step-2 CAS
+> conflict signal per Cluster 7 #15 ; TR-058 G.6 jitter validator per
+> Cluster 7 #16)**, Formulas 6, Edge Cases 9 + 2 (EC-14, EC-18) + 1
+> additive (EC-26 sequencing), Cross-System 3, Performance 4 (TR-034
+> split a/b/c per Cluster 3 #7 + qa-1 ; TR-042 mid-range) + 1 (TR-055
+> ghost-slot per Cluster 3 #8), Manual 2 + 1 additive (G.5 fragmentation
+> alert). ดู H.7 สำหรับ criteria ที่ defer รอ FT13/FT14/M11.
 
 ### H.1 Core Rules (R1–R14)
 
@@ -1271,6 +1294,8 @@ budget revision pass หาก leadership เลือก gamepad / touch / cros
 | TR-WMS-047 (R16 opt-out passthrough) | Logic | **Given** B ปิด emote receive ใน M11 settings **When** A กด acknowledge บน B **Then** A สำเร็จส่ง request (ฝั่ง A trigger emote ปกติ) แต่ B ไม่เห็น reciprocal animation ; ไม่มี toast/notification บน B ; cooldown timer ของ A→B ยังเริ่มนับ (กัน A spam attempt) |
 | TR-WMS-048 (EC-26 sequencing) | **Integration** | **Given** Fragment Event announce arrive ที่ city ที่ player กำลัง `InCity` ; Monument อยู่นอก viewport **When** สังเกต signal ordering บน client (mock instrumentation) **Then** bell audio fires ที่ t=0 (server-issued event time) ; directional indicator fade-in trigger ที่ t = 0.3s ± 50ms ; Galaxy Map indicator pulse update เป็น state-change ไม่ trigger UI sound |
 | TR-WMS-049 (G.5 fragmentation alert) | Logic | **Given** city_solis มี 10 active instances ที่ pop = [150, 150, 75, 60, 50, 40, 30, 20, 15, 10] (`SOFT_CAP`=150) ; rolling 1h window **When** evaluate `CITY_INSTANCE_FRAGMENTATION_ALERT` predicate **Then** instances ที่ pop < 75 (SOFT_CAP × 0.5) มี 7 จาก 10 = 0.70 > threshold (0.40) → alert fires ; ops dashboard เห็น "fragmentation warning city_solis" |
+| TR-WMS-057 (D1 step 2 CAS-conflict signal) | Logic | **Given** instance_X pop=148, `CITY_INSTANCE_SOFT_CAP`=150, party A (size=2) และ party B (size=2) issue D1 step 2 CAS concurrently **When** Lua script serializes (one wins, the other CAS-conflicts: reads 148, retry reads 150, 150+2=152>150 pre-CAS filter caught it on retry) **Then** the failing party emits `instance_pop_cas_conflict(instance_X)` signal exactly once ; D1 falls through to next candidate or step 3 ; ห้าม silently retry on same instance without signal (closes Cluster 7 #15) |
+| TR-WMS-058 (G.6 jitter headroom validator) | Logic | **Given** CBS validator load-time check ของ `EVENT_ANNOUNCE_LEAD_SECONDS` × `D2_SCHEDULER_TICK_SECONDS` per Cluster 7 #16 6× rule **When** config = (LEAD=10, tick=2) → 10 < 6×2=12 **Then** rejects with "lead must be ≥ 6 × tick" ; **When** config = (LEAD=12, tick=2) → 12 = 6×2 **Then** accepts (boundary inclusive) ; **When** config = (LEAD=30, tick=5) — default → 30 = 6×5 **Then** accepts ; **When** config = (LEAD=30, tick=6) → 30 < 6×6=36 **Then** rejects (ops must pick LEAD ≥ 36 OR tick ≤ 5) ; CBS apply fails on any rejection ; ห้าม silently allow |
 | TR-WMS-056 (R2.1 access paths post-first-visit) | **Integration** | **Given** player state = `InCity` post-first-visit (เคยเข้า city อย่างน้อย 1 ครั้งแล้ว) **When** ผู้เล่นเลือก service path ใดก็ตามจาก 3 paths: (a) กด City Menu hotkey (PC `M`), (b) คลิก persistent City Menu HUD pin, (c) เดินไปที่ landmark ใด landmark หนึ่งใน 8 landmarks + กด interaction prompt **Then** target service UI เปิดภายใน 200ms ; ทั้ง 3 paths reachable from any spawn point ใน plaza ; path (a)+(b) ยัง active เมื่อ state = `InCity+Queued` ; path (c) Keeper interaction prompt ยัง active ทุก visit (ไม่ใช่ first-visit only) |
 
 ### H.2 Formulas (D1, D2)
