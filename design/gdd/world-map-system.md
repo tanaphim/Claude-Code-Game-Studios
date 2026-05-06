@@ -223,6 +223,58 @@ Anchor Content ทำงานเป็น one-and-done lore tourism ; ผู้
 narrative ownership (OQ-3 ขยาย scope). Rotation เกิดบน server clock
 (UTC), ทุก instance ของเมืองเห็น vignette ปัจจุบันพร้อมกัน.
 
+**R3.1 freshness signal (closes Cluster 4 #10):** ผู้เล่นต้องเห็น signal
+ที่บอกว่า vignette ปัจจุบันเป็น **"unseen since rotation"** หรือ
+"already-read this rotation" เพื่อให้ habitual visitor (return ทุก 5 วัน
+ที่ rotation 7 วัน) ไม่อ่านซ้ำโดยไม่รู้ตัว.
+
+- **Per-player seen-state model — engineering pick required:**
+  - **Path A (preferred — preserves R12 contract):** derive จาก existing
+    `anchor_interacted(player_id, city_id, vignette_id)` telemetry event
+    log. ที่ Anchor approach time, server query: *"`anchor_interacted` ของ
+    `(player_id, city_id, current_vignette_id)` ถูก log ตั้งแต่
+    `current_vignette_id` กลายเป็น active หรือยัง?"* yes = seen, no = unseen.
+    No new PlayFab field, no R12 contract change.
+  - **Path B (fallback — if telemetry store ไม่รองรับ low-latency per-player
+    query):** separate PlayFab user-data key `vignette_seen_set`
+    (List[vignette_id], partition แยกจาก R12 4-field blob). R12 atomicity
+    contract ไม่เปลี่ยน เพราะ key นี้อยู่นอก 4-field co-located blob ;
+    write happens after `anchor_interacted` log, asynchronous, non-atomic
+    กับ Player Record.
+  - **Engineering picks Path A หรือ Path B หลัง telemetry feasibility
+    confirm** ; GDD commits ทั้ง 2 paths เพื่อให้ implementation มี
+    fallback. ห้ามเพิ่ม field เข้า R12 4-field blob ในทุกกรณี.
+
+- **Cold-start failure mode:** ถ้า query/lookup fail (telemetry down,
+  Path B key missing), treat vignette as "unseen" → show freshness signal.
+  Conservative — แสดง redundant badge ดีกว่าซ่อน new content.
+
+- **UI signal — freshness present (vignette unseen):**
+  1. **Anchor landmark ambient pulse** — slow warm-amber glow (≥3s cycle,
+     non-flashing per photosensitivity), visible จาก plaza primary path
+     ที่ default camera distance ; diegetic environmental cue, ไม่ใช่
+     notification badge
+  2. **Vignette panel header marker** — ข้อความ *"(ใหม่)"* adjacent
+     ต่อ vignette title, low visual weight, same color as header text +
+     bold/slight emphasis ; ไม่ใช่ overlay badge หรือ blinking icon
+  3. Server logs `anchor_interacted` เมื่อปิด panel → ครั้งถัดไป resolve
+     เป็น "seen" → pulse + "(ใหม่)" ทั้งคู่หาย
+
+- **UI signal — freshness absent (vignette seen):**
+  - Anchor pulse absent ; vignette panel header ไม่มี marker
+  - **ห้ามแสดง negative feedback** ("already read", "เคยอ่านแล้ว") — เป็น
+    quiet absence ตาม sanctuary tone, ไม่ใช่ system nag
+
+- **Accessibility compliance:**
+  - "(ใหม่)" text ensures colorblind players ไม่พึ่ง amber pulse alone
+    (color + text redundancy — mandatory minimum #2)
+  - Text marker scale ตาม text-scale 100–150% (mandatory minimum #4)
+  - Pulse ≥3s cycle ป้องกัน photosensitivity trigger
+
+- **History affordance ("อ่านที่ผ่านมา") — DEFERRED to post-launch.** Scenario
+  B failure mode คือ "ไม่รู้ว่าเคยอ่านอันนี้ยัง" ไม่ใช่ "หา vignette เก่า
+  ไม่เจอ" ; freshness signal ปิด gap แรกได้โดยไม่ต้อง history list.
+
 **R4 — Single Presence + Persistent City**
 ผู้เล่นอยู่ใน city เดียวเท่านั้น ณ เวลาใดก็ตาม. `last_city_id` เป็น
 persistent server-authoritative field — เมื่อ disconnect/session expire
@@ -520,9 +572,68 @@ performance ACs (TR-034a/b/c, TR-035, TR-042, TR-055) จะ executable.
 - ห้าม block traversal — ทุก affordance วาง offset จาก main pathway
 - Detail spec ของแต่ละ affordance defer ไป UX spec + Asset Spec phase
 
+**R15 pull mechanics (closes Cluster 4 #11) — 3 binding rules:**
+
+1. **Sightline-from-spawn rule (spatial constraint, level-design + art enforce):**
+   - ≥1 R15 affordance ต้องมี **unobstructed direct sightline จาก plaza
+     spawn point** ที่ default camera angle/zoom (camera state หลัง
+     `EnteringCity` → `InCity` complete, ก่อน input ใดๆ). "Unobstructed"
+     = ไม่มี structure/NPC/terrain breaking sightline ระหว่าง spawn
+     กับ affordance's primary interactive element ใน camera frustum
+   - ≥2 R15 affordances ต้องอยู่ **บนหรือ immediately adjacent ต่อ
+     plaza primary path** (spawn → Anchor traversal corridor) ; "adjacent"
+     = ภายใน 5u จาก path centerline, visible จาก path โดยไม่ต้อง rotate
+     camera
+   - **Exceptions:** geometry ที่ block sightline จริง (curved plaza,
+     occluding columns) → affordance ต้อง visible **ภายใน 5s ของ natural
+     forward movement จาก spawn**. Anchor landmark **ไม่นับ** เป็น R15
+     affordance สำหรับ sightline rule (มี R3 function แยก). ทุก affordance
+     ยัง offset จาก main pathway ได้ — sightline + non-blocking-traversal
+     compatible
+
+2. **Ambient social proof rule (NPC seeding extension ของ EC-22):**
+   - ใน 5+ ambient NPCs ต่อ plaza (`MIN_AMBIENT_NPC_PER_CITY=5`):
+     **≥1 ambient NPC ต้อง visibly using R15 affordance ทุกเวลา** —
+     นั่งบนม้านั่ง, ยืนที่ fountain (particle active), หรือ occupy
+     emote spot (animation playing)
+   - **Rotation interval 60–120s** — assigned "R15-using" role rotate
+     ไปยัง NPC + affordance อื่นภายใน window สุ่ม ; transition ใช้
+     walk + sit/interact animation, ห้าม teleport (ป้องกัน static-tableau
+     ที่อ่านเป็น "decorative prop")
+   - **Pop-conditional:** apply เมื่อ `current_population ≥ 0` (รวม
+     off-peak empty plaza per EC-22 intent). ถ้า real player กำลังใช้
+     R15 affordance อยู่ → NPC yield (เดินออก, real player นั่งแทน) —
+     preferred over NPC + player co-occupying (breaks spatial credibility)
+   - **No new knob** ; rule เป็น behavioral constraint บน existing
+     ambient NPC system ; Asset Spec phase ระบุ animation states
+
+3. **Queue-wait visual signal rule (passive ambient emphasis):**
+   - ใน passive `InCity` states (รวม `InCity+Queued`, ไม่ใช่ใน service
+     menu, avatar idle), R15 affordances ใน camera viewport รับ **subtle
+     ambient visual emphasis** — slow soft glow หรือ gentle particle
+     emission (warm, low-saturation) ที่ primary interactive element
+   - Emphasis เป็น **passive** ; ไม่ pulse urgent, ไม่แสดง text, ไม่ตาม
+     player. ทำให้ affordance ที่มีอยู่แล้ว distinct จาก inert environment
+     props
+   - Activation scope: **ทุก R15 affordances ใน viewport** (ไม่เฉพาะ
+     nearest one)
+   - **Apply universally ใน passive `InCity`** (ไม่เฉพาะ queued) เพื่อ
+     ป้องกัน state-flicker (glow ขึ้นเมื่อ enter queue, หายเมื่อ cancel)
+     ที่จะรู้สึก mechanical instead of diegetic
+   - **Accessibility:** glow/particle ห้ามเป็น sole indicator ของ
+     interactability ; interaction prompt (on approach, opt-in rule
+     เดิม) คือ primary functional indicator. Visual signal เป็น
+     secondary discoverability layer ; ต้องผ่าน colorblind sim
+     (shape/motion redundancy, ไม่ใช่ color alone)
+   - Specific particle/glow parameters defer to art-director ; GDD commits:
+     present ใน passive `InCity` + warm/soft tone + no text overlay
+
 *(Rationale: P5 Anti-Toxicity + P3 Team Synergy fantasy require ผู้เล่น
 *มีอยู่จริง* ใน plaza ไม่ใช่แค่ผ่านทาง ; ถ้าทุกคน teleport ออกทันทีหลังเปิด
-service menu, fantasy "ลานวิหาร" ที่ Section B วาดไว้จะไม่ดำเนินการจริง)*
+service menu, fantasy "ลานวิหาร" ที่ Section B วาดไว้จะไม่ดำเนินการจริง.
+3 pull rules ข้างต้นปิด Scenario B exposure ที่ player เดินผ่าน R15 ใน
+queue-wait window โดยไม่ engage — sightline + NPC social proof + visual
+emphasis ทำงานร่วมกันให้ R15 มี discoverability โดยไม่ละเมิด zero-reward rule)*
 
 **R16 — Cross-Faction Stranger Acknowledge Primitive (resolves OQ-9)**
 
@@ -896,6 +1007,30 @@ State C: City "Nova" ยังไม่มี instance (everyone offline)
   ที่ default countdown 10s = popup fire ไม่ช้ากว่า t=2s (เหลือ 8s).
   เมื่อ popup fire, input field auto-blur. *(รักษา Priority-1 intent —
   defer ไม่กิน decision window ของผู้เล่น)*
+
+  **Draft fate per field type (closes Cluster 8 #18 — Norman: "never
+  discard user input without notice"):**
+  - **Loadout name field = preserve + visible cue (Option C):**
+    text content frozen ใน field at auto-blur (ไม่ clear) ; field
+    border รับ subtle warm highlight + persistent label
+    *"ชื่อที่พิมพ์ไว้ยังอยู่"* ปรากฏใต้ field ตลอดเวลาที่ modal แสดง.
+    Label legible ที่ทุก text-scale (100–150% per accessibility minimum
+    #4) ; label หายเมื่อ modal resolve ; field re-focus หลัง decline
+    (player กลับมาพิมพ์ต่อ)
+  - **Friend search field = preserve silently (Option B):** text
+    content frozen ใน field at auto-blur (ไม่ clear) ; ห้ามเพิ่ม
+    visible cue (search เป็น transient query, label จะเพิ่ม cognitive
+    load โดยไม่จำเป็น). Field re-focus หลัง decline ; player เห็น
+    text ยังอยู่และพิมพ์ต่อได้
+  - **On accept (player goes `InMatch`):** uncommitted loadout name
+    **ไม่ save** (player ไม่กด confirm ก่อน modal — ไม่ commit) ;
+    loadout retain prior committed name (or "untitled"). Friend search
+    query ไม่ save (session-scoped state)
+  - **IME mid-composition limitation (known platform limitation, out
+    of FT12 scope):** ตัวอักษรที่อยู่ใน IME composition buffer (ยังไม่
+    commit ไป field) ที่ auto-blur time อาจหายตาม platform IME behavior.
+    Frozen text = last committed character ; full IME preservation
+    across auto-blur เป็น platform-specific engineering ที่ไม่ใช่ FT12 scope
 - **EC-10** **If Galaxy Map double-tap ระหว่าง `EnteringCity` transition**:
   input layer block ทุก nav input ตลอด `EnteringCity` state. server
   ignore second teleport request ที่ arrive ก่อน first จบ.
@@ -1325,16 +1460,19 @@ budget revision pass หาก leadership เลือก gamepad / touch / cros
 > test (BLOCKING) ; Performance = load test (ADVISORY pre-milestone) ;
 > Manual = smoke check (ADVISORY)
 >
-> **Coverage:** 58 criteria — Core Rules 15 + 4 (R3.1, R12 atomicity, R12 CAS,
+> **Coverage:** 62 criteria — Core Rules 15 + 4 (R3.1, R12 atomicity, R12 CAS,
 > R15) + 5 additive (R5.1, R9.1, R16 ×3) + 1 (R2.1 service access paths,
 > closes blocker #12) + 3 (TR-038 split into a/b per qa-3 ; TR-053
-> read-repair + TR-054 cache TTL per qa-4) + **2 (TR-057 D1 step-2 CAS
+> read-repair + TR-054 cache TTL per qa-4) + 2 (TR-057 D1 step-2 CAS
 > conflict signal per Cluster 7 #15 ; TR-058 G.6 jitter validator per
-> Cluster 7 #16)**, Formulas 6, Edge Cases 9 + 2 (EC-14, EC-18) + 1
-> additive (EC-26 sequencing), Cross-System 3, Performance 4 (TR-034
-> split a/b/c per Cluster 3 #7 + qa-1 ; TR-042 mid-range) + 1 (TR-055
-> ghost-slot per Cluster 3 #8), Manual 2 + 1 additive (G.5 fragmentation
-> alert). ดู H.7 สำหรับ criteria ที่ defer รอ FT13/FT14/M11.
+> Cluster 7 #16) + **4 (TR-059 R3.1 freshness signal per Cluster 4 #10 ;
+> TR-060 R15 sightline + TR-061 R15 NPC social proof per Cluster 4 #11 ;
+> TR-062 EC-09 text field preservation per Cluster 8 #18)**, Formulas 6,
+> Edge Cases 9 + 2 (EC-14, EC-18) + 1 additive (EC-26 sequencing),
+> Cross-System 3, Performance 4 (TR-034 split a/b/c per Cluster 3 #7 +
+> qa-1 ; TR-042 mid-range) + 1 (TR-055 ghost-slot per Cluster 3 #8),
+> Manual 2 + 1 additive (G.5 fragmentation alert). ดู H.7 สำหรับ criteria
+> ที่ defer รอ FT13/FT14/M11.
 
 ### H.1 Core Rules (R1–R14)
 
@@ -1371,6 +1509,10 @@ budget revision pass หาก leadership เลือก gamepad / touch / cros
 | TR-WMS-049 (G.5 fragmentation alert) | Logic | **Given** city_solis มี 10 active instances ที่ pop = [150, 150, 75, 60, 50, 40, 30, 20, 15, 10] (`SOFT_CAP`=150) ; rolling 1h window **When** evaluate `CITY_INSTANCE_FRAGMENTATION_ALERT` predicate **Then** instances ที่ pop < 75 (SOFT_CAP × 0.5) มี 7 จาก 10 = 0.70 > threshold (0.40) → alert fires ; ops dashboard เห็น "fragmentation warning city_solis" |
 | TR-WMS-057 (D1 step 2 CAS-conflict signal) | Logic | **Given** instance_X pop=148, `CITY_INSTANCE_SOFT_CAP`=150, party A (size=2) และ party B (size=2) issue D1 step 2 CAS concurrently **When** Lua script serializes (one wins, the other CAS-conflicts: reads 148, retry reads 150, 150+2=152>150 pre-CAS filter caught it on retry) **Then** the failing party emits `instance_pop_cas_conflict(instance_X)` signal exactly once ; D1 falls through to next candidate or step 3 ; ห้าม silently retry on same instance without signal (closes Cluster 7 #15) |
 | TR-WMS-058 (G.6 jitter headroom validator) | Logic | **Given** CBS validator load-time check ของ `EVENT_ANNOUNCE_LEAD_SECONDS` × `D2_SCHEDULER_TICK_SECONDS` per Cluster 7 #16 6× rule **When** config = (LEAD=10, tick=2) → 10 < 6×2=12 **Then** rejects with "lead must be ≥ 6 × tick" ; **When** config = (LEAD=12, tick=2) → 12 = 6×2 **Then** accepts (boundary inclusive) ; **When** config = (LEAD=30, tick=5) — default → 30 = 6×5 **Then** accepts ; **When** config = (LEAD=30, tick=6) → 30 < 6×6=36 **Then** rejects (ops must pick LEAD ≥ 36 OR tick ≤ 5) ; CBS apply fails on any rejection ; ห้าม silently allow |
+| TR-WMS-059 (R3.1 vignette freshness signal) | **Manual** (ADVISORY pending state-model engineering pick — upgrade to Integration/BLOCKING after Path A vs Path B confirmed) | **Given** player ที่ logged `anchor_interacted(player_id, "city_solis", vignette_id_V2)` ใน current rotation window (V2 = current vignette) **When** approach city_solis Anchor และเปิด vignette panel **Then** (a) Anchor ambient pulse ไม่แสดง ; (b) panel header ไม่มี *"(ใหม่)"* marker ; (c) V2 text แสดงปกติ ; **Given** player ที่ NOT logged `anchor_interacted` for current vignette **When** approach Anchor **Then** (a) ambient pulse แสดง (slow ≥3s cycle, amber, non-flashing) ; (b) header แสดง *"(ใหม่)"* adjacent title ; (c) ปิด panel → server logs `anchor_interacted` → ครั้งถัดไป resolve เป็น "seen" |
+| TR-WMS-060 (R15 sightline-from-spawn placement) | **Manual** (ADVISORY — verified by QA during art/level review) | **Given** city plaza กับ R15 affordances per level layout **When** QA tester spawns เข้าเมือง (camera default angle/zoom, no input) **Then** (a) ≥1 R15 affordance visible ใน camera frustum โดยไม่ต้อง rotate ; (b) ≥2 R15 affordances within 5u จาก spawn-to-Anchor primary path centerline ; (c) ไม่มี R15 affordance obstruct forward traversal (tester reach Anchor โดยไม่ detour) |
+| TR-WMS-061 (R15 ambient NPC social proof rotation) | **Manual** (ADVISORY — QA observe pass) | **Given** city plaza กับ ambient NPCs active (`MIN_AMBIENT_NPC_PER_CITY=5`, `current_population ≥ 0`) **When** QA tester observe plaza ต่อเนื่อง 3 นาที (180s) ไม่ interact **Then** (a) ตลอด observation window ≥1 ambient NPC visibly using R15 affordance ; (b) "R15-using NPC" role เปลี่ยน ≥1 ครั้งใน 3-min window (NPC หรือ affordance ต่าง — verify ที่ t=0 vs t=180) ; (c) NPC-to-NPC transition ใช้ walk + interact animation, ไม่ teleport |
+| TR-WMS-062 (EC-09 text field preservation on match modal) | **Integration** (ADVISORY pre-FT13 schema — upgrade to BLOCKING after FT13 `match_found` signal format confirmed) | **Given** player `InCity+Queued` พิมพ์ "น้ำเงินเดือด" ใน loadout name field (4 chars, not submitted) **When** mock match-found countdown fires (FT13 mock, `countdown_total=10s`, defer window expired) **Then** (a) modal appears (Priority 1) ; (b) loadout field auto-blurred แต่ยังแสดง "น้ำเงินเดือด" ; (c) label *"ชื่อที่พิมพ์ไว้ยังอยู่"* ปรากฏ adjacent ; (d) decline → field re-focus, label หาย, "น้ำเงินเดือด" ยังอยู่ ; (e) accept → uncommitted name ไม่ save, loadout retain prior name ; **Given** ผู้เล่นเดียวกันพิมพ์ "ต้อม" ใน friend search field (silent preserve) **When** modal fires **Then** (a) field auto-blurred แต่ยังแสดง "ต้อม" ; (b) ไม่มี label/highlight ; (c) decline → field re-focus displaying "ต้อม" ; (d) accept → query discarded with session context |
 | TR-WMS-056 (R2.1 access paths post-first-visit) | **Integration** | **Given** player state = `InCity` post-first-visit (เคยเข้า city อย่างน้อย 1 ครั้งแล้ว) **When** ผู้เล่นเลือก service path ใดก็ตามจาก 3 paths: (a) กด City Menu hotkey (PC `M`), (b) คลิก persistent City Menu HUD pin, (c) เดินไปที่ landmark ใด landmark หนึ่งใน 8 landmarks + กด interaction prompt **Then** target service UI เปิดภายใน 200ms ; ทั้ง 3 paths reachable from any spawn point ใน plaza ; path (a)+(b) ยัง active เมื่อ state = `InCity+Queued` ; path (c) Keeper interaction prompt ยัง active ทุก visit (ไม่ใช่ first-visit only) |
 
 ### H.2 Formulas (D1, D2)
