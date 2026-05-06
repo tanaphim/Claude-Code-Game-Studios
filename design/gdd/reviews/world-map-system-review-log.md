@@ -637,3 +637,70 @@ Phase 3 external-coordination phase continues:
 3. **Narrative writer-day allocation** — 8 remaining city briefs (4 wd per producer notification)
 4. **OQ-3 vignette pool authoring** — 80 wd, sequence after all 10 city themes locked
 5. **Cluster 5 #13** — gated on FT13/FT14 ; not actionable in FT12 alone
+
+---
+
+## Phase 3 UX pass — 2026-05-05 — Cluster 4 #10 + #11 + Cluster 8 #18
+Specialist: ux-designer ✓ (spawned by main session per user approval ; research-mode draft → main session patched per collaboration protocol)
+Blockers closed: 3 (Cluster 4 #10 R3.1 freshness signal, Cluster 4 #11 R15 zero pull, Cluster 8 #18 EC-09 draft fate)
+Items: 3 GDD edits + 4 net-new ACs + 1 review log entry
+
+Summary: ux-designer pass closes 3 BLOCKING items per user-approved drafts. R3.1 gets per-player freshness signal with engineering-fork (telemetry-derived Path A vs separate PlayFab key Path B — GDD commits both, R12 contract preserved). R15 gets 3 binding pull rules (sightline-from-spawn, ambient NPC social proof, queue-wait visual emphasis) without violating zero-reward rule. EC-09 gets per-field-type draft fate (Option C loadout-name with visible cue ; Option B friend-search silent preserve) + IME limitation flagged as out-of-scope.
+
+### Decisions applied (2026-05-05)
+
+**Decision 1 — Cluster 4 #10 R3.1 freshness signal**
+- Per-player seen-state model: derive จาก existing `anchor_interacted` telemetry (Path A preferred) ; fallback separate PlayFab key `vignette_seen_set` outside R12 4-field blob (Path B) — engineering picks after telemetry feasibility confirmed ; **R12 atomicity contract preserved in both paths**
+- UI signal — unseen vignette: warm-amber Anchor ambient pulse (≥3s cycle, non-flashing) + "(ใหม่)" text marker on vignette panel header
+- UI signal — seen vignette: quiet absence (no negative feedback per sanctuary tone)
+- Cold-start failure mode: treat as unseen (conservative — show redundant badge over hiding new content)
+- History affordance ("อ่านที่ผ่านมา") — DEFERRED to post-launch (Scenario B failure mode is "don't know if seen", not "can't find old")
+- Accessibility: text + color redundancy ; text-scale 100–150% ; ≥3s pulse cycle photosensitivity-safe
+
+**Decision 2 — Cluster 4 #11 R15 pull mechanics (3 rules)**
+- Sightline-from-spawn: ≥1 R15 affordance unobstructed sightline from spawn at default camera ; ≥2 within 5u of spawn-to-Anchor primary path ; exception for geometry that blocks sightline (≤5s natural forward movement)
+- Ambient NPC social proof: ≥1 of 5 NPCs visibly using R15 affordance always ; rotation 60–120s ; pop-conditional (always, including off-peak per EC-22) ; NPC yields seat to real player
+- Queue-wait visual signal: subtle warm glow on R15 affordances in viewport during all passive `InCity` (universal apply prevents state-flicker) ; accessibility shape/motion redundancy not color alone
+- All 3 rules respect R15 zero-reward (no XP/Fragment/currency/queue-priority/stat) — pull is discoverability + ambient social proof, not mechanical incentive
+
+**Decision 3 — Cluster 8 #18 EC-09 draft fate per-field-type**
+- Loadout name field = Option C (preserve + visible cue) — *"ชื่อที่พิมพ์ไว้ยังอยู่"* label adjacent to blurred field, scales with text-scale 100–150%
+- Friend search field = Option B (silent preserve) — text frozen, no label (transient query, label adds cognitive load)
+- On accept: uncommitted name not saved (loadout retains prior committed name) ; search query discarded with session
+- IME mid-composition limitation: flagged as known platform limitation, out of FT12 scope (frozen text = last committed character ; IME composition buffer may lose chars per platform behavior)
+
+### Patch applied (2026-05-05)
+1. **R3.1 patched** — new "freshness signal" subsection with state model fork (Path A/B), UI signal spec for unseen + seen states, cold-start failure mode, history-deferred decision, accessibility compliance
+2. **R15 patched** — new "pull mechanics" subsection with 3 binding rules (sightline + NPC + visual), exception cases, accessibility note ; rationale paragraph extended to reference 3-rule combo closing Scenario B exposure
+3. **EC-09 patched** — new "draft fate per field type" subsection with Option C / Option B per field, on-accept behavior, IME limitation note
+4. **AC suite expanded** — TR-WMS-059 (R3.1 freshness, Manual ADVISORY pending engineering pick), TR-WMS-060 (R15 sightline, Manual ADVISORY), TR-WMS-061 (R15 NPC rotation, Manual ADVISORY), TR-WMS-062 (EC-09 preservation, Integration ADVISORY pre-FT13) ; AC count 58 → 62
+
+### Cascading effects
+- **Scenario B blockers #10 + #11** — RESOLVED at design-spec level ; verification depends on engineering pick (Path A vs B) for #10 and on art/level review pass for #11 sightline rule
+- **Scenario A + D blocker #18** — RESOLVED ; both party members in Scenario D get same per-field treatment when match-found fires
+- **Asset Spec phase** — partially expanded (R15 visual emphasis specs + ambient NPC R15-using behavior states needed)
+- **R12 atomicity contract** — UNCHANGED (both R3.1 paths preserve 4-field blob)
+- **Engineering pick required** — telemetry event store low-latency per-player query feasibility confirms Path A vs B for #10
+
+### Items NOT in scope of this patch
+- Cluster 5 #13 OQ-10 Fragment routing — gated on FT13/FT14
+- Cluster 8 #19 OQ-7 platform — needs producer decision
+- narr-3 8 remaining cities — needs narrative writer-day allocation
+- OQ-3 vignette pool authoring (40 vignettes) — needs OQ-2 lock first then 80 wd allocation
+- Engineering pick for #10 state model (Path A vs B) — needs engineering session
+
+### Updated blocker landscape
+- Total now: **3 BLOCKING / 33 RECOMMENDED** (was 6 — closed Cluster 4 #10 + #11 + Cluster 8 #18 = 3 closed)
+- Cluster 4 fully closed at design-spec level
+- Cluster 8 #18 closed ; #17 already closed (narrative pass) ; #19 remains (producer decision)
+- Remaining 3 BLOCKING: Cluster 5 #13 (FT13/FT14 gate), Cluster 8 #19 (producer), narr-3 8-cities (narrative writer-days)
+
+### Next step
+Phase 3 external-coordination phase nearing completion:
+1. **Producer decision** — Cluster 8 #19 OQ-7 platform (PC vs cross-platform commitment) — single 1-line decision, unblocks UX spec phase budget for any platform-specific revisions
+2. **Narrative writer-day allocation** — 8 remaining city briefs (4 wd) ; producer staffing decision
+3. **Engineering pick** — Path A (telemetry) vs Path B (separate PlayFab key) for #10 state model — telemetry feasibility confirmation
+4. **Cluster 5 #13** — remains gated on FT13/FT14 design ; not actionable in FT12 alone
+5. **OQ-3 vignette pool** — 80 narrative writer-days, sequence after all 10 city themes locked
+
+After producer + narrative writer-day decisions, FT12 GDD revision phase will be **fully closed** — only Cluster 5 #13 (gated externally) and OQ-3 (production-staffing) will remain.
