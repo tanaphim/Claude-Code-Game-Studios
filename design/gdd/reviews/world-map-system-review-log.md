@@ -704,3 +704,62 @@ Phase 3 external-coordination phase nearing completion:
 5. **OQ-3 vignette pool** — 80 narrative writer-days, sequence after all 10 city themes locked
 
 After producer + narrative writer-day decisions, FT12 GDD revision phase will be **fully closed** — only Cluster 5 #13 (gated externally) and OQ-3 (production-staffing) will remain.
+
+---
+
+## Phase 3 Producer decision — 2026-05-05 — OQ-7 platform locked
+Specialist: main session (producer-style decision per user pick — Option A from 3-options analysis)
+Blockers closed: 1 (Cluster 8 #19 OQ-7 platform decision gate)
+Items: 4 GDD/spec edits + 1 review log entry
+
+Summary: Producer decision pass closes Cluster 8 #19 by locking OQ-7 to **Option A — PC desktop only, mouse+keyboard primary, gamepad+touch+console+mobile out-of-scope สำหรับ MVP**. User picked Option A from 3 user-presented options (PC-only / PC+Gamepad / PC+Gamepad+Touch). Choice rationale: all Phase 2/3 specs already authored under PC assumption (zero revision-pass cost), sanctuary-fantasy + Tournament-led gameplay aligns with PC primary, cross-platform expansion can be flagged as post-MVP with budget revision-pass.
+
+### Decision applied (2026-05-05)
+
+**Decision — OQ-7 platform = Option A (PC-only)**
+- Target platforms: PC desktop (Windows/macOS/Linux via Unity build)
+- Input methods: Mouse + Keyboard (primary)
+- Gamepad: out-of-scope for MVP (post-launch ~2–4 weeks UX revision pass budget)
+- Touch: out-of-scope for MVP (post-launch combined gamepad+touch ~6–8 weeks)
+- Console + mobile: out-of-scope for MVP
+
+Rationale per user pick: zero revision-pass cost, fantasy/gameplay aligns, post-MVP expansion path documented.
+
+### Patch applied (2026-05-05)
+1. **OQ-7 entry patched** — strikethrough heading marks RESOLVED ; full decision rationale + 3-options reference + post-MVP expansion budget documented inline
+2. **UI Requirements platform notes patched** — "provisional" language removed ; PC commitment LOCKED ; cross-ref to OQ-7 resolution
+3. **R2.1 Path 2 hotkey description patched** — "gamepad/touch mapping per OQ-7" replaced with "gamepad/touch out-of-scope per OQ-7 resolution" ; PC `M` hotkey remappable
+4. **Accessibility item #3 patched** — input remap scope now explicitly "keyboard remap only" (was "ครอบคลุม input method นั้นเพิ่ม" conditional on OQ-7)
+5. **`.claude/docs/technical-preferences.md` Input & Platform section patched** — replaced all `[TO BE CONFIGURED]` placeholders with locked PC commitment + cross-ref to FT12 OQ-7 entry
+
+### Cascading effects
+- **All 5 Phase 2 walkthroughs** — blocker #19 references can now be cited as RESOLVED ; no per-scenario row changes needed because PC was the authored assumption
+- **R2.1 Path 2 (City Menu hotkey + HUD pin)** — implementation specs simplified (no controller variant needed for MVP)
+- **R16 (Wayfarer's Nod)** — 1-button targeted action implementation simplified (mouse click target ; no controller D-pad/face-button mapping needed for MVP)
+- **EC-09 (text input draft fate)** — IME limitation note remains ; no touch on-screen keyboard concern for MVP
+- **Section G accessibility minimum #3** — input remap scope tightened to keyboard only
+- **`.claude/docs/technical-preferences.md`** — single source of truth now consistent with FT12 commitment ; downstream skills (`/ux-design`, `/ux-review`, `/test-setup`, `/team-ui`, `/dev-story`) read locked values
+- **No new ACs** — OQ-7 is a decision lock, not a new mechanic ; existing ACs continue to verify PC-native flows
+
+### Items NOT in scope of this patch
+- Any post-MVP cross-platform expansion work (gamepad/touch/console/mobile) — explicit budget noted in OQ-7 resolution but not authored
+- Cluster 5 #13 OQ-10 Fragment routing — gated on FT13/FT14 (not affected by platform decision)
+- narr-3 8 remaining cities — pending narrative writer-days
+- Engineering pick (Path A vs B) for #10 state model — separate decision, pending engineering session
+
+### Updated blocker landscape
+- Total now: **2 BLOCKING / 33 RECOMMENDED** (was 3 — closed Cluster 8 #19 = 1 closed)
+- Cluster 8 fully closed (#17 narrative pass, #18 UX pass, #19 producer decision)
+- Remaining 2 BLOCKING: Cluster 5 #13 (FT13/FT14 gate), narr-3 8-cities (narrative writer-days)
+- **Phase 3 GDD revision phase is effectively COMPLETE** — only externally-gated items remain
+
+### Next step
+FT12 Phase 3 GDD revision is **effectively complete**. Remaining 2 blockers are not actionable in FT12 alone:
+1. **Cluster 5 #13** — wait for FT13 + FT14 GDD authoring (separate systems) ; OQ-10 Fragment routing exception decision for cross-faction Casual party will close this when FT13/FT14 design ; FT12 R9.1 telemetry continues collecting interim data
+2. **narr-3 8 city briefs** — narrative writer-day allocation decision (4 wd) ; deferred to next sprint
+
+**Recommended FT12 closure actions:**
+- Update `design/gdd/systems-index.md` FT12 status from "MAJOR REVISION NEEDED" → e.g., "REVISION COMPLETE — externally-gated items pending"
+- Re-run `/design-review design/gdd/world-map-system.md` (full mode with all 7 specialists) to verify Phase 3 revisions hold under cold-context adversarial re-evaluation per third-review creative-director synthesis recommendation
+- Engineering session: confirm Path A (telemetry-derived) vs Path B (separate PlayFab key) for #10 state model based on telemetry feasibility
+- Sprint commit producer decisions still pending in env-spec.md (PlayFab plan upgrade, Photon plan, hardware tier, launch-mode playbook authoring)

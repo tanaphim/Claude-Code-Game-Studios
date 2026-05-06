@@ -15,12 +15,18 @@
 <!-- Written by /setup-engine. Read by /ux-design, /ux-review, /test-setup, /team-ui, and /dev-story -->
 <!-- to scope interaction specs, test helpers, and implementation to the correct input methods. -->
 
-- **Target Platforms**: [TO BE CONFIGURED — e.g., PC, Console, Mobile, Web]
-- **Input Methods**: [TO BE CONFIGURED — e.g., Keyboard/Mouse, Gamepad, Touch, Mixed]
-- **Primary Input**: [TO BE CONFIGURED — the dominant input for this game]
-- **Gamepad Support**: [TO BE CONFIGURED — Full / Partial / None]
-- **Touch Support**: [TO BE CONFIGURED — Full / Partial / None]
-- **Platform Notes**: [TO BE CONFIGURED — any platform-specific UX constraints]
+**Locked 2026-05-05** per FT12 OQ-7 resolution (Cluster 8 #19 closed).
+
+- **Target Platforms**: PC desktop only (Windows/macOS/Linux via Unity build)
+- **Input Methods**: Mouse + Keyboard
+- **Primary Input**: Mouse + Keyboard
+- **Gamepad Support**: None (out-of-scope for MVP — post-launch expansion budget per FT12 OQ-7 resolution: ~2–4 weeks UX revision pass for gamepad)
+- **Touch Support**: None (out-of-scope for MVP — post-launch combined gamepad+touch ~6–8 weeks UX revision pass)
+- **Platform Notes**:
+  - Console + mobile out-of-scope สำหรับ MVP
+  - All hotkeys remappable per FT12 accessibility minimum #3 (keyboard remap scope only)
+  - Cross-platform expansion is post-MVP decision ; affected scope = 17 UI surfaces × N input methods + accessibility re-derive + Section G spatial knobs (touch tap-target sizing min 44pt if mobile included)
+  - Cross-ref: `design/gdd/world-map-system.md` OQ-7 entry for full decision rationale + 3-options analysis
 
 ## Naming Conventions
 

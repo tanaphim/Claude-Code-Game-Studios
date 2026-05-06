@@ -178,7 +178,7 @@ faction ranking, Fragment pool, หรือสถานะ Tournament จะเ
    landmark → interaction prompt → service UI เปิดโดยตรง (ไม่ผ่าน City
    Menu hub). Spatial discovery + sanctuary tone preserved.
 2. **City Menu hotkey + persistent HUD pin (quick-access path)** — กด
-   City Menu hotkey (PC default `M` ; gamepad/touch mapping per OQ-7) **หรือ**
+   City Menu hotkey (PC `M` — remappable ; gamepad/touch out-of-scope per OQ-7 resolution) **หรือ**
    คลิก persistent City Menu pin บน HUD corner (subordinate ต่อ Priority-1
    modal area per UI hierarchy) → 8-service grid เปิดทันที ; เลือก service →
    service UI open (ไม่ต้องเดินไป landmark). Hotkey + pin **active ทุก state
@@ -1425,8 +1425,9 @@ Priority order (สูง → ต่ำ):
    shape/pattern/icon redundancy. Test target: protanopia/deuteranopia/
    tritanopia simulator pass.
 3. **Input remapping** — ทุก hotkey (Galaxy Map open, City Menu open,
-   queue confirm) ต้อง remappable ผ่าน settings. ถ้า OQ-7 resolve เป็น
-   gamepad/touch, mapping ต้องครอบคลุม input method นั้นเพิ่ม.
+   queue confirm) ต้อง remappable ผ่าน settings ; scope = keyboard remap
+   เท่านั้น (per OQ-7 resolution: PC + mouse+keyboard primary, gamepad +
+   touch out-of-scope สำหรับ MVP).
 4. **Text scale** — minimum readable font 16pt @ 1080p (เทียบเท่า
    1.5em บน web standard). Scale slider 100%–150% ใน accessibility menu.
    Critical UI (match-found countdown, ban broadcast, error toast)
@@ -1437,9 +1438,11 @@ toggle, high-contrast mode, gamepad-haptic alternatives) defer ไป
 `design/ux/accessibility-requirements.md` ; minimums ข้างบนเป็น **floor
 ที่ห้ามต่ำกว่า**, ไม่ใช่ ceiling.
 
-**Platform notes:** ดู OQ-7 — ปัจจุบัน assume PC + mouse+keyboard
-(provisional default). UX specs ที่เขียนภายใต้ assumption นี้ต้อง
-budget revision pass หาก leadership เลือก gamepad / touch / cross-platform.
+**Platform notes:** **LOCKED 2026-05-05** — PC desktop, mouse+keyboard
+primary (closes Cluster 8 #19 / OQ-7 RESOLVED). Gamepad + touch + console
++ mobile out-of-scope สำหรับ MVP. UX specs ทั้งหมดถูก author ภายใต้ PC
+commitment ; ไม่มี revision-pass cost. Post-MVP cross-platform expansion
+budget specified ใน OQ-7 resolution entry.
 
 > **📌 UX Flag — World Map (FT12)**: ระบบนี้มี UI touch-points จำนวนมาก
 > (17 surfaces). ใน Pre-Production phase ให้รัน `/ux-design` ต่อ screen
@@ -1742,20 +1745,28 @@ authoring + audio direction + asset spec + first-visit beat text per city.
 - **Impact:** R2 (เพิ่ม service) ; UI Requirements (เพิ่ม UI surface)
 - **Cross-ref:** สอดคล้องกับ FT11 OQ-4
 
-### OQ-7 — Platform / Input constraints
+### ~~OQ-7~~ — Platform / Input constraints **(RESOLVED 2026-05-05 — Cluster 8 #19 closed)**
 - **Owner:** Producer + Leadership
 - **Question:** target platforms (PC, console, mobile, web) + input methods
-  (mouse+keyboard, gamepad, touch) ส่งผลต่อ Galaxy Map UI, City Menu navigation,
-  Keeper interaction model
-- **Default ใน GDD (provisional 2026-04-29):** **PC + mouse+keyboard**
-  (FT9 pattern). UX specs ทั้งหมดเขียนภายใต้ assumption นี้ ; **revision
-  pass budget required** ใน production plan ถ้า leadership เลือก
-  gamepad / touch / cross-platform หลัง UX spec phase เริ่ม
-- **Trigger:** Leadership decision — ยิ่งเร็ว ยิ่ง revision pass cost ต่ำ
-- **Impact:** UI Requirements platform notes ; Galaxy Map input method
-  (touch pinch-zoom vs gamepad cursor-nav vs mouse click — interaction
-  models ต่างกัน mass) ; accessibility item #3 (input remap scope)
-- **Cross-ref:** [`technical-preferences.md`](../../.claude/docs/technical-preferences.md) Input section
+  (mouse+keyboard, gamepad, touch)
+- **DECISION (2026-05-05):** **PC desktop only, mouse+keyboard primary input.**
+  Gamepad + touch + console + mobile expressly **out-of-scope สำหรับ MVP**.
+  เลือก **Option A** จาก 3 options (PC-only / PC+Gamepad / PC+Gamepad+Touch)
+  เพราะ: (a) Phase 2/3 specs ทั้งหมดเขียนภายใต้ PC assumption เรียบร้อย
+  ไม่ต้อง revision pass ; (b) sanctuary-fantasy + Tournament-led gameplay
+  เหมาะกับ PC primary ; (c) cross-platform expansion สามารถ flag เป็น
+  post-MVP + budget revision-pass ภายหลังได้.
+- **Resolution impact:** ลบ "provisional" language จาก UI Requirements
+  platform notes + R2.1 hotkey description + Section G accessibility
+  item #3 (input remap scope ตอนนี้ครอบ keyboard remap เท่านั้น) ;
+  อ้างอิง [`technical-preferences.md`](../../.claude/docs/technical-preferences.md)
+  Input section update เพื่อ pin platform decision
+- **Post-MVP cross-platform path:** ถ้า leadership ตัดสินใจ expand
+  หลัง MVP launch, ต้อง budget **~2–4 weeks UX revision pass สำหรับ
+  Gamepad** หรือ **~6–8 weeks** สำหรับ full cross-platform (Gamepad+Touch).
+  Affected scope: 17 UI surfaces × N input methods + accessibility
+  re-derive + Section G spatial knobs (touch tap-target sizing min 44pt
+  ถ้ารวม mobile)
 
 ### OQ-8 — Post-FT9 deprecation parallel-operation period
 - **Owner:** Producer + Engineering
