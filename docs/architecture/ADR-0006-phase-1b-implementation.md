@@ -109,6 +109,14 @@ Phase 2 cannot start until **all** of:
 - Boot-time cost < 100ms for 50 abilities (stress test)
 - No allocations post-boot (lookup is O(1))
 
+**Closure (2026-04-21):** ✅ Implemented at `Assets/GameScripts/Gameplays/Abilities/AbilityRegistry.cs` (delta-unity commit `eb2ff94f12`).
+- 5 EditMode tests at `Assets/UnitTests/TestEditMode/AbilityRegistryTests.cs` — all pass.
+- Acceptance #1 (3+ tests) ✅ — registration / lookup / create-by-id error paths covered. Spawn happy-path deferred to Phase 2 multipeer harness (requires NetworkRunner).
+- Acceptance #2 (boot-time) — **dictionary build cost = 0.06 ms / 50 entries** (synthetic `InitializeForTest`), 1700× under budget. **Live `Resources.LoadAll` scan for production 158 prefabs + 157 SOs:** 1079 ms cold, 511.9 ms warm — dominated by Unity asset I/O, not registry logic. **Flagged as Sprint 004 polish item** (Option A: accept-and-document; consider Addressables or build-time manifest if cold start becomes user-visible).
+- Acceptance #3 (O(1) post-boot) ✅ — `Dictionary<string,...>.TryGetValue` only.
+- Test hook `InitializeForTest` exposed publicly under `#if UNITY_INCLUDE_TESTS` (stripped from ship builds).
+- AbilityId resolution: `[AbilityClass]` attribute wins over `prefab.name` convention (forward-compatible with Phase 2 hero migration).
+
 ---
 
 ### 4.4 P1B-03 — `AbilityDataSnapshot` Real Implementation (0.5 day)

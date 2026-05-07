@@ -99,6 +99,7 @@
 ### Per-Task Gates
 
 - [x] S3-01: Multipeer harness pass #4 + #5 ✅ verified (2026-04-21)
+- [x] S3-02: `AbilityRegistry` real impl + 5 EditMode tests pass (2026-04-21)
 - [ ] S3-02: `AbilityRegistry` real impl + unit tests pass
 - [ ] S3-03: `AbilityDataSnapshot` real impl + immutability test
 - [ ] S3-04: `BindSlot` real impl + `[Obsolete]` removed + regression pass
@@ -145,6 +146,23 @@
   Pass #4 + #5 ไม่กระทบ (first session สำเร็จก่อน). Fix: static bootstrap
   guard หรือ disable self เมื่อ `NetworkRunner.Instances.Count > 0`.
   → tracked ต่อใน S3-02..S3-07 polish pass หรือ Sprint 004 nice-to-have.
+
+### 2026-04-21 — S3-02 closed ✅
+
+**P1B-02 `AbilityRegistry` real implementation** — DONE
+
+- Implementation `Assets/GameScripts/Gameplays/Abilities/AbilityRegistry.cs` (delta-unity `eb2ff94f12`)
+- Strategy: `Resources.LoadAll<GameObject>("Prefabs/Gameplay/Spell")` → filter prefabs ที่มี `NetworkObject` + `ActorCombatAction` → resolve abilityId via `[AbilityClass]` attribute (forward-compatible) ตกที่ `prefab.name` (convention) — option A+C-fallback
+- 5 EditMode tests pass ทั้งหมด ที่ `Assets/UnitTests/TestEditMode/AbilityRegistryTests.cs`
+- **Live scan:** 158 abilities + 157 SOs ใน 1079 ms cold / 511.9 ms warm (เกิน budget 100ms ของ plan §4.3)
+- **Dict build cost (synthetic 50):** 0.06 ms — 1700× ใต้ budget ✅ (acceptance criteria #2 บางส่วน)
+- **O(1) lookup post-boot ✅**
+- **Spawn happy-path** ไม่ test ใน EditMode (ต้อง NetworkRunner) — defer ไป Phase 2 multipeer harness
+
+**Polish item flagged → Sprint 004 nice-to-have:**
+- `Resources.LoadAll` cold-start cost dominated by Unity asset I/O (not registry logic)
+- 3 options: accept (current), Addressables migration (~2-3d), build-time manifest (~1-1.5d)
+- Decision: Accept ตอนนี้ — boot-time = one-time match start ไม่ใช่ per-frame cost
 
 ---
 
