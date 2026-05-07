@@ -103,6 +103,7 @@
 - [x] S3-03: `AbilityDataSnapshot` real impl + 7 EditMode tests pass (2026-04-21)
 - [x] S3-04: `AbilityComponent.BindSlot` real impl + harness regression Pass #4/#5 still ✅ (2026-04-21, Option C dual-path)
 - [x] S3-05: `InputMessage.PressedSlot` wired in production input writer (2026-04-21, Option A soft-verified)
+- [x] S3-06: `KeybindMap` service registration + Editor placeholder UI (2026-04-21, Option A; runtime UI deferred Sprint 004)
 - [ ] S3-02: `AbilityRegistry` real impl + unit tests pass
 - [ ] S3-03: `AbilityDataSnapshot` real impl + immutability test
 - [ ] S3-04: `BindSlot` real impl + `[Obsolete]` removed + regression pass
@@ -252,6 +253,43 @@ the full round-trip happy path.
     never reaches `GameState.Start` → `OnInput` early-returns
 - Production end-to-end trace deferred to **Phase 2 Hercules pilot** (first reader
   of PressedSlot — will exercise full read+write loop in a real match scene)
+
+### 2026-04-21 — S3-06 closed ✅
+
+**P1B-06 `KeybindMap` production wiring + Settings placeholder** — DONE (Option A)
+
+**Service wiring (critical path):**
+- New `KeybindMapService.prefab` registered in `DeltaConfiguration.asset` Services
+  array (10 → 11 services). `DeltaService.I.GetService<KeybindMap>()` resolves
+  at runtime → unblocks S3-04 BindSlot lookup path
+- `KeybindMap` already complete from Phase 1a (lifecycle + IKeybindMap +
+  SetBinding + GetSlotForKey/Slot + ResetToDefaults + PlayerPrefs persistence
+  + OnBindingChanged) — S3-06 adds the deployment surface
+
+**CBS bridge stub:**
+- `KeybindMap.ResetToDefaults()` calls `TryLoadDefaultsFromCBS()` first → falls
+  back to hardcoded Q/W/E/R/A/B (slots 1-6) if CBS path returns false
+- Stub returns false today; doc comment lists 4-step impl pattern for when
+  CBSKeybindDefaults schema lands
+
+**Editor placeholder UI** (`Radius/Abilities/Keybind Map` menu + CustomEditor):
+- Inspector + EditorWindow show 8 slots with current binding
+- Per-slot Rebind/Clear + global Reset to defaults
+- KeyCode → InputSystem.Key mapper covers A-Z, 0-9, F1-F12, common modifiers
+- Verified visually: rebinds persist via PlayerPrefs across Play Mode entry/exit
+
+**Acceptance evaluation:**
+- ✅ #1 Defaults loaded on game start (KeybindMap.Init → LoadFromPlayerPrefs →
+  ResetToDefaults on first boot)
+- 🟡 #2 Remap workflow — Editor inspector covers it; **runtime UGUI panel
+  deferred to Sprint 004**
+- ✅ #3 Persist across sessions (existing PlayerPrefs logic)
+- 🟡 #4 UX sign-off — deferred with runtime UI
+
+**Out of scope → Sprint 004:**
+- Runtime UGUI Settings panel scene (Controls.unity)
+- CBSKeybindDefaults schema (CBS dashboard + parser)
+- UX designer review of runtime panel
 
 ---
 

@@ -244,6 +244,39 @@ Verification scope reduction:
 - Persist across sessions (PlayerPrefs verified)
 - UX designer sign-off on placeholder: "functional, non-blocking for Phase 2"
 
+**Closure (2026-04-21) — Option A (service + Editor UI; runtime UI deferred):**
+
+Service registration (critical path — unblocks S3-04 BindSlot):
+- New service prefab `Assets/Resources/Prefabs/Data/Services/KeybindMapService.prefab` with `KeybindMap` component (script GUID `795c122d33f940f40b8853bdc00e4f10`).
+- Registered in `DeltaConfiguration.asset` `Services` array (10 entries → 11). At runtime, `DeltaService.I.GetService<KeybindMap>()` resolves to the live instance, satisfying the lookup path that `AbilityComponent.BindSlot` uses (S3-04 closure note §4.5).
+
+CBS bridge stub:
+- `KeybindMap.ResetToDefaults()` calls `TryLoadDefaultsFromCBS()` first, falls back to hard-coded `Q/W/E/R/A/B` (slots 1–6) on miss.
+- `TryLoadDefaultsFromCBS()` returns `false` today; doc comment lists the exact 4-step implementation pattern (resolve `MetadataService` → pull `CBSKeybindDefaults` → call `SetBinding` per slot → return `true` on success). Future schema work just fills the body.
+
+Editor placeholder UI:
+- `Assets/GameScripts/Editor/KeybindMapEditor.cs`:
+  - `[CustomEditor(typeof(KeybindMap))]` — inline rebind table on the service prefab inspector.
+  - `KeybindMapWindow` at menu `Radius → Abilities → Keybind Map` — free-floating window that auto-discovers the service prefab.
+  - Per-slot **Rebind** (captures next IMGUI key event), **Clear**, and **Reset to defaults**.
+  - `KeyCode → InputSystem.Key` mapper covering A–Z, 0–9, F1–F12, common modifiers.
+- `Radius.Custom.editor.asmdef` — added `Radius.Gameplays.Abilities` GUID + `Unity.InputSystem` reference.
+
+Acceptance evaluation:
+- **#1 Start game → defaults loaded** ✅ — `KeybindMap.Init()` calls `LoadFromPlayerPrefs()` which falls through to `ResetToDefaults()` on first boot. Service is now bootstrapped via `DeltaConfiguration`.
+- **#2 Remap Q→X via Settings panel** 🟡 PARTIAL — Editor inspector covers the rebind workflow (verified visually: rebinds persist via PlayerPrefs and survive Play Mode entry/exit). Runtime UGUI Settings panel is **deferred to Sprint 004**.
+- **#3 Persist across sessions** ✅ — `KeybindMap.SetBinding()` writes PlayerPrefs immediately; verified pre-existing logic.
+- **#4 UX designer sign-off** 🟡 DEFERRED with runtime UI to Sprint 004.
+
+Out of scope (Sprint 004 polish):
+- Runtime UGUI Settings panel scene (`Assets/Scenes/Settings/Controls.unity`)
+- `CBSKeybindDefaults` schema implementation (CBS dashboard + parser)
+- UX designer review of runtime panel
+
+Verification:
+- Editor inspector renders all 8 slots with default `Q/W/E/R/A/B` for slots 1–6 and `—` for empty 7–8 (screenshot in commit `1022c87dbb`).
+- Compile clean after fully qualifying `UnityEditor.Editor` and `UnityEditor.MessageType` (collisions with `Photon.Realtime` namespace).
+
 ---
 
 ### 4.8 P1B-07 — Phase 2 Touch-Point Audit (0.5 day)
