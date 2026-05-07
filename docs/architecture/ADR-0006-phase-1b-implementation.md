@@ -147,7 +147,24 @@ Phase 2 cannot start until **all** of:
 
 **Current state:** `[Obsolete] BindSlotPrototype(slot, NetworkBehaviourId)` only
 
-**Deliverables:**
+**Closure (2026-04-21) — Option C (pragmatic dual-path):**
+
+The literal acceptance ("delete prototype path entirely; migrate harness to use real BindSlot") was reduced in scope after discovering 3 architectural conflicts in the harness:
+1. `AbilityRegistry.CreateAction(abilityId, Actor)` requires an `Actor` instance — TestActor in the harness scene is a plain NetworkBehaviour with no Actor, so harness migration is blocked at the type system level.
+2. The harness scene `AbilityMultipeer.unity` does not bootstrap `DeltaService` — `AbilityRegistry` is therefore not retrievable via `DeltaService.GetService<>()` at harness runtime.
+3. Prototype prefabs (`m_TestAbilityActionPrefab` assigned via Inspector and reused for 4 different ability ids) are not in `Resources/Prefabs/Gameplay/Spell/` — the registry's convention scan would not find them.
+
+**Decisions (2026-04-21):**
+- **Production path implemented:** `AbilityComponent.BindSlot(byte slot, string abilityId)` resolves `AbilityRegistry` via `DeltaService.I.GetService<AbilityRegistry>()`, calls `CreateAction(abilityId, anchor: this)`, captures the new behaviour's `NetworkBehaviourId`, replaces any prior slot binding (despawn old), writes `Slots.Set + SlotAbilityIds.Set`, and fires `OnSlotChanged`. Server-auth (silent no-op + warning on client). Returns `bool`.
+- **Registry overload added:** `AbilityRegistry.CreateAction(string abilityId, NetworkBehaviour anchor)` — same authority/spawn-pose contract as the `Actor` overload but accepts any NetworkBehaviour as the anchor. The existing `(string, Actor)` overload becomes a thin wrapper. This unblocks any non-Actor consumer (AbilityComponent included).
+- **Prototype path renamed, kept:** `BindSlotPrototype` → `BindSlotForTestHarness` (no `[Obsolete]`; doc note explains it's the test-only path that bypasses the registry). The harness scene + `AbilityPrototypeDriver` retain Pass #1–5 coverage as the multipeer regression gate. **Removal deferred to Phase 2** when the Hercules pilot replaces TestActor with a real Actor and bootstraps `DeltaService` in the test scene.
+- **Acceptance #1 ("AbilityPrototypeRunner still passes Pass #1-5"):** verified by re-running the multipeer harness after the rename — same 4/4 slot parity + < 2 KB/s idle bandwidth as Phase 1b S3-01. Code change is a callsite rename only; no behavioural change.
+- **Acceptance #2 ("UnbindSlot cleans up NetworkObject"):** already covered by the existing `DespawnSlotBehaviourIfAny` path — unchanged in this story.
+- **Acceptance #3 ("Multipeer harness confirms BindSlot replicates correctly"):** deferred to Phase 2 — `BindSlot` is not wired into the current harness (which uses the test-harness path). Phase 2's Hercules pilot will exercise BindSlot end-to-end in a real scene with `DeltaService` and Resources-backed prefabs.
+
+**No EditMode unit tests added for `BindSlot` itself** — the method is dominated by Fusion APIs (`HasStateAuthority`, `Runner.TryGetNetworkedBehaviourId`, `Runner.Spawn`) which can only be exercised inside a live `NetworkRunner`. The `AbilityRegistry` overload that BindSlot delegates to is already covered by `AbilityRegistryTests` (5/5).
+
+**Deliverables (per original plan):**
 - `BindSlot(byte slot, string abilityId)` — internally:
   1. `AbilityRegistry.CreateAction(abilityId, ...)` → new `NetworkObject`
   2. `Runner.TryGetNetworkedBehaviourId(newAction)` → `NetworkBehaviourId`

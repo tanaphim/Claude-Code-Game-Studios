@@ -101,6 +101,7 @@
 - [x] S3-01: Multipeer harness pass #4 + #5 ✅ verified (2026-04-21)
 - [x] S3-02: `AbilityRegistry` real impl + 5 EditMode tests pass (2026-04-21)
 - [x] S3-03: `AbilityDataSnapshot` real impl + 7 EditMode tests pass (2026-04-21)
+- [x] S3-04: `AbilityComponent.BindSlot` real impl + harness regression Pass #4/#5 still ✅ (2026-04-21, Option C dual-path)
 - [ ] S3-02: `AbilityRegistry` real impl + unit tests pass
 - [ ] S3-03: `AbilityDataSnapshot` real impl + immutability test
 - [ ] S3-04: `BindSlot` real impl + `[Obsolete]` removed + regression pass
@@ -185,6 +186,40 @@
   needs an authoritative actor (GameMode) which Phase 2 introduces. Acceptance is
   satisfied today because hash compute + mismatch detection are local-deterministic
   and verifiable in EditMode.
+
+### 2026-04-21 — S3-04 closed ✅
+
+**P1B-04 `AbilityComponent.BindSlot` real implementation** — DONE (Option C dual-path)
+
+**Production path implemented** (`AbilityComponent.BindSlot(byte, string) → bool`):
+- Resolves `AbilityRegistry` via `DeltaService.I.GetService<AbilityRegistry>()`
+- Calls new `AbilityRegistry.CreateAction(abilityId, NetworkBehaviour anchor)` overload
+  (anchor-based; unblocks non-Actor callers like AbilityComponent itself)
+- Captures `NetworkBehaviourId`, replaces prior slot binding (despawn old),
+  writes `Slots.Set + SlotAbilityIds.Set`, fires `OnSlotChanged`
+- Server-auth: silent no-op + warning on client-side calls
+
+**Test-harness path retained** (renamed `BindSlotPrototype → BindSlotForTestHarness`):
+- `[Obsolete]` removed; doc note explains it bypasses registry for harness scenes
+- `AbilityPrototypeDriver` updated to new name; `#pragma 618` workaround removed
+- Phase 2 will remove this when Hercules pilot retires TestActor
+
+**Plan deviation** — Option C (pragmatic dual-path) chosen over literal "delete prototype path entirely + migrate harness" because:
+- Registry's `CreateAction` requires `Actor` (TestActor doesn't have one)
+- Harness scene `PrototypeTest.unity` doesn't bootstrap `DeltaService`
+- Proto prefabs (`m_TestAbilityActionPrefab`) aren't in `Resources/Prefabs/Gameplay/Spell/`
+  registry scan target
+
+**Verification** (PrototypeTest.unity multipeer harness re-run after rename):
+- Pass #4 ✅ — 4/4 slots converge `[Multipeer-Parity] ✅ PASS #4`
+- Pass #5 ✅ — Host 26-28 B/s, Client 51-64 B/s (~1-3% of 2 KB/s budget)
+- `BindSlotForTestHarness` fires correctly for all 4 slots; no warnings/regressions
+
+**Note:** No EditMode unit tests added for `BindSlot` itself — the method is dominated
+by Fusion APIs (`HasStateAuthority`, `Runner.TryGetNetworkedBehaviourId`, `Runner.Spawn`)
+that require a live `NetworkRunner`. Coverage delegates to `AbilityRegistryTests`
+(5/5 ✅ for the registry overload BindSlot calls) + Phase 2 multipeer harness for
+the full round-trip happy path.
 
 ---
 
