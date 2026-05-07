@@ -104,6 +104,7 @@
 - [x] S3-04: `AbilityComponent.BindSlot` real impl + harness regression Pass #4/#5 still ✅ (2026-04-21, Option C dual-path)
 - [x] S3-05: `InputMessage.PressedSlot` wired in production input writer (2026-04-21, Option A soft-verified)
 - [x] S3-06: `KeybindMap` service registration + Editor placeholder UI (2026-04-21, Option A; runtime UI deferred Sprint 004)
+- [x] S3-07: Phase 2 touch-point audit — `ADR-0006-phase-2-migration-plan.md` published (2026-04-21)
 - [ ] S3-02: `AbilityRegistry` real impl + unit tests pass
 - [ ] S3-03: `AbilityDataSnapshot` real impl + immutability test
 - [ ] S3-04: `BindSlot` real impl + `[Obsolete]` removed + regression pass
@@ -290,6 +291,43 @@ the full round-trip happy path.
 - Runtime UGUI Settings panel scene (Controls.unity)
 - CBSKeybindDefaults schema (CBS dashboard + parser)
 - UX designer review of runtime panel
+
+### 2026-04-21 — S3-07 closed ✅ (Phase 1b Foundation COMPLETE 🎯)
+
+**P1B-07 Phase 2 touch-point audit** — DONE
+
+- Published `docs/architecture/ADR-0006-phase-2-migration-plan.md`
+- Hercules pilot enumeration with line numbers from HEAD `1022c87dbb`:
+  - Net Phase 2 Hercules code edits = 2 files (HerculesRAction + HerculesWAction)
+  - `ActorCombatAction` Pattern A/B/C/D refreshed (drift +5 to +13 lines vs 2026-04-19 audit)
+  - Pattern A extracts to `IsActiveSlotOwner(byte)` helper → ~−155 lines net
+- Schema additions identified: `CBSAbility.Slot` field (additive, non-breaking) +
+  `EffectiveSlot` shim derives from `SkillKey` for legacy records
+- AnimationEvent Option A confirmed: 42 method shims route through
+  `Actor.Combat.GetActiveSlot()` — zero animator clip touches
+- 10-story Phase 2 work breakdown (P2-01..P2-10) totalling 3.75 days; critical
+  path ~2.0 days serial
+- Phase 3 entry criteria documented (Hercules stability gate before mass migration)
+
+**No code changes — documentation only**
+
+---
+
+## 🎯 Phase 1b Foundation — DONE
+
+All 7 critical-path stories closed. Phase 2 (Hercules pilot) is sprint-ready.
+
+| # | Story | Status | Notes |
+|---|---|---|---|
+| S3-01 | Multipeer harness | ✅ | Pass #4/#5 verified |
+| S3-02 | AbilityRegistry | ✅ | 5 EditMode tests; boot-time benchmark |
+| S3-03 | AbilityDataSnapshot | ✅ | 7 EditMode tests; FNV-1a hash |
+| S3-04 | AbilityComponent.BindSlot | ✅ | Option C dual-path; harness regression green |
+| S3-05 | InputMessage slot wire | ✅ | Option A soft-verified |
+| S3-06 | KeybindMap + UI | ✅ | Service + Editor inspector; runtime UI defer |
+| S3-07 | Phase 2 audit | ✅ | Migration plan published |
+
+**Total: 6.5/6.5 days Must Have closed**
 
 ---
 

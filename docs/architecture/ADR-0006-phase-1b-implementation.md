@@ -298,6 +298,26 @@ Verification:
 - All line numbers in audit refreshed against current delta-unity HEAD
 - Phase 2 sprint-ready work breakdown defined
 
+**Closure (2026-04-21):** ✅ Published `docs/architecture/ADR-0006-phase-2-migration-plan.md`.
+
+Sections shipped:
+- §2 Entry context table mapping every Phase 1b artifact (S3-01..S3-06) to its Phase 2 consumer.
+- §3 Exit criteria — 8 binary checks for Phase 2 close.
+- §4 **Hercules touch-point enumeration** with line numbers from HEAD `1022c87dbb`. Net Phase 2 Hercules edits = **2 files**: `HerculesRAction.cs` (1 method) + `HerculesWAction.cs` (5 sibling reads).
+- §5 **`ActorCombatAction` Pattern A/B/C/D refresh** — each pattern's line numbers re-anchored against HEAD (drifted by ~5–13 lines from 2026-04-19 audit). Pattern A extracts to `IsActiveSlotOwner(byte)` helper saving ~155 lines.
+- §6 Schema additions: `CBSAbility.Slot` field + `EffectiveSlot` shim (additive, non-breaking — derives from `SkillKey` when `Slot==0`); `AnimationEvent` Option A confirmed (no animator clip touches).
+- §7 **10-story work breakdown** (`P2-01..P2-10`) totalling **3.75 days**; critical path ~2.0 days serial.
+- §8 Risk table with mitigations for the 6 identified risks.
+- §10 Phase 3 entry criteria (codifies handover gate so Phase 3 doesn't drift).
+
+Audit verifications during the refresh:
+- ✅ `CBSAbility` has no `Slot` field today — schema addition is required (P2-03)
+- ✅ Pattern A blocks shifted: 866-872 → 867-873, 996-1002 → 1009-1015 (file growth between audit and HEAD)
+- ✅ Pattern B has 4 sites in HEAD (audit listed 3); the 4th at line 1909 is a single-line condition (easier rewrite)
+- ✅ NetworkDictionary support concern from audit §5.2 was already resolved by S3-01 multipeer harness Pass #4
+
+No code changes in this story — documentation only.
+
 ---
 
 ## 5. Risks & Mitigations
