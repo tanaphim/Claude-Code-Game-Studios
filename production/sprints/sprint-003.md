@@ -33,10 +33,10 @@
 
 | ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
 |----|------|-------------|-----------|-------------|-------------------|
-| S3-08 | AI Bot item-buying behavior (carryover S2-09) | ai-programmer + game-designer | 2.0 | — | Bot buys items ตาม role + gold threshold; อ้างอิง `ai-bot-system.md`; playtest 1 match ไม่มี crash |
-| S3-09 | AI Bot Difficulty Level — Easy/Normal/Hard (carryover S2-10) | ai-programmer | 1.0 | S3-08 | 3 tiers ต่างกันที่ reaction time + item-buying priority; documented ใน `ai-bot-system.md §Difficulty` |
+| ~~S3-08~~ | ~~AI Bot item-buying behavior (carryover S2-09)~~ — **deferred to Sprint 004** (2026-04-21) | ai-programmer + game-designer | 2.0 | — | (deferred — not started this sprint) |
+| ~~S3-09~~ | ~~AI Bot Difficulty Level — Easy/Normal/Hard (carryover S2-10)~~ — **deferred to Sprint 004** (2026-04-21) | ai-programmer | 1.0 | S3-08 | (deferred — not started this sprint) |
 
-**Should Have Subtotal: 3.0 วัน**
+**Should Have Subtotal: 0 วัน** (3.0d deferred to Sprint 004 by user request 2026-04-21)
 
 ### Nice to Have
 
@@ -328,6 +328,19 @@ All 7 critical-path stories closed. Phase 2 (Hercules pilot) is sprint-ready.
 | S3-07 | Phase 2 audit | ✅ | Migration plan published |
 
 **Total: 6.5/6.5 days Must Have closed**
+
+### 2026-04-21 — Sprint 003 closure decision
+
+**S3-08 (AI Bot item-buying) + S3-09 (AI Bot Difficulty) deferred to Sprint 004**
+per user direction. Reasons:
+
+- Phase 1b Foundation is the binding sprint goal — DONE 6.5/6.5 days
+- AI Bot work has no dependency on Phase 1b output → can move without churn
+- Defers carryover load: S2-01..S2-08 (animator + bug hunting batch from
+  Sprint 002, 7.0d) + S3-08/S3-09 (3.0d) → Sprint 004 batch = ~10d AI/animation/
+  bug focus, clean separation from Phase 2 ability migration
+
+**Sprint 003 final status:** Must Have 7/7 ✅, Should Have 0/2 (deferred)
 
 ---
 
