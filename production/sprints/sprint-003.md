@@ -100,6 +100,7 @@
 
 - [x] S3-01: Multipeer harness pass #4 + #5 ✅ verified (2026-04-21)
 - [x] S3-02: `AbilityRegistry` real impl + 5 EditMode tests pass (2026-04-21)
+- [x] S3-03: `AbilityDataSnapshot` real impl + 7 EditMode tests pass (2026-04-21)
 - [ ] S3-02: `AbilityRegistry` real impl + unit tests pass
 - [ ] S3-03: `AbilityDataSnapshot` real impl + immutability test
 - [ ] S3-04: `BindSlot` real impl + `[Obsolete]` removed + regression pass
@@ -163,6 +164,27 @@
 - `Resources.LoadAll` cold-start cost dominated by Unity asset I/O (not registry logic)
 - 3 options: accept (current), Addressables migration (~2-3d), build-time manifest (~1-1.5d)
 - Decision: Accept ตอนนี้ — boot-time = one-time match start ไม่ใช่ per-frame cost
+
+### 2026-04-21 — S3-03 closed ✅
+
+**P1B-03 `AbilityDataSnapshot` real implementation** — DONE
+
+- Implementation: `AbilityDataSnapshot.cs` (factory body) + new `AbilitySnapshotService.cs`
+  (DeltaBaseService — match-scoped frozen dict + FNV-1a 64-bit hash + broadcast stub)
+- 7 EditMode tests pass at `Assets/UnitTests/TestEditMode/AbilitySnapshotTests.cs`
+- Acceptance #1 (frozen invariant): mutate CBS post-build → snapshot unchanged ✅
+- Acceptance #2 (hash mismatch detection): `ComputeHash` differs on any field change;
+  `ValidateRemoteHash` logs error on mismatch ✅
+- Hash sorted-key, deterministic across Host↔Client (verified via two services with
+  same data in different insertion order produce identical hash)
+- Field mapping: 1:1 primitives + rank-aware Costs/Cooldowns (clamped) + best-effort
+  formula parse for BaseDamage / Duration / APScaling / ADScaling
+
+**Phase 1b stub (full RPC in Phase 2):**
+- `BroadcastHash()` logs the hash but does not emit Fusion RPC yet — the real wire
+  needs an authoritative actor (GameMode) which Phase 2 introduces. Acceptance is
+  satisfied today because hash compute + mismatch detection are local-deterministic
+  and verifiable in EditMode.
 
 ---
 

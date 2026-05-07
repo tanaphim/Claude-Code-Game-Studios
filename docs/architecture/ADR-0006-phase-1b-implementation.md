@@ -133,6 +133,14 @@ Phase 2 cannot start until **all** of:
 - Unit test: mutate CBS after snapshot built → `Get()` still returns frozen value
 - Hash mismatch detected and logged (test-only assertion for now; production handling = Phase 3)
 
+**Closure (2026-04-21):** ✅ Implemented across `AbilityDataSnapshot.cs` (factory `FromCBS(abilityId, cbs, rank)` + 24-field mapping) + new `AbilitySnapshotService.cs` (DeltaBaseService that holds the match-scoped frozen dict).
+- 7 EditMode tests at `Assets/UnitTests/TestEditMode/AbilitySnapshotTests.cs` — all pass.
+- Acceptance #1 (frozen invariant) ✅ — `BuildForMatch_FreezesData_MutateCBS_DoesNotAffectSnapshot` mutates the live CBS record post-build and verifies the snapshot is unchanged. Service replaces the dict reference wholesale on each Build (no in-place mutation possible).
+- Acceptance #2 (hash mismatch detected + logged) ✅ — `ComputeHash_DiffersWhenAnyFieldChanges` proves hash sensitivity; `ValidateRemoteHash` logs an error on mismatch (verified via `LogAssert.Expect`).
+- Hash algorithm: FNV-1a 64-bit over sorted keys + every field — order-independent, deterministic Host↔Client.
+- Field mapping: 1:1 for primitives + flags + AI weights; rank-aware for `Costs/Cooldowns` (clamped); best-effort `float.TryParse` for `BaseDamage / Duration / APScaling / ADScaling` from `cbs.GetAbility(key)` formula strings (default 0 on miss).
+- **Phase 1b stub:** `BroadcastHash()` logs the hash but does not yet emit a Fusion RPC — the real wire happens in Phase 2 against the GameMode actor authority. Acceptance is satisfied because hash compute + mismatch logging are local-deterministic and testable today.
+
 ---
 
 ### 4.5 P1B-04 — `AbilityComponent.BindSlot` Real Implementation (1.0 day, depends on P1B-02)
