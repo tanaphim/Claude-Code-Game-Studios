@@ -97,7 +97,7 @@ These are session-level patterns the user + agents converged on by trial. Worth 
 
 | # | Action | Owner | When |
 |---|---|---|---|
-| 1 | Investigate Photon STUN timeout + Version mismatch — these block any production playtest in editor | network-programmer + producer | Sprint 004 day 1, before AI Bot work starts (S4-09 needs match access) |
+| 1 | ~~Investigate Photon STUN timeout + Version mismatch~~ ✅ **RESOLVED 2026-05-07** — Root cause: `NetworkProjectConfig.fusion` had `PeerMode=Multiple` (set during S3-01 multipeer harness work) leaking into production scene. Reverting to `PeerMode=Single` for production playtest restores connectivity. S4-09 AI Bot + Phase 2 P2-10 playtest unblocked. Workflow friction (manual toggle) tracked as `S4-P5`. See [peer-mode-toggle workflow doc](../../docs/dev-workflow/peer-mode-toggle.md). | network-programmer + producer | ~~Sprint 004 day 1~~ — closed pre-sprint |
 | 2 | Fix `AbilityMultipeerRunner` duplicate-Start cascade (S4-P1) — only 0.5d, but compounds future harness debugging | network-programmer | Sprint 004 polish slot |
 | 3 | Document scene-naming convention: when plan says "new scene X.unity," default = create-or-confirm-with-user | producer | Add to `coordination-rules.md` or `coding-standards.md` |
 | 4 | Schedule frequent `origin/dev` merge cadence on `feature/refactor-ability-claude` (every 2-3 sprint days) to limit asset conflict accumulation | lead-programmer | Sprint 004 +Sprint 005 |
