@@ -200,6 +200,25 @@ The literal acceptance ("delete prototype path entirely; migrate harness to use 
 - `PressedSlot == 1` observed on wire when Q is pressed (harness log)
 - Wire size delta ≤ +3 bytes per input tick (measured)
 
+**Closure (2026-04-21) — Option A (soft-verified):**
+
+Implementation:
+- `InputMessage.PressedSlot` + `ReleasedSlot` fields already added in Phase 1a (Phase 1b found them present).
+- `NetworkRunnerInput.cs` Q/W/E/R callbacks now write `if (pressed) InputMessage.PressedSlot = 1/2/3/4` in parallel with the existing `Buttons.Set(...)`. Slot index follows KeybindMap defaults (Q→1, W→2, E→3, R→4).
+- `OnInput()` gets an editor-only debug log `[ADR-0006 P1B-05] Wire write: PressedSlot=N ...` wrapped in `#if UNITY_EDITOR` (stripped from ship build, kept as permanent diagnostic for Phase 2 wire-up).
+
+ReleasedSlot deferred:
+- The production `PlayerGameplayInput.Q/W/E/R` callbacks have no symmetric release event today (`UpQ`/`UpW`/etc. are gated by ctrl-key). `ReleasedSlot` stays at 0 until S3-06 KeybindMap takes over the input writer end-to-end.
+
+Acceptance evaluation:
+- **#1 Zero gameplay regression** ✅ — `Buttons.Set(...)` path unchanged; new field is pure additive write. Compile clean. Unity editor launches and Fusion Startup completes.
+- **#2 PressedSlot observed on wire** ✅ (transitively) — already verified in S3-01 multipeer harness which writes PressedSlot via `TestInputProvider` and confirms wire-level replication via `[Multipeer-Parity]` log. The production-writer path (`NetworkRunnerInput`) uses identical assignment semantics.
+- **#3 Wire size delta ≤ +3 B/tick** ✅ — actual delta is **0 B/tick** because the fields were already serialized (as zeroes) since Phase 1a. S3-05 only populates them; struct shape is unchanged.
+
+Verification scope reduction:
+- Live production-match playtest blocked in current dev build by (a) PlayFab title `Version mismatch! Prompt update.` and (b) Photon Cloud STUN timeout in the editor. Match start reaches `WaitForPlayerJoin` then idles, never hitting `GameState.Start` → `OnInput` early-returns and the new editor log never fires.
+- End-to-end production trace deferred to **Phase 2 Hercules pilot**, which will be the first reader of `PressedSlot` (replaces `input.Buttons.IsSet(Buttons.Q)` switch in `ActorCombatAction.FixedUpdateNetwork`). That migration provides full read+write coverage in a real match scene.
+
 ---
 
 ### 4.7 P1B-06 — `KeybindMap` Production Wiring + Settings Placeholder (1.0 day)

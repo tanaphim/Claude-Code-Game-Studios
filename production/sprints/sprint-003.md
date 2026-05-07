@@ -102,6 +102,7 @@
 - [x] S3-02: `AbilityRegistry` real impl + 5 EditMode tests pass (2026-04-21)
 - [x] S3-03: `AbilityDataSnapshot` real impl + 7 EditMode tests pass (2026-04-21)
 - [x] S3-04: `AbilityComponent.BindSlot` real impl + harness regression Pass #4/#5 still ✅ (2026-04-21, Option C dual-path)
+- [x] S3-05: `InputMessage.PressedSlot` wired in production input writer (2026-04-21, Option A soft-verified)
 - [ ] S3-02: `AbilityRegistry` real impl + unit tests pass
 - [ ] S3-03: `AbilityDataSnapshot` real impl + immutability test
 - [ ] S3-04: `BindSlot` real impl + `[Obsolete]` removed + regression pass
@@ -220,6 +221,37 @@ by Fusion APIs (`HasStateAuthority`, `Runner.TryGetNetworkedBehaviourId`, `Runne
 that require a live `NetworkRunner`. Coverage delegates to `AbilityRegistryTests`
 (5/5 ✅ for the registry overload BindSlot calls) + Phase 2 multipeer harness for
 the full round-trip happy path.
+
+### 2026-04-21 — Merged origin/dev (no conflicts)
+
+- Merge commit `b2128d6ae4` — pulled 3 dev commits (ui town fix, reconnection
+  stability, register session fix) into `feature/refactor-ability-claude`
+- Conflict-free this round (S3-01..S3-04 work didn't touch dev's edit surface)
+- Removed orphan `Assets/GameScripts/UI/GameViews/Core/UIStatVisualUtility.cs.meta`
+  (Unity local-generated; dev side now ships canonical version)
+
+### 2026-04-21 — S3-05 closed ✅
+
+**P1B-05 `InputMessage.PressedSlot/ReleasedSlot` wired** — DONE (Option A soft-verified)
+
+- `NetworkRunnerInput.cs` Q/W/E/R now write `if (pressed) InputMessage.PressedSlot = N`
+  in parallel with existing `Buttons.Set(...)` (Q→1, W→2, E→3, R→4 per KeybindMap defaults)
+- Added editor-only debug log `[ADR-0006 P1B-05]` in `OnInput()` wrapped in `#if UNITY_EDITOR`
+  (permanent diagnostic for Phase 2 wire-up; stripped from ship build)
+- `ReleasedSlot` deferred to S3-06 (production callback path lacks symmetric release event today)
+
+**Verification:**
+- Wire delta = **0 B/tick** (fields existed since Phase 1a; struct shape unchanged)
+- Compile clean; Fusion Startup completes; no exception in OnInput path
+- S3-01 multipeer harness already covers wire-level replication of these fields
+  (TestInputProvider is functionally identical writer; Pass #4 confirmed both peers
+  receive same PressedSlot value)
+- **End-to-end production playtest blocked** by environment in current dev build:
+  - PlayFab `Version mismatch! Prompt update.` (CBS title version drift)
+  - Photon Cloud STUN timeout (network/firewall) → match stuck at `WaitForPlayerJoin`,
+    never reaches `GameState.Start` → `OnInput` early-returns
+- Production end-to-end trace deferred to **Phase 2 Hercules pilot** (first reader
+  of PressedSlot — will exercise full read+write loop in a real match scene)
 
 ---
 
