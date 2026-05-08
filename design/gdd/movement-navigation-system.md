@@ -129,10 +129,27 @@ displacement.y = (10 × t) + (-15 × t^force)
 
 ### Move Speed (ที่ส่งให้ NavMeshAgent)
 ```
-if (!CanMove)         → Agent.speed = 0
-elif AdditionalMoveSpeed > 0 → Agent.speed = AdditionalMoveSpeed
-else                  → Agent.speed = move_speed stat value
+if (!CanMove)                 → Agent.speed = 0
+elif AdditionalMoveSpeed > 0  → Agent.speed = AdditionalMoveSpeed   ← OVERRIDE (not additive)
+else                          → Agent.speed = move_speed stat value
 ```
+
+**⚠️ Naming caveat:** `AdditionalMoveSpeed` is **misleading** — semantically it
+is `OverrideMoveSpeed`. Whenever it is `> 0`, the entire `move_speed` stat path
+(base + item bonuses + Slow effects) is **bypassed**. See §Known Issues / S4-07.
+
+**Field:** `NetworkVariable.cs:40-44` — single `float`, dict-backed, no stack.
+**Read sites (3, identical pattern):** `ActorDriver.cs:271` (NavMeshAgent),
+`ActorAnimation.cs:255`, `ActorBakeAnimation.cs:105`.
+**Write sites (server-only, currently 4 + 1 init):**
+
+| Site | Action | Value |
+|---|---|---|
+| `NetworkTrait.cs:333` | actor init | `0f` |
+| `CupidQAction.cs:33` | StartSpellCast (self-slow during charge) | `0.5f` |
+| `CupidQAction.cs:119` | EndCharge cleanup | `0f` |
+| `HerculesRAction.cs:204` | charge ramp (FixedUpdate) | `currentSpeed` 0..10 |
+| `HerculesRAction.cs:70` | StopCharging cleanup | `0` |
 
 ### CBS-to-runtime Scale Convention (move_speed)
 ```
@@ -256,6 +273,20 @@ time   = length / speed
 
 - ⚠️ **Minion Formation**: ไม่มีระบบ Formation Movement จริง — Minion แต่ละตัว Path ของตัวเอง; อาจทำให้ดูไม่เป็นระเบียบ
 - ⚠️ **Dash ผ่านสิ่งกีดขวางขนาดเล็ก**: CapsuleCast อาจ Miss สิ่งกีดขวางที่เล็กกว่า Capsule — ต้องทดสอบกับ Map จริง
-- ⚠️ **AdditionalMoveSpeed Override**: ถ้า Item/Buff ตั้ง AdditionalMoveSpeed > 0 จะ Override ความเร็วทั้งหมด — อาจเกิด Bug เมื่อมีหลาย Buff พร้อมกัน
+- ⚠️ **AdditionalMoveSpeed = misnamed Override** (S4-07, 2026-05-08): Field name
+  สื่อ "additive" แต่ semantic คือ **OVERRIDE** — เมื่อ > 0 จะแทนที่
+  `move_speed` stat ทั้งหมด (base + item bonuses + SLOW effect ทั้งหมดถูก
+  bypass). Investigation ปิดเป็น "documented, not currently exploitable":
+  - **Field:** single `float` ใน `NetworkVariable.cs:40-44` — ไม่มี stack/list/priority
+  - **Write sites ปัจจุบัน:** เฉพาะ `CupidQAction.cs:33,119` (self-slow ตอน
+    charge) และ `HerculesRAction.cs:70,204` (charge ramp 0..10) — ทั้งคู่
+    เขียนบน *self* และ Cupid ≠ Hercules → ปัจจุบัน **ไม่ collide จริง**
+  - **Bug taxonomy ที่จะเกิดถ้ามี ability ที่ 3 ใช้ field นี้:**
+    (B) Last-write-wins — ability A 5.0 → B เขียน 0.5 → A พังตัวเอง;
+    (C) Cleanup hardcoded `0` — เมื่อ B จบจะ reset 0 ทำให้ A เสียค่าด้วย;
+    (D) Base stat bypass — SLOW status effect บน hero ที่กำลัง override
+        จะไม่มีผล เพราะ formula ข้ามไปไม่อ่าน `move_speed` stat
+  - **Status:** documented + R-23 added; rename + stack design defer to Phase 2
+    (rename กระทบ `NetworkVariable` dict key serialization)
 - ⚠️ **CBS scale convention undocumented (S4-03, 2026-05-08)**: CBSUnit.MoveSpeed เก็บเป็น int ×100 ของ runtime value (350 → 3.5 game units) — ไม่ใช่ 0..100 ตามที่อาจสมมติ. NetworkHeroInventory.cs:1299-1304 หาร item bonus /100 ไม่ว่า ModifierType เป็น Flat หรือ Percent → **ทั้ง 2 ให้ผลเหมือนกัน** สำหรับ attack_speed และ move_speed. Designer trap เมื่อ tune item bonus. ดู R-22 ใน risk register
 - ⚠️ **LowQuality Obstacle Avoidance**: Minion จำนวนมากในบริเวณแคบอาจทำให้ติดกัน

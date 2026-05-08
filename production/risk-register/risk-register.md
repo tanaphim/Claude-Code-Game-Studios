@@ -243,7 +243,7 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 
 ---
 
-## R-20..R-22: Item system / Stats
+## R-20..R-23: Item system / Stats / Movement
 
 ### R-20 — Mythic Passive Bonus = schema-only (unimplemented)
 - **Source:** S4-06 reverse-doc finding (2026-05-08); `design/gdd/item-system.md §3.7`
@@ -289,6 +289,28 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
   ไม่ตรงกับที่ตั้ง; (ii) Balance pass พบ build dominant strategy ที่อาศัย scale
   mismatch นี้
 
+### R-23 — AdditionalMoveSpeed = misnamed override, no stack
+- **Source:** S4-07 investigation (2026-05-08); `NetworkVariable.cs:40-44`,
+  `ActorDriver.cs:271`, `CupidQAction.cs:33,119`, `HerculesRAction.cs:70,204`;
+  `design/gdd/movement-navigation-system.md §4 / §Known Issues`
+- **Probability:** Medium (จะ realized เมื่อมี ability ที่ 3 ใช้ field นี้)
+- **Impact:** Medium (collision = silent move-speed bugs ระหว่าง ability charging /
+  slow; SLOW status effect บน hero ที่กำลัง override จะไม่มีผล → balance escape)
+- **Status:** Open (documented, not currently exploitable)
+- **Owner:** gameplay-programmer + technical-director (semantics decision)
+- **Mitigation:**
+  (a) **Documentation done** — `movement-navigation-system.md` §4 + §Known Issues
+      ระบุ semantic ที่แท้จริง + write sites + bug taxonomy (S4-07);
+  (b) **Hold the line** — ห้าม ability ใหม่เขียน `AdditionalMoveSpeed` จนกว่าจะ
+      redesign field (use `move_speed` stat with ModifierType.Percent แทน);
+  (c) **Phase 2 redesign:** เลือก one of (1) rename → `OverrideMoveSpeed` +
+      เพิ่ม API `Push/Pop` พร้อม priority stack, หรือ (2) ลบ field แล้วย้าย
+      Cupid Q + Hercules R ไปใช้ `move_speed` stat modifier (ModifierType
+      override / temp-effect). Both paths ต้อง playtest re-tune
+- **Trigger to escalate:** (i) ออกแบบ ability ใหม่ที่ต้อง override move speed →
+  เลือกทางไหน; (ii) Bug report จาก playtest ว่า SLOW ไม่มีผลกับ Cupid ตอน Q
+  หรือ Hercules ตอน R
+
 ---
 
 ## Summary
@@ -297,11 +319,11 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 |--------------------------|-------|-----|
 | Critical (High prob × Critical impact) | 0 | — |
 | High (Medium+ prob × High+ impact) | 4 | R-02, R-03, R-06, R-09 |
-| Medium | 11 | R-01, R-04, R-05, R-07, R-10, R-15, R-16, R-17, R-18, R-20, R-22 |
+| Medium | 12 | R-01, R-04, R-05, R-07, R-10, R-15, R-16, R-17, R-18, R-20, R-22, R-23 |
 | Low | 7 | R-08, R-11, R-12, R-13, R-14, R-19, R-21 |
 
 **By status:**
-- Open: 11 (R-02, R-07, R-09, R-11, R-16, R-17, R-18, R-19, R-20, R-21, R-22)
+- Open: 12 (R-02, R-07, R-09, R-11, R-16, R-17, R-18, R-19, R-20, R-21, R-22, R-23)
 - Mitigating: 8 (R-01, R-03, R-04, R-05, R-06, R-10, R-12, R-14, R-15)
 - Monitoring: 2 (R-08, R-13)
 - Realized (active): 6 (R-05, R-09, R-10, R-11, R-16, R-17, R-18, R-19) — overlap กับ Open/Mitigating
