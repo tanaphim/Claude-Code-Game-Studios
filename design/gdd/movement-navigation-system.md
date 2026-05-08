@@ -134,6 +134,32 @@ elif AdditionalMoveSpeed > 0 → Agent.speed = AdditionalMoveSpeed
 else                  → Agent.speed = move_speed stat value
 ```
 
+### CBS-to-runtime Scale Convention (move_speed)
+```
+CBS unit:     int 200..500       (e.g. CBSUnit.MoveSpeed = 350)
+Runtime unit: float game-units   (NavMesh world units, e.g. 3.5)
+
+Conversion:   runtime = CBS / 100f
+Source:       NetworkStat.cs:169  MoveSpeed.Initialize(this, stats.MoveSpeed / 100f, ...)
+              NetworkStat.cs:170  Min/MaxMoveSpeed clamp also / 100f
+```
+
+### Item Modifier Conversion (move_speed) ⚠️
+```
+Source: NetworkHeroInventory.cs:1299-1304
+ALL item bonuses to attack_speed and move_speed are divided by 100,
+regardless of ModifierType (Flat or Percent):
+
+    case StatKey.attack_speed:
+    case StatKey.move_speed:
+        statValue.Value = statValue.Value / 100f;   // unconditional
+
+Implication: ModifierType.Flat and ModifierType.Percent produce identical
+output for these two stats. Designers tuning items must enter values as
+×100 of the intended runtime delta — NOT as a 0..100 percentage.
+See item-system.md §Known Issues for designer-facing guidance.
+```
+
 ### NavMesh Snap Fallback
 ```
 Try 1: SamplePosition(click, radius=0.5f)
@@ -231,4 +257,5 @@ time   = length / speed
 - ⚠️ **Minion Formation**: ไม่มีระบบ Formation Movement จริง — Minion แต่ละตัว Path ของตัวเอง; อาจทำให้ดูไม่เป็นระเบียบ
 - ⚠️ **Dash ผ่านสิ่งกีดขวางขนาดเล็ก**: CapsuleCast อาจ Miss สิ่งกีดขวางที่เล็กกว่า Capsule — ต้องทดสอบกับ Map จริง
 - ⚠️ **AdditionalMoveSpeed Override**: ถ้า Item/Buff ตั้ง AdditionalMoveSpeed > 0 จะ Override ความเร็วทั้งหมด — อาจเกิด Bug เมื่อมีหลาย Buff พร้อมกัน
+- ⚠️ **CBS scale convention undocumented (S4-03, 2026-05-08)**: CBSUnit.MoveSpeed เก็บเป็น int ×100 ของ runtime value (350 → 3.5 game units) — ไม่ใช่ 0..100 ตามที่อาจสมมติ. NetworkHeroInventory.cs:1299-1304 หาร item bonus /100 ไม่ว่า ModifierType เป็น Flat หรือ Percent → **ทั้ง 2 ให้ผลเหมือนกัน** สำหรับ attack_speed และ move_speed. Designer trap เมื่อ tune item bonus. ดู R-22 ใน risk register
 - ⚠️ **LowQuality Obstacle Avoidance**: Minion จำนวนมากในบริเวณแคบอาจทำให้ติดกัน

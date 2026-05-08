@@ -243,7 +243,7 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 
 ---
 
-## R-20..R-21: Item system
+## R-20..R-22: Item system / Stats
 
 ### R-20 — Mythic Passive Bonus = schema-only (unimplemented)
 - **Source:** S4-06 reverse-doc finding (2026-05-08); `design/gdd/item-system.md §3.7`
@@ -270,6 +270,25 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 - **Trigger to escalate:** Designer สร้าง CBS item ที่ตั้ง `Positions[]` แล้ว
   คาดว่าระบบจะ enforce → playtest พบว่าไม่ทำงาน
 
+### R-22 — attack_speed / move_speed item-bonus /100 unconditional
+- **Source:** S4-03 investigation (2026-05-08); `NetworkHeroInventory.cs:1299-1304`;
+  `design/gdd/item-system.md §Known Issues`; `design/gdd/movement-navigation-system.md §4 / §Known Issues`
+- **Probability:** Realized (code in production since pre-Sprint 002)
+- **Impact:** Medium (designer trap: item "+30 move_speed" Flat ให้ผล +0.30 runtime
+  ≈ +8.6% บน base 3.5, ไม่ใช่ +30% ที่อาจคิด; `ModifierType.Flat` กับ `Percent`
+  ให้ผลเหมือนกันสำหรับ 2 stats นี้ → label เลือกผิดไม่ส่งผลแต่อาจหลอกการอ่าน data)
+- **Status:** Open
+- **Owner:** gameplay-programmer + game-designer (balance pass)
+- **Mitigation:**
+  (a) **Documentation done** — `item-system.md` + `movement-navigation-system.md`
+      ระบุ scale convention และ /100 trap แล้ว (S4-03);
+  (b) **Phase 2 / balance pass:** ตัดสินใจว่าจะ honor `ModifierType` (เปลี่ยน
+      `NetworkHeroInventory.cs:1302` ให้ /100 เฉพาะเมื่อ `Percent`) หรือ rename
+      stats ให้ชัด (`move_speed_centi`) — ทั้งสอง path ต้อง re-tune ทุก item ที่มีอยู่
+- **Trigger to escalate:** (i) Designer ใหม่เข้ามา tune item แล้วรายงานว่า bonus
+  ไม่ตรงกับที่ตั้ง; (ii) Balance pass พบ build dominant strategy ที่อาศัย scale
+  mismatch นี้
+
 ---
 
 ## Summary
@@ -278,11 +297,11 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 |--------------------------|-------|-----|
 | Critical (High prob × Critical impact) | 0 | — |
 | High (Medium+ prob × High+ impact) | 4 | R-02, R-03, R-06, R-09 |
-| Medium | 10 | R-01, R-04, R-05, R-07, R-10, R-15, R-16, R-17, R-18, R-20 |
+| Medium | 11 | R-01, R-04, R-05, R-07, R-10, R-15, R-16, R-17, R-18, R-20, R-22 |
 | Low | 7 | R-08, R-11, R-12, R-13, R-14, R-19, R-21 |
 
 **By status:**
-- Open: 10 (R-02, R-07, R-09, R-11, R-16, R-17, R-18, R-19, R-20, R-21)
+- Open: 11 (R-02, R-07, R-09, R-11, R-16, R-17, R-18, R-19, R-20, R-21, R-22)
 - Mitigating: 8 (R-01, R-03, R-04, R-05, R-06, R-10, R-12, R-14, R-15)
 - Monitoring: 2 (R-08, R-13)
 - Realized (active): 6 (R-05, R-09, R-10, R-11, R-16, R-17, R-18, R-19) — overlap กับ Open/Mitigating

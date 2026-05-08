@@ -367,6 +367,18 @@ CraftPrice = ItemFullPrice - Σ(ComponentPrice สำหรับชิ้นส
   Sprint 005+ story: เพิ่ม `case` ตรวจ `item.Positions.Contains(Hero.Role)` ใน
   `AvailableToPurchase()` และ surface ใน Shop UI (recommend filter)
 - ⚠️ **Mythic Passive Formula** (S4-06, 2026-05-08): Schema documented ใน §3.7 + proposed formula §4. **Schema-only / unimplemented** — `ItemObject.MythicItemEffect` ไม่มี read site ใน `Assets/GameScripts`. ต้อง: (a) Sprint 005+ story สำหรับ wire-up `ApplyMythicBonus()` ใน `NetworkHeroInventory` หรือ `Actor.Trait`, (b) ADR ตอบ Open Questions §4, (c) CBS dashboard editor support สำหรับ `ItemEffectMythicPattern[]` field
-- ⚠️ **attack_speed / move_speed Hardcode**: การ ÷100 เสมออาจเป็น Bug หรือ Design — ต้องยืนยันว่าค่าใน CBS ตั้งเป็น 0–1 หรือ 0–100
+- ⚠️ **attack_speed / move_speed item-bonus /100 unconditional** (S4-03, 2026-05-08):
+  `NetworkHeroInventory.cs:1299-1304` หาร item bonus /100 เสมอ ไม่ว่า
+  `ModifierType` จะเป็น Flat หรือ Percent → **ทั้งสองให้ผลเหมือนกัน**
+  สำหรับ 2 stats นี้ (ต่างจาก stats อื่นที่ /100 เฉพาะ Percent).
+  CBS scale conventions:
+  - `CBSUnit.MoveSpeed` int 200..500 → /100 ใน `NetworkStat.cs:169` → game units 2.0..5.0
+  - `CBSUnit.AttackSpeed` float ~0.5..2.0 (raw multiplier, **NO /100** ใน base init `NetworkStat.cs:179`)
+  - Item bonus values ใน CBS เก็บเป็น ×100 ของ runtime delta (เช่น item "+30" → +0.30 runtime)
+  - **Designer trap**: ค่า "30" ใน item อาจคิดว่า "+30%" แต่จริงๆ คือ +0.30 runtime
+    → บน MoveSpeed base 3.5 = ~+8.6%, บน AttackSpeed base 1.0 = +30% (ตรงโดยบังเอิญ)
+  - **`ModifierType.Flat` กับ `Percent` ให้ผลเหมือนกัน** สำหรับ 2 stats นี้ → label เลือกให้ตรง intent แต่ผลเหมือนกัน
+  Status: **documented, not fixed** — code change กระทบ balance ของทุก item ที่ตั้งค่าไว้แล้ว;
+  defer to Phase 2 หรือ balance pass. ดู R-22 ใน risk register
 - ⚠️ **Item Animation — Animator States ยังไม่มี**: `Item_Recall_Perform`, `Item_Consume_Perform`, `Item_Spell_Perform`, `Item_Attack_Perform` ต้องสร้างใน AnimatorController ของแต่ละ Hero ด้วยมือ
 - ⚠️ **Item_Viable ยังไม่มีใน AnimatorController**: bool parameter `Item_Viable` ต้องเพิ่มใน Animator ของแต่ละ Hero เพื่อให้ `GetViable`/`SetViable` ทำงาน
