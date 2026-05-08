@@ -6,7 +6,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-08"
+updated: "2026-05-08-pm"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -14,11 +14,11 @@ stories:
     name: "CBSUnit.SlotQ/W/E/R/A/I alias properties (revised per ADR-0008)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-05-08 — delta-unity@b7821a6dce, 14/14 EditMode tests pass"
 
   - id: "S5-02"
     name: "ActorCombat.GetSlotAction + AbilityComponent.GetSlotAction facade (P2-01)"
