@@ -24,7 +24,7 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 
 | ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
 |----|------|-------------|-----------|-------------|-------------------|
-| S5-01 (P2-03) | `CBSAbility.Slot` field + `AbilityData.EffectiveSlot` shim + `SkillKeyToSlot` mapper | gameplay-programmer + game-designer | 0.25 | — | Schema change additive; EffectiveSlot derives from SkillKey เมื่อ Slot==0; unit test pass |
+| S5-01 (revised, ADR-0008) | `CBSUnit.SlotQ/W/E/R/A/I` alias properties (read-only, wraps legacy fields) | gameplay-programmer | 0.25 | — | Aliases compile; EditMode tests pass for empty/non-empty/consolidation cases; existing CBS deserialization unaffected. **Note:** Original ADR-0006 §6.1 (CBSAbility.Slot) reverted 2026-05-08 — see ADR-0008. |
 | S5-02 (P2-01) | `ActorCombat.GetSlotAction` + `AbilityComponent.GetSlotAction` facade | gameplay-programmer | 0.25 | — | Both facades return same action for slot lookup; covered by unit test |
 | S5-03 (P2-02) | `ActorCombat.GetActiveSlot` + `IsQuickCast(byte slot)` accessor | gameplay-programmer | 0.25 | — | GetActiveSlot returns latest pressed slot; IsQuickCast respects per-slot setting |
 | S5-04 (P2-04) | `ActorCombatAction` Pattern-A helper (`IsActiveSlotOwner`) — replace 5 blocks | gameplay-programmer | 0.5 | S5-01, S5-02 | All 5 owner-guard sites replaced; multipeer harness Pass #1-5 still pass |
@@ -32,7 +32,7 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 | S5-06 (P2-06) | `AnimationEvent` Option A — wire 42 shim methods through `GetActiveSlot()` | gameplay-programmer | 0.5 | S5-03 | All 42 shim methods compile; animation events fire on correct slot |
 | S5-07 (P2-07) | `HerculesRAction.GetInput` rewrite (PressedSlot path) | gameplay-programmer | 0.25 | S5-01 | Hercules R charge respects PressedSlot binding; release uses ReleasedSlot when wired |
 | S5-08 (P2-08) | `HerculesWAction` slot-indexed sibling reads (5 sites) | gameplay-programmer | 0.25 | S5-02 | 5 sibling reads use GetSlotAction; behavior unchanged |
-| S5-09 (P2-09) | `Hercules` avatar bootstrap — `ActorCombat.OnStartup` calls `AbilityComponent.BindSlot(slot, abilityId)` × 4 | gameplay-programmer | 0.5 | S5-01 | 4 BindSlot calls in OnStartup; PeerMode=Single playtest no errors |
+| S5-09 (P2-09, revised ADR-0008) | `Hercules` avatar bootstrap — `ActorCombat.OnStartup` reads `unit.SlotQ[0]..SlotI[0]` from CBSUnit and calls `AbilityComponent.BindSlot(slot, id)` × 6 (Q/W/E/R/A/I); slot 7 Recall bound globally | gameplay-programmer | 0.5 | S5-01 | 6 BindSlot calls in OnStartup, all reading from CBSUnit aliases (no hardcoded ability ids); PeerMode=Single playtest no errors |
 | S5-10 (P2-10) | Manual playtest checklist + 1-match Training playthrough verification | qa-tester + gameplay-programmer | 0.5 | all S5-01..S5-09 | Hercules QWER playable end-to-end; multipeer harness passes; evidence in `production/qa/evidence/` |
 
 **Must Have Subtotal: 3.75d** (~2.0d critical path serial; rest parallelizable)
@@ -141,5 +141,14 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 
 - [Sprint 004 retrospective](../retrospectives/sprint-004.md) — 6 action items
 - [ADR-0006 Phase 2 Migration Plan §7](../../docs/architecture/ADR-0006-phase-2-migration-plan.md) — P2-01..P2-10 work breakdown
+- [ADR-0008 Slot Binding via CBSUnit](../../docs/architecture/ADR-0008-slot-binding-via-cbsunit.md) — supersedes ADR-0006 §6.1; affects S5-01 + S5-09 scope (2026-05-08)
 - [Risk Register R-21..R-23](../risk-register/risk-register.md) — Open design decisions
 - [Sprint 003 retrospective](../retrospectives/sprint-003.md) §5 — carry-forward actions #3, #4
+
+## Mid-Sprint Pivot Log
+
+**2026-05-08 — ADR-0006 §6.1 → ADR-0008 (CBSAbility.Slot superseded)**
+
+S5-01 was implemented (additive `CBSAbility.Slot` field + `EffectiveSlot` shim + `SkillKeyToSlot` mapper + 7 unit tests) per ADR-0006 §6.1. User design review surfaced that slot binding should be sourced from `CBSUnit` (per-hero kit), not `CBSAbility` (per-ability slot self-declaration). Implementation reverted; ADR-0008 written; S5-01 scope reduced to alias properties on `CBSUnit`; S5-09 scope updated to read from CBSUnit aliases. Net Sprint 005 estimate unchanged (~3.75d Must Have).
+
+Reverted code (in delta-unity repo): `CBSAbility.cs`, `AbilityDataSnapshot.cs`, deleted `AbilitySlotTests.cs`. No commits to dev branch — change was on worktree only.

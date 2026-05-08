@@ -11,7 +11,7 @@ updated: "2026-05-08"
 stories:
   # Must Have — Phase 2 Hercules pilot
   - id: "S5-01"
-    name: "CBSAbility.Slot field + EffectiveSlot shim + SkillKeyToSlot mapper (P2-03)"
+    name: "CBSUnit.SlotQ/W/E/R/A/I alias properties (revised per ADR-0008)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
     status: ready-for-dev
@@ -91,7 +91,7 @@ stories:
     completed: ""
 
   - id: "S5-09"
-    name: "Hercules avatar bootstrap — ActorCombat.OnStartup BindSlot x4 (P2-09)"
+    name: "Hercules bootstrap — ActorCombat.OnStartup reads CBSUnit.Slot* aliases, BindSlot x6 (revised per ADR-0008)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
     status: backlog
