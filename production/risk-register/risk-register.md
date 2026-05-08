@@ -243,17 +243,33 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 
 ---
 
+## R-20: Item system
+
+### R-20 — Mythic Passive Bonus = schema-only (unimplemented)
+- **Source:** S4-06 reverse-doc finding (2026-05-08); `design/gdd/item-system.md §3.7`
+- **Probability:** Realized
+- **Impact:** Medium (advertised mechanic missing; affects Mythic item value perception)
+- **Status:** Open
+- **Owner:** gameplay-programmer + game-designer
+- **Mitigation:** GDD §3.7 + §4 documented schema + proposed formula + open
+  questions; spawn Sprint 005+ wire-up story (ApplyMythicBonus in
+  `NetworkHeroInventory` or `Actor.Trait`); ADR to answer Open Questions §4.1–4.4
+- **Trigger to escalate:** Mythic items ship to playtest while bonus path
+  ยังไม่ wire — players จะมอง Mythic เป็น "broken" item
+
+---
+
 ## Summary
 
 | Severity (Prob × Impact) | Count | IDs |
 |--------------------------|-------|-----|
 | Critical (High prob × Critical impact) | 0 | — |
 | High (Medium+ prob × High+ impact) | 4 | R-02, R-03, R-06, R-09 |
-| Medium | 9 | R-01, R-04, R-05, R-07, R-10, R-15, R-16, R-17, R-18 |
+| Medium | 10 | R-01, R-04, R-05, R-07, R-10, R-15, R-16, R-17, R-18, R-20 |
 | Low | 6 | R-08, R-11, R-12, R-13, R-14, R-19 |
 
 **By status:**
-- Open: 8 (R-02, R-07, R-09, R-11, R-16, R-17, R-18, R-19)
+- Open: 9 (R-02, R-07, R-09, R-11, R-16, R-17, R-18, R-19, R-20)
 - Mitigating: 8 (R-01, R-03, R-04, R-05, R-06, R-10, R-12, R-14, R-15)
 - Monitoring: 2 (R-08, R-13)
 - Realized (active): 6 (R-05, R-09, R-10, R-11, R-16, R-17, R-18, R-19) — overlap กับ Open/Mitigating
