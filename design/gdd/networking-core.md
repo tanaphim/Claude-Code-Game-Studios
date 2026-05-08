@@ -191,7 +191,7 @@ BeforeJoinSession → BeforeCreateOrJoin → Created → Join
 ### Tick-based Delay
 ```
 TicksForDelay(seconds) = ceil(seconds × runner.TickRate)
-ตัวอย่าง: 0.2s × 60 tps = 12 ticks
+ตัวอย่าง: 0.2s × 64 tps = 13 ticks  (ceil(12.8))
 ```
 
 ### Max Players
@@ -232,7 +232,13 @@ MaxPlayersTotal = (TeamSize × 2) + SpectatorCount
 
 | ค่า | ที่อยู่ | ค่าปัจจุบัน | ผลกระทบ |
 |-----|--------|------------|---------|
-| Tick Rate | Fusion Project Settings | Config-based | Simulation Precision vs Bandwidth |
+| Tick Rate | `NetworkProjectConfig.fusion` → `Simulation.TickRateSelection.Client` | **64 Hz** | Simulation Precision vs Bandwidth |
+| Send Rate (Server) | same → `Simulation.TickRateSelection.ServerSendIndex` | **0 = match tick rate (64 Hz)** | Server→Client Bandwidth |
+| Send Rate (Client) | same → `Simulation.TickRateSelection.ClientSendIndex` | **0 = match tick rate (64 Hz)** | Client→Server Bandwidth |
+| Player Count (per session) | same → `Simulation.PlayerCount` | **10** | Hard cap; ต้อง ≥ MaxPlayersTotal |
+| Simulation Update Mode | same → `Simulation.SimulationUpdateTimeMode` | **0 (Engine update)** | Tick driven by Unity update loop |
+| Connection Timeout | same → `Network.ConnectionTimeout` | **120 s** | เวลารอ reconnect ก่อน drop |
+| Connection Shutdown Time | same → `Network.ConnectionShutdownTime` | **1.0 s** | Graceful disconnect window |
 | Session Player Limit | CustomData.GetMaxPlayersIncSpectator | TeamSize × 2 + Spectator | Room Capacity |
 | Reconnect Timeout | WaitUntil(IsCloudReady) | — | รอ Cloud ได้นานแค่ไหน |
 | Reliable Data Key | ReliableKey pattern | Per-message | ป้องกัน Duplicate |
@@ -256,7 +262,7 @@ MaxPlayersTotal = (TeamSize × 2) + SpectatorCount
 
 ## Known Issues / TODO
 
-- ⚠️ **Tick Rate ไม่ได้ระบุตัวเลข**: ใช้ `runner.TickRate` แต่ไม่พบค่า Default ใน Config — ต้องตรวจ Fusion Project Settings
+- ✅ **Tick Rate** — RESOLVED 2026-05-08 (S4-04): **64 Hz** จาก `NetworkProjectConfig.fusion → Simulation.TickRateSelection.Client`. Send rates (Server/Client) = 0 → match tick rate. ดู §7 Tuning Knobs สำหรับค่าทั้งหมด
 - ⚠️ **Client-side Prediction**: ไม่พบ Implementation ชัดเจน — Relying on Fusion built-in interpolation
 - ⚠️ **Lag Compensation**: ไม่มี Explicit Lag Compensation นอกจาก Tick-based timing
 - ⚠️ **Spectator Sync**: Spectator สามารถเห็นทั้ง 2 ทีม — ต้องตรวจสอบว่า AOI ถูก Bypass สำหรับ Spectator อย่างไร
