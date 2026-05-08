@@ -152,3 +152,13 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 S5-01 was implemented (additive `CBSAbility.Slot` field + `EffectiveSlot` shim + `SkillKeyToSlot` mapper + 7 unit tests) per ADR-0006 §6.1. User design review surfaced that slot binding should be sourced from `CBSUnit` (per-hero kit), not `CBSAbility` (per-ability slot self-declaration). Implementation reverted; ADR-0008 written; S5-01 scope reduced to alias properties on `CBSUnit`; S5-09 scope updated to read from CBSUnit aliases. Net Sprint 005 estimate unchanged (~3.75d Must Have).
 
 Reverted code (in delta-unity repo): `CBSAbility.cs`, `AbilityDataSnapshot.cs`, deleted `AbilitySlotTests.cs`. No commits to dev branch — change was on worktree only.
+
+## Retrospective Seeds (carry-forward to Sprint 005 retro)
+
+**Finding 1 — NetworkBehaviour EditMode testability gap (S5-02 + S5-03)**
+
+`ActorCombat` is a Fusion `NetworkBehaviour`. Instance methods that read networked properties (`Skill1..4`, `IsQuickQ..R`, `m_ActiveSlot`) cannot be exercised in EditMode without a live `NetworkRunner`. No existing test fixture in the project instantiates a Fusion type. S5-02 (`GetSlotAction`) and S5-03 (`IsQuickCast`) acceptance criteria specified "covered by unit test" — partially satisfied via static-helper extraction (`ResolveSlotAction`, `ResolveQuickCast`) which are pure and EditMode-testable. `GetActiveSlot` / `SetActiveSlot` networked-state behaviour falls back to multipeer harness + Hercules manual playtest (S5-10) for coverage.
+
+**Process improvement candidate:** sprint planning should distinguish "Logic stories with pure C# state" (full EditMode coverage possible) from "Logic stories with NetworkBehaviour state" (requires PlayMode framework or static-helper extraction). Currently classified together as "Logic" by `/qa-plan`.
+
+**Sprint 006 backlog candidate:** investigate establishing a PlayMode test framework that can spawn a minimal `NetworkRunner` for unit-level coverage of NetworkBehaviour subclasses. Estimate ~1-2d. If too expensive, codify "static-helper extraction for switch logic" as the canonical pattern.

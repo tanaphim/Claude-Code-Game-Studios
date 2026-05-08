@@ -24,21 +24,21 @@ stories:
     name: "ActorCombat.GetSlotAction + AbilityComponent.GetSlotAction facade (P2-01)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-05-08 — delta-unity@f0e59e692d, EditMode tests pass"
 
   - id: "S5-03"
     name: "ActorCombat.GetActiveSlot + IsQuickCast(byte slot) accessor (P2-02)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-05-08 — delta-unity@f0e59e692d, EditMode tests pass (network-state behaviour deferred to multipeer harness + S5-10)"
 
   - id: "S5-04"
     name: "ActorCombatAction Pattern-A helper (IsActiveSlotOwner) — replace 5 blocks (P2-04)"
