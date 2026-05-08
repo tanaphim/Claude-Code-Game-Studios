@@ -243,7 +243,7 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 
 ---
 
-## R-20: Item system
+## R-20..R-21: Item system
 
 ### R-20 — Mythic Passive Bonus = schema-only (unimplemented)
 - **Source:** S4-06 reverse-doc finding (2026-05-08); `design/gdd/item-system.md §3.7`
@@ -257,6 +257,19 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 - **Trigger to escalate:** Mythic items ship to playtest while bonus path
   ยังไม่ wire — players จะมอง Mythic เป็น "broken" item
 
+### R-21 — Item Role Restriction = unimplemented
+- **Source:** S4-05 reverse-doc finding (2026-05-08); `design/gdd/item-system.md §6 / §Known Issues`
+- **Probability:** Realized
+- **Impact:** Low (balance: ทุก Role ซื้อทุกไอเทมได้; ไม่ block gameplay แต่
+  ทำให้ระบบ build ไม่มี constraint ตามที่ออกแบบ)
+- **Status:** Open
+- **Owner:** gameplay-programmer + game-designer
+- **Mitigation:** Sprint 005+ story: เพิ่ม case ใน `AvailableToPurchase()`
+  ตรวจ `item.Positions.Contains(Hero.Role)` + Shop UI recommend filter;
+  หรือ explicit decision ว่าจะลบ field `Positions` ทิ้ง
+- **Trigger to escalate:** Designer สร้าง CBS item ที่ตั้ง `Positions[]` แล้ว
+  คาดว่าระบบจะ enforce → playtest พบว่าไม่ทำงาน
+
 ---
 
 ## Summary
@@ -266,10 +279,10 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 | Critical (High prob × Critical impact) | 0 | — |
 | High (Medium+ prob × High+ impact) | 4 | R-02, R-03, R-06, R-09 |
 | Medium | 10 | R-01, R-04, R-05, R-07, R-10, R-15, R-16, R-17, R-18, R-20 |
-| Low | 6 | R-08, R-11, R-12, R-13, R-14, R-19 |
+| Low | 7 | R-08, R-11, R-12, R-13, R-14, R-19, R-21 |
 
 **By status:**
-- Open: 9 (R-02, R-07, R-09, R-11, R-16, R-17, R-18, R-19, R-20)
+- Open: 10 (R-02, R-07, R-09, R-11, R-16, R-17, R-18, R-19, R-20, R-21)
 - Mitigating: 8 (R-01, R-03, R-04, R-05, R-06, R-10, R-12, R-14, R-15)
 - Monitoring: 2 (R-08, R-13)
 - Realized (active): 6 (R-05, R-09, R-10, R-11, R-16, R-17, R-18, R-19) — overlap กับ Open/Mitigating
