@@ -380,5 +380,23 @@ CraftPrice = ItemFullPrice - Σ(ComponentPrice สำหรับชิ้นส
   - **`ModifierType.Flat` กับ `Percent` ให้ผลเหมือนกัน** สำหรับ 2 stats นี้ → label เลือกให้ตรง intent แต่ผลเหมือนกัน
   Status: **documented, not fixed** — code change กระทบ balance ของทุก item ที่ตั้งค่าไว้แล้ว;
   defer to Phase 2 หรือ balance pass. ดู R-22 ใน risk register
-- ⚠️ **Item Animation — Animator States ยังไม่มี**: `Item_Recall_Perform`, `Item_Consume_Perform`, `Item_Spell_Perform`, `Item_Attack_Perform` ต้องสร้างใน AnimatorController ของแต่ละ Hero ด้วยมือ
-- ⚠️ **Item_Viable ยังไม่มีใน AnimatorController**: bool parameter `Item_Viable` ต้องเพิ่มใน Animator ของแต่ละ Hero เพื่อให้ `GetViable`/`SetViable` ทำงาน
+- ✅ **Item Animation States — VERIFIED DONE** (S4-01, 2026-05-08):
+  States `Item_Recall_Perform`, `Item_Consume_Perform`, `Item_Spell_Perform`,
+  `Item_Attack_Perform`, `Item_Perform` (default) ทั้ง 5 states มีอยู่แล้วใน
+  shared base controller `Assets/Animations/RadiusBasicLocomotion.controller`
+  (GUID `d5cada5dadda5f44db70f1faa1c641fc`). Hero override controllers ทั้งหมด
+  เป็น `AnimatorOverrideController` ที่ point ไปที่ base นี้ → **inherit
+  states อัตโนมัติ**. Coverage: 22/25 hero override controllers ใช้ base
+  ที่ถูกต้อง
+- ✅ **Item_Viable parameter — VERIFIED DONE** (S4-02, 2026-05-08):
+  Bool parameter `Item_Viable` มีอยู่แล้วใน `RadiusBasicLocomotion.controller`.
+  `GetViable(SkillKey.Item)` / `SetViable(SkillKey.Item, true/false)` ทำงาน
+  โดยไม่ error สำหรับทุก hero ที่ override จาก base นี้
+- ⚠️ **Garen variant controllers gap** (S4-01, 2026-05-08): 3 override
+  controllers ใช้ `GameCreator/CompleteLocomotion.controller` (plugin) เป็น
+  base — **ไม่มี item states และไม่มี `Item_Viable` parameter**:
+  `GarenCompleteLocomotion`, `GarenButKingArthurCompleteLocomotion`,
+  `GarenButXinZhoaCompleteLocomotion`. ชื่อแบบ "GarenBut*" สื่อว่าเป็น
+  hybrid prototypes (legacy test). Action: (a) confirm ว่าไม่ใช่ production
+  hero แล้วพิจารณาลบ; (b) ถ้ายังใช้ → swap base เป็น `RadiusBasicLocomotion`
+  หรือ port states เข้า `CompleteLocomotion.controller`. Defer ไป Sprint 005+
