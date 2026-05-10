@@ -6,7 +6,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-08-pm"
+updated: "2026-05-10"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -74,21 +74,21 @@ stories:
     name: "HerculesRAction.GetInput rewrite (PressedSlot path) (P2-07)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: backlog
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 0.25
-    blocker: "depends S5-01"
-    completed: ""
+    blocker: ""
+    completed: "2026-05-10 — delta-unity@0cd6bd240d, ReleasedSlot path also re-enabled (StopCharging trigger). Behaviour gap covered by multipeer harness + S5-10."
 
   - id: "S5-08"
     name: "HerculesWAction slot-indexed sibling reads — 5 sites (P2-08)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: backlog
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 0.25
-    blocker: "depends S5-02"
-    completed: ""
+    blocker: ""
+    completed: "2026-05-10 — delta-unity@0cd6bd240d, all 5 sites use GetSlotAction(3). NetworkBehaviour property substitution — coverage falls to multipeer harness + S5-10."
 
   - id: "S5-09"
     name: "Hercules bootstrap — ActorCombat.OnStartup reads CBSUnit.Slot* aliases, BindSlot x6 (revised per ADR-0008)"
