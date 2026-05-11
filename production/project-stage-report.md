@@ -1,231 +1,237 @@
 # Project Stage Analysis Report
 
-**Generated**: 2026-04-17
+**Generated**: 2026-05-10
 **Stage**: Production
+**Stage Confidence**: PASS — ชัดเจน, มี source code มาก + active sprint + ADRs ครบ core
 **Analysis Scope**: Full project
+**Supersedes**: รายงานฉบับ 2026-04-17
 
 ---
 
 ## Executive Summary
 
-Delta เป็นเกม MOBA 5v5 ที่อยู่ในขั้น **Production** อย่างเต็มตัว — มีโค้ด Unity จำนวนมากกว่า 7,300 C# files ใน `C:\GitHub\delta-unity` และมี GDD ครอบคลุมครบ 37+ ระบบ ใน `C:\GitHub\Delta-Project` โครงสร้างของโปรเจกต์แบ่งเป็น 2 repositories: repo นี้ (`Delta-Project`) ใช้สำหรับ design docs และ project management, ส่วน `delta-unity` คือ Unity source code จริง
+Delta เป็นเกม MOBA 5v5 อยู่ใน **Production** stage ต่อเนื่อง ความคืบหน้าระหว่าง 2026-04-17 ถึง 2026-05-10 (~3.5 สัปดาห์):
 
-ช่องว่างหลักที่ต้องจัดการคือ: (1) ไม่มี test strategy ที่เป็นระบบ — มี test files กระจัดกระจายอยู่หลายที่, (2) ADRs ครอบคลุมเพียง 5 ระบบจาก 37 ระบบ, (3) Sprint 001 หมดอายุวันนี้และต้องวางแผน Sprint 002, (4) ไม่มี milestone/roadmap ที่ formal
+- ผ่านมาแล้ว **4 sprints** (Sprint 001 → Sprint 005)
+- เพิ่ม **3 ADRs** (ADR-0006 Unified Ability System, ADR-0007 VFX Network Decoupling, ADR-0008 Slot Binding via CBSUnit)
+- มี **mid-sprint pivot** ครั้งสำคัญใน Sprint 005 (ADR-0008 supersedes ADR-0006 §6.1)
+- Sprint 005 กำลังโฟกัส **Phase 2 Hercules pilot** — technical sub-phase ของ ability system migration
 
-**Current Focus**: ปิด Sprint 001 — item animation, combat/networking bug fixes, risk register
-**Blocking Issues**: Sprint 001 หมดอายุวันนี้ (2026-04-17), ยังไม่มี Sprint 002
-**Estimated Time to Next Stage (Polish)**: ขึ้นอยู่กับ milestone definition ที่ยังไม่มี
+**Current Focus**: Phase 2 Hercules pilot (Sprint 005, 2026-05-09 → 2026-05-22)
+**Critical Gaps ที่ยังไม่แก้**: Test strategy, ADR coverage, Milestone definitions, 2-repo traceability
+**Estimated Time to Next Stage (Polish)**: ขึ้นอยู่กับการกำหนด Milestone Alpha + แก้ Test strategy gap
+
+---
+
+## Progress Since 2026-04-17
+
+| ด้าน | เมษา (2026-04-17) | ปัจจุบัน (2026-05-10) | สถานะ |
+|------|-------------------|----------------------|-------|
+| Sprints completed | 0 (Sprint 001 expired) | 4 (Sprint 001-004 closed, Sprint 005 active) | ✅ คืบหน้า |
+| ADRs | 5 | 8 | ✅ +3 |
+| GDDs | 40 | 40+ | ✅ คงที่ |
+| Mid-sprint pivots documented | 0 | 1 (ADR-0008) | ✅ มี process แล้ว |
+| Retrospectives | 0 | 4 (Sprint 001-004 retros) | ✅ มี cadence |
+| Test strategy | ไม่มี | ยังไม่มี | ❌ ยังเป็น gap |
+| Milestone definitions | ไม่มี | ยังไม่มี | ❌ ยังเป็น gap |
+| 2-repo traceability convention | ไม่มี | ยังไม่มี (ตัดสินใจ Option A แล้ว — รอ implement) | ⚠️ planned |
+| Risk register | ไม่มี | ไม่มี (S1-08 ยังค้าง) | ❌ ยังเป็น gap |
 
 ---
 
 ## Completeness Overview
 
 ### Design Documentation
-- **Status**: ~85% complete
-- **Files Found**: 40 documents in `design/gdd/`
-  - GDD sections: 40 files in `design/gdd/` (รวม systems-index, game-concept)
-  - Narrative docs: 0 files — `design/narrative/` ไม่มี (MOBA อาจไม่จำเป็น)
-  - Level designs: 0 files — `design/levels/` ไม่มี (ใช้ map แทน level design)
-- **Key Gaps**:
-  - [ ] `game-pillars.md` — หลักการออกแบบเกมยังไม่แยกไฟล์ (อาจอยู่ใน game-concept.md)
-  - [ ] narrative/lore docs — ถ้าเกมมี hero backstory หรือ world lore
-  - [ ] map design doc — `design/gdd/` มี territory-war.md แต่ยังไม่มี map layout doc
+- **Status**: ~85% complete (เหมือนเดือนเมษา)
+- **Files**: 40 GDDs + `game-concept.md` + `systems-index.md`
+- **Highlight ใหม่**: ADR-0008 ระบุการกลับด้าน design decision ใน `combat-skills-system.md` — แสดงว่า design + architecture มี feedback loop ที่ทำงาน
+- **Gaps**:
+  - [ ] `game-pillars.md` ยังไม่แยกจาก `game-concept.md`
+  - [ ] ทุก GDD ขาด `## Implementation Reference` section (รอ Option A convention)
 
 ### Source Code
-- **Status**: ~70% complete (ประเมินจาก GDD vs code coverage)
-- **Files Found**: 7,300+ C# files ใน `C:\GitHub\delta-unity`; 1,063 ไฟล์ใน `Assets/GameScripts/`
-- **Major Systems Identified**:
-  - ✅ Gameplay (`GameScripts/Gameplays/` — 362 files) — ระบบหลักมีโค้ดแล้ว
-  - ✅ UI (`GameScripts/UI/` — 337 files) — UI ครอบคลุมดี
-  - ✅ Networking (`GameScripts/Networkings/` — 23 files) — Photon Fusion integrated
-  - ✅ Audio (`GameScripts/Audioes/` — 5 files + `src/audio/` ใน Delta-Project)
-  - ✅ Fog of War (`GameScripts/FogofWars/` — 23 files)
-  - ✅ Character Customize (`GameScripts/CharacterCustomizes/` — 22 files)
-  - ✅ PlayFab/Backend (`GameScripts/Playfab/` — 11 files)
-  - ⚠️ Item Animation — Sprint 001 กำลัง implement Animator States
-  - ⚠️ AI Bot — GDD มี แต่ implementation status ไม่แน่ชัด
-- **Key Gaps**:
-  - [ ] โค้ดอยู่ใน repo แยก — ยังไม่มีการ sync หรือ bridge ระหว่าง 2 repos
-  - [ ] Item Animation System ยังไม่สมบูรณ์ (Sprint 001 task S1-01, S1-02)
+- **Status**: ~75% complete (ประเมินจาก Sprint 005 task list ที่ยังต้องเพิ่ม facade methods + migrate Hercules)
+- **Distribution**:
+  - `Delta-Project` (repo นี้): 1 file (`src/audio/TerritoryWarAudioConfig.cs`)
+  - `delta-unity` (separate repo): 7,300+ C# files
+- **Migration ในมือ**: Phase 2 ability system — Hercules pilot กำลังทำ S5-01..S5-10
+- **Gaps**:
+  - [ ] 2-repo bridge convention ยังไม่ implement
+  - [ ] ระบบใน `delta-unity` ส่วนใหญ่ไม่มี README ชี้กลับมาที่ GDD/ADR
 
 ### Architecture Documentation
-- **Status**: ~14% complete (5 ADRs จาก 37 ระบบ)
-- **ADRs Found**: 5 ใน `docs/architecture/` + README index
-- **Coverage**:
-  - ✅ Unity Engine + URP + C# (ADR-0001) — documented
-  - ✅ Photon Fusion 2 Networking (ADR-0002) — documented
-  - ✅ PlayFab + Azure Functions Backend (ADR-0003) — documented
-  - ✅ Actor-Combat-Action-Skill Pipeline (ADR-0004) — documented
-  - ✅ Item Animation Type Routing (ADR-0005) — documented
-  - ⚠️ Hero System architecture — implemented แต่ไม่มี ADR
-  - ⚠️ Gold Economy + Item Shop — implemented แต่ไม่มี ADR
-  - ❌ Test Strategy — ไม่มีทั้ง ADR และ formal decision
-  - ❌ Save/State Management — ไม่ชัดเจน
-- **Key Gaps**:
-  - [ ] ADR สำหรับระบบ Gameplay หลัก (Combat, Hero, Economy, Map Objectives)
-  - [ ] ADR สำหรับ Test Strategy และ CI/CD approach
-  - [ ] ADR สำหรับ data-config format (CBS structure)
+- **Status**: ~22% complete (8 ADRs / 37 systems)
+- **ADRs ปัจจุบัน**:
+  - ADR-0001 Unity Engine + URP + C# ✅
+  - ADR-0002 Photon Fusion 2 Networking ✅
+  - ADR-0003 PlayFab + Azure Functions Backend ✅
+  - ADR-0004 Actor-Combat-Action-Skill Pipeline ✅
+  - ADR-0005 Item Animation Type Routing ✅
+  - ADR-0006 Unified Ability System ✅ (with phase 1a, 1b, phase 2 migration plan, migration audit)
+  - ADR-0007 VFX Object Network Decoupling ✅
+  - ADR-0008 Slot Binding via CBSUnit ✅ (supersedes ADR-0006 §6.1)
+- **Plus**: `change-impact-2026-04-23-tournament-pivot.md` (impact analysis doc)
+- **ระบบที่ยังไม่มี ADR**:
+  - [ ] Hero System
+  - [ ] Gold Economy
+  - [ ] Map Objectives
+  - [ ] Matchmaking
+  - [ ] Faction System
+  - [ ] Fog of War
+  - [ ] AI Bot System
+  - [ ] Tutorial System
+  - [ ] Test Strategy / QA approach
+  - [ ] Data-config (CBS) structure
 
 ### Production Management
-- **Status**: ~60% complete
+- **Status**: ~75% complete (ดีขึ้นจากเมษา 60%)
 - **Found**:
-  - Sprint plans: 1 (`production/sprints/sprint-001.md`) — หมดวันนี้
-  - Milestones: 0 ใน `production/milestones/`
-  - Roadmap: ไม่มี
-  - Risk Register: Sprint 001 task S1-08 (ยังไม่ทำ)
-- **Key Gaps**:
-  - [ ] Sprint 002 — Sprint 001 หมดอายุวันนี้ 2026-04-17
-  - [ ] Milestone definitions — ยังไม่มี Alpha/Beta/Release milestones
-  - [ ] Roadmap — ไม่รู้ว่า feature ไหนอยู่ sprint ไหน
-  - [ ] Risk Register — task S1-08 ยังค้างอยู่
+  - Sprint plans: 5 (`sprint-001.md` → `sprint-005.md`) ✅
+  - Retros: 4 (Sprint 001-004) ✅
+  - QA plan: Phase 2 Hercules pilot test strategy (Sprint 005) ✅
+  - Milestones: 0 ❌
+  - Roadmap: ไม่มี ❌
+  - Risk register: S1-08 ยังค้าง ❌
+- **Gaps**:
+  - [ ] Milestone Alpha/Beta/Launch definitions
+  - [ ] Roadmap แสดง feature ไหนอยู่ sprint ไหน
+  - [ ] Risk register (S1-08 ค้างจาก Sprint 001)
 
 ### Testing
-- **Status**: ~5% coverage (ประเมิน)
-- **Test Files**: ~35 ไฟล์ กระจัดกระจายใน `delta-unity`
-  - `Assets/UnitTests/` — 3 files
-  - `Assets/GameScripts/GameConsoleCommand/CustomUnitest/` — 4 files
-  - `Assets/GameScripts/Testing/` — 1 file
-- **Coverage by System**:
-  - Item System: มี ItemTest.cs, ItemActiveUnitTest.cs, ItemActiveAutoTest.cs
-  - UI: มี UISwipeTest.cs
-  - Animation: มี TestAnimationSpeed.cs
-  - Network/Login: มี UnitestNetworkLogin.cs
-  - ระบบอื่น ๆ ทั้งหมด: ไม่มี test
-- **Key Gaps**:
-  - [ ] Test strategy document — ไม่มี approach ที่ชัดเจน
-  - [ ] Combat system tests — ไม่มีทั้ง unit และ integration
-  - [ ] Networking tests — มีแค่ login test
-  - [ ] Economy/Balance tests — ไม่มี formula verification
+- **Status**: ~5% coverage (ไม่เปลี่ยนจากเมษา)
+- **Confirmed**: 5 sprints ผ่านไปยังไม่ได้เขียน test สม่ำเสมอ (ผู้ใช้ยืนยัน 2026-05-10)
+- **Existing**: ~35 test files กระจัดกระจายใน `delta-unity` (UnitTests/, CustomUnitest/, Testing/)
+- **Sprint 005 QA plan**: มี manual playtest strategy สำหรับ Hercules pilot — แต่ไม่ใช่ automated regression
+- **Gaps**:
+  - [ ] Test Strategy ADR (decision: unit/integration/playtest mix)
+  - [ ] Combat/Hero/Economy/Networking automated tests
+  - [ ] Regression suite (`tests/regression-suite.md`)
+  - [ ] CI test gate (มี build CI แต่ test gate ไม่ชัดเจน)
 
 ### Prototypes
-- **Active Prototypes**: 0 ใน `prototypes/`
-- โค้ดใน `delta-unity` ทำหน้าที่เป็น "living prototype" — feature หลายอย่างอยู่ระหว่างพัฒนา
+- 0 ใน `prototypes/` (delta-unity ยังเป็น "living prototype")
 
 ---
 
 ## Stage Classification Rationale
 
-**Why Production?**
+**Stage = Production** ยืนยันจาก:
 
-โปรเจกต์มี source code จำนวนมากกว่า 7,300 ไฟล์ใน `delta-unity` ครอบคลุมระบบหลักเกือบทั้งหมด มี active sprint plan, ADRs สำหรับ architecture decisions หลัก และ GDDs ครบ 40 ไฟล์ ลักษณะเหล่านี้บ่งชี้ว่าอยู่ใน Production stage แม้ repo `Delta-Project` จะมีโค้ดน้อย แต่นั่นเป็นเพราะ source code แยกอยู่ใน `delta-unity`
+1. **Active development across 5 sprints** — มี cadence แน่นอน, retros ครบ, mid-sprint pivots ได้รับการ document
+2. **7,300+ C# files in delta-unity** ครอบคลุมระบบหลัก
+3. **GDDs ครบ 40 ไฟล์ + systems index**
+4. **ADRs core architecture ครบ** (engine, networking, backend, combat pipeline, ability system)
+5. **Phase 2 migration กำลังรัน** — ระบบหลัก (ability) refactor ระหว่าง Foundation → Production transition
 
-**Indicators for this stage**:
-- 7,300+ C# files ครอบคลุม gameplay, UI, networking, audio
-- GDDs ครบ 40 ไฟล์ ครอบคลุม 37 ระบบ
-- Active sprint (Sprint 001) กำลังดำเนินการ
-- CI/CD pipeline มี (GitHub Actions)
-- ADRs 5 รายการสำหรับ core architecture decisions
+**Phase 2 Hercules pilot คืออะไร**:
+- Technical sub-phase ภายใน Production stage (ไม่ใช่ formal milestone)
+- ส่วนหนึ่งของ ADR-0006 Unified Ability System migration plan
+- Hercules เป็น "pilot hero" ทดสอบ migration pattern ก่อน roll out hero ตัวอื่น
+- ตำแหน่งใน roadmap: Phase 1a ✅ → Phase 1b ✅ → **Phase 2 (Sprint 005 ตอนนี้)** → Phase 3+ roll out
 
-**Next stage requirements (Polish)**:
-- [ ] ระบบหลักทั้งหมด feature-complete และทดสอบแล้ว
-- [ ] ไม่มี S1/S2 bugs เปิดอยู่
-- [ ] Performance targets ผ่าน (ยังไม่ได้กำหนด budget)
-- [ ] Localization พร้อม (ถ้าต้องการ)
-- [ ] Milestone Alpha/Beta ผ่าน gate-check
+**Next stage (Polish) requirements**:
+- [ ] Phase 2 migration complete + roll out Phase 3+ (hero ตัวอื่น)
+- [ ] Milestone Alpha definition + gate-check ผ่าน
+- [ ] Test strategy + automated regression suite
+- [ ] Performance budgets defined + verified
+- [ ] No S1/S2 bugs open
 
 ---
 
 ## Gaps Identified
 
-### Critical Gaps (block progress)
+### Critical Gaps (block quality/scaling)
 
-1. **Sprint 002 ยังไม่มี**
-   - **Impact**: Sprint 001 หมดวันนี้ — team ไม่รู้จะทำอะไรต่อพรุ่งนี้
-   - **Question**: Sprint 001 tasks ทำเสร็จหมดแล้วหรือยัง? มี carryover ไหม?
-   - **Suggested Action**: รัน `/sprint-plan` เพื่อวางแผน Sprint 002
+1. **Test Strategy ขาด — 5 sprints ไม่ได้เขียน test สม่ำเสมอ**
+   - **Impact**: Regression risk สะสมขึ้นทุก sprint, ทุก refactor (เช่น Phase 2) มี blind spot
+   - **Question**: อยากเริ่มจาก unit test ระบบเล็ก ๆ ก่อน หรือสร้าง playtest-based QA process ก่อน?
+   - **Suggested Action**: เขียน **Test Strategy ADR** เป็น ADR ตัวต่อไป (ADR-0009) ก่อน Sprint 006
 
-2. **2 Repositories ไม่มี bridge**
-   - **Impact**: Design docs อยู่ใน `Delta-Project`, code อยู่ใน `delta-unity` — ยากต่อการ sync
-   - **Question**: ตั้งใจรวม 2 repos เป็นหนึ่งเดียว หรือเก็บแยกตลอดไป?
-   - **Suggested Action**: ถ้าแยก — สร้าง linking convention (cross-reference ใน GDDs ชี้ไปยัง path ใน delta-unity)
+2. **ADR coverage ~22% — ระบบ gameplay หลักหลายตัวไม่มี ADR**
+   - **Impact**: ระบบ Hero, Gold Economy, Map Objectives, Matchmaking, Fog of War ฯลฯ ตัดสินใจ architecture ไว้ในโค้ดแล้วแต่ไม่มี decision record → onboarding ยาก, ลำบากเวลาต้อง refactor
+   - **Question**: อยากเขียน ADR เพิ่ม 1 ตัวต่อ sprint หรือลุย batch หลังปิด Phase 2?
+   - **Suggested Action**: หลัง Sprint 005 ปิด — ทำ ADR batch สำหรับ Hero/Economy/Map Objectives เป็นอย่างน้อย
 
-### Important Gaps (affect quality/velocity)
+### Important Gaps (affect planning)
 
-3. **ADRs ครอบคลุมแค่ 14% ของระบบ**
-   - **Impact**: ตัดสินใจทางเทคนิคจำนวนมากไม่มีเหตุผลบันทึกไว้ — ยากต่อ onboarding
-   - **Question**: ระบบที่เหลือ (Hero, Combat, Economy ฯลฯ) ตัดสินใจ architecture ไว้ที่ไหน?
-   - **Suggested Action**: รัน `/architecture-decision` สำหรับระบบ gameplay หลัก
+3. **Milestone Alpha/Beta/Launch ยังไม่กำหนด**
+   - **Impact**: ไม่รู้ว่า "เสร็จ" คืออะไร → ไม่มี gate-check ได้, scope creep risk สูง
+   - **Suggested Action**: หลัง Phase 2 จบ — รัน `/milestone-review` หรือ `/gate-check` เพื่อ define Alpha
 
-4. **Test Strategy ไม่มี**
-   - **Impact**: มี test files กระจัดกระจาย 35 ไฟล์แต่ไม่มี coverage ที่เป็นระบบ — regression risk สูง
-   - **Question**: อยากเน้น unit tests, integration tests, หรือ playtest-based QA?
-   - **Suggested Action**: สร้าง test strategy ADR + รัน `/qa-lead` เพื่อออกแบบ test plan
+4. **2-repo traceability — Option A ยังไม่ implement**
+   - **Decision**: ผู้ใช้เลือก Option A (สร้าง convention เชื่อม GDD → code path โดยไม่รวม repo)
+   - **Suggested Action**: สร้าง `.claude/docs/gdd-implementation-link-standard.md` + เพิ่ม `## Implementation Reference` ใน GDD ทั้ง 40 ไฟล์ (ประมาณ 4-7 ชั่วโมงงาน)
 
-5. **Risk Register ยังไม่สร้าง (S1-08 ค้างอยู่)**
-   - **Impact**: ความเสี่ยงที่ identify ใน ADRs และ GDDs ไม่มีที่ track อย่างเป็นทางการ
+5. **Risk register ยังไม่มี (S1-08 ค้าง 5 sprints)**
+   - **Impact**: ความเสี่ยงที่ identify ใน retros และ ADRs ไม่ถูก track อย่างเป็นทางการ
    - **Suggested Action**: สร้าง `production/risk-register/risk-register.md`
 
 ### Nice-to-Have Gaps
 
-6. **`game-pillars.md` ขาด**
-   - **Impact**: ทีมอาจตัดสินใจ feature ใหม่โดยไม่มี design filter ที่ชัดเจน
-   - **Suggested Action**: Extract pillars จาก `game-concept.md` มาเป็นไฟล์แยก
-
-7. **Milestone definitions ไม่มี**
-   - **Impact**: ไม่รู้ว่า Alpha/Beta/Launch คืออะไร — ยากต่อการ gate-check
-   - **Suggested Action**: สร้าง milestone definitions ใน `production/milestones/`
+6. **`game-pillars.md` ยังไม่แยก** — pillars อยู่ใน `game-concept.md`
+7. **Roadmap document** — แม้จะมี sprint plan แต่ไม่มี view ภาพรวมยาว 6-12 เดือน
+8. **Performance budgets ใน `technical-preferences.md`** — ยัง `[TO BE CONFIGURED]`
 
 ---
 
 ## Recommended Next Steps
 
-### Immediate Priority (Do First)
-1. **วางแผน Sprint 002** — Sprint 001 หมดอายุวันนี้
-   - Suggested skill: `/sprint-plan`
-   - Estimated effort: S (1-2 ชั่วโมง)
+### Immediate (ระหว่าง Sprint 005)
+1. ปิด **Phase 2 Hercules pilot** ตาม Sprint 005 plan (S5-01..S5-10)
+2. ตัดสินใจ **S5-11 R-21 Role Restriction**, **S5-12 AI Bot fate**, **S5-13 Garen variants** (Sprint 004 retro actions)
 
-2. **สร้าง Risk Register** — S1-08 ค้างจาก Sprint 001
-   - Suggested skill: `/producer` หรือสร้างด้วยตนเอง
-   - Estimated effort: S
+### Sprint 006 Candidates
+3. **ADR-0009 Test Strategy** — ตัดสินใจ test approach แล้ว document
+4. **Option A traceability implementation** — เพิ่ม `## Implementation Reference` ใน GDDs (ทำเป็น task เดียวหรือกระจาย)
+5. **Phase 3 roll-out planning** — ถ้า Phase 2 สำเร็จ จะ migrate hero ตัวไหนต่อ?
 
-### Short-Term (This Sprint/Week)
-3. **กำหนด Milestone Alpha** — เพื่อให้ team รู้ target
-   - Suggested skill: `/milestone-review`
-4. **ADR สำหรับ Combat + Hero System** — ระบบหลักที่ยังไม่มี decision record
-   - Suggested skill: `/architecture-decision`
+### Medium-Term (Sprint 007+)
+6. **ADR batch สำหรับ gameplay systems**: Hero, Gold Economy, Map Objectives เป็นอย่างน้อย
+7. **Milestone Alpha definition** — สร้าง gate criteria แล้วรัน `/gate-check`
+8. **Risk register** — สร้าง + sweep ความเสี่ยงจาก retros 4 ฉบับ
 
-### Medium-Term (Next Milestone)
-5. **Test Strategy** — วางแผน coverage ให้ครอบคลุม core systems
-   - Suggested skill: ปรึกษา `qa-lead` agent
-6. **Cross-repo convention** — สร้าง linking standard ระหว่าง GDD กับ code path
-7. **Game Pillars doc** — แยก pillars ออกจาก game-concept
-   - Suggested skill: `/design-system`
+### Long-Term
+9. **Test automation infrastructure** — เริ่มจาก critical paths (combat formulas, ability bindings, networking)
+10. **Performance budgets** — กำหนด target framerate, frame budget, memory ceiling ใน `technical-preferences.md`
 
 ---
 
 ## Follow-Up Skills to Run
 
-- `/sprint-plan` — วางแผน Sprint 002 (ทำก่อนเลย)
-- `/architecture-decision` — สำหรับ Combat System, Hero System, Economy
-- `/gate-check` — ตรวจสอบความพร้อมก่อน Alpha milestone
-- `/milestone-review` — กำหนด Alpha milestone criteria
-- `/reverse-document architecture delta-unity/Assets/GameScripts/Gameplays` — ถ้าต้องการ ADR จากโค้ด
+- `/architecture-decision` → ADR-0009 Test Strategy (priority 1 หลัง Sprint 005)
+- `/architecture-decision` → ADR สำหรับ Hero, Economy, Map Objectives
+- `/milestone-review` → กำหนด Alpha milestone
+- `/gate-check` → ตรวจสอบ readiness ก่อน Polish stage (ต้องผ่าน Phase 2 + ADR coverage เพิ่ม)
+- `/sprint-plan` → Sprint 006 (หลัง Sprint 005 ปิด 2026-05-22)
+- `/retrospective` → Sprint 005 retro (หลัง Sprint 005 ปิด)
 
 ---
 
-## Appendix: File Counts by Directory
+## Appendix: File Counts (2026-05-10)
 
 ```
 Delta-Project (this repo):
-  design/gdd/           40 files
-  design/narrative/      0 files
-  design/levels/         0 files
-  src/audio/             1 file (TerritoryWarAudioConfig.cs)
-  docs/architecture/     5 ADRs + 1 README
-  production/sprints/    1 plan (sprint-001.md)
-  production/milestones/ 0 files
-  tests/                 0 files
-  prototypes/            0 directories
+  design/gdd/                40+ files (game-concept, systems-index, 40 system GDDs)
+  design/narrative/           0 files
+  design/levels/              0 files
+  docs/architecture/          8 ADRs + 4 phase docs + 1 README + 1 change-impact doc
+  production/sprints/         5 plans (sprint-001..sprint-005)
+  production/retros/          4 retros (sprint 001-004) — location ต้อง verify
+  production/qa/              QA plan for Phase 2 Hercules pilot
+  production/milestones/      0 files
+  src/audio/                  1 file
+  tests/                      0 files
+  prototypes/                 0 directories
 
-delta-unity (separate repo):
-  Assets/GameScripts/   1,063 C# files (42 subdirectories)
-  Assets/ (total)       7,300+ C# files
-  Assets/UnitTests/     ~35 test files (scattered)
-  .github/workflows/    2 CI files (build.yml, BuildVersionSetter.yml)
+delta-unity (separate repo, not analyzed this session):
+  Assets/                     7,300+ C# files (from previous report)
+  Assets/UnitTests/           ~35 test files (scattered, no unified strategy)
+  .github/workflows/          2 CI files (build + version setter)
 ```
 
 ---
 
 **End of Report**
 
-*Generated by `/project-stage-detect` skill — 2026-04-17*
+*Generated by `/project-stage-detect` skill — 2026-05-10*
+*Replaces previous report dated 2026-04-17*
