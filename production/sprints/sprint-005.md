@@ -62,6 +62,15 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 
 **Nice to Have Subtotal: 2.75d** (pull only ถ้า Must + Should เสร็จเร็ว)
 
+### Bugs (filed during sprint)
+
+| ID | Bug | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
+|----|-----|-------------|-----------|-------------|-------------------|
+| S5-19 | [BUG-0001](../qa/bugs/BUG-0001-recall-locomotion-stuck.md) — Recall post-warp locomotion animation ไม่เล่น | gameplay-programmer + technical-artist | 0.5 | — | Animator transitions back to locomotion after Recall; manual playtest confirms walk/run plays |
+| S5-20 | [BUG-0002](../qa/bugs/BUG-0002-anansi-w-idle-stuck.md) — Anansi W ค้างท่า Idle หลัง cast จบ | gameplay-programmer + technical-artist | 0.5 | — | Animator exits W state correctly; locomotion resumes; manual playtest passes |
+
+**Investigation note:** BUG-0001 และ BUG-0002 มีอาการ post-cast animator-state-stuck เหมือนกัน — แนะนำ investigate ร่วมเพื่อหา root cause ก่อนเขียน fix แยก
+
 ---
 
 ## Carryover from Previous Sprint
