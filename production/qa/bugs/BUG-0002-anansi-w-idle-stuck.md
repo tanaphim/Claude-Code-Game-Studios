@@ -50,3 +50,40 @@
 
 ## Notes
 ขอตรวจสอบว่า W ใช้ AnimationEvent ปิด state หรือไม่ — ถ้าใช่ และ event fire ผิด slot หลัง S5-06 → regression candidate
+
+---
+
+## Investigation Findings (2026-05-11 — gameplay-programmer, partial)
+
+**Root cause confidence: NEEDS-RUNTIME-TEST**
+**S5-06 regression: UNDETERMINED — needs runtime test**
+
+### Key finding
+
+Anansi's W SkillKey ไม่ได้ฝังใน Unity asset (`AnansiW.asset`) — **resolve จาก PlayFab CBS dashboard ตอน runtime** ทำให้ static analysis ตอบไม่ได้ว่า Anansi W ใช้ `SkillKey.W` มาตรฐานหรือ key อื่น
+
+### Working hypothesis
+
+Anansi W น่าจะใช้ `SkillKey.W` (เพราะ bind อยู่บน W key) → case `W` ใน `ActorCombatAction.OnPerformExit` switch มีอยู่แล้ว → ปัญหา **ไม่ใช่** root cause เดียวกับ BUG-0001 (missing switch case)
+
+ถ้าสมมติฐานถูก → ปัญหาต้องอยู่ที่:
+1. `AnansiWAction` มี override ที่ skip base cleanup, หรือ
+2. Anansi animator controller — W state ไม่มี exit transition ที่ viable กลับ locomotion, หรือ
+3. Anansi W ใช้ AnimationEvent ปิด state และ S5-06 (42 shim methods rewired ผ่าน `GetActiveSlot()`) ทำให้ event fire ผิด slot/ผิด timing → **S5-06 regression suspect**
+
+### Runtime test ที่ unblock ได้
+
+ใส่ debug log ใน `ActorCombatAction.OnPerform` หรือ `StartSpellCast`:
+
+```csharp
+Debug.Log($"[BUG-0002] Anansi W start — SkillKey={AbilityData.SkillKey}, Hero={Actor.name}");
+```
+
+แล้วเล่น Anansi → กด W → ดู console:
+
+- **ถ้า log = `SkillKey.W`** → INDEPENDENT จาก BUG-0001 → ต้อง investigate Anansi W override / animator exit / S5-06 shim ต่อ
+- **ถ้า log ≠ `SkillKey.W`** (เช่น Recall / I / Item / Unknown) → SHARED root cause กับ BUG-0001 → fix BUG-0001 อาจครอบทั้งคู่
+
+### Status
+
+**Blocked pending runtime test.** Static investigation จาก gameplay-programmer agent (2 รอบ, total ~63 tool calls) ไม่สามารถ resolve ได้ static-only.
