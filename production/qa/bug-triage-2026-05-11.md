@@ -77,14 +77,21 @@
 
 ---
 
-## Update 2026-05-12 — Both bugs deferred to Sprint 006
+## Update 2026-05-12 (afternoon) — BUG-0002 FIXED; BUG-0001 still deferred
 
-Investigation จาก Sprint 005 (Recommended Action #1 ข้างบน) ทำแล้ว แต่:
+User clarified reproduction context — BUG-0002 deterministic on client (เป็นทุกครั้ง) → re-investigated และพบ root cause:
 
-- **BUG-0001**: race condition hypothesis (CheckViable timing) ไม่ verify ผ่าน Thread.Sleep amplifier — bug ไม่ reproduce ใน editor 30-40 รอบ. Status: Investigation Paused. **Severity unchanged S3; Priority downgraded P2 → P3** (rare cosmetic, ไม่ block release)
-- **BUG-0002**: ยังต้อง runtime test (SkillKey resolved from CBS at runtime) — defer พร้อม BUG-0001 ใน animator architecture review
-- **Sprint 006 task created**: animator state machine architecture review — designer-led, ~2-3d. ครอบทั้ง 2 bugs + ป้องกัน heroes อื่นๆ ที่อาจมีปัญหาเดียวกัน
+- **BUG-0002 ✅ Verified Fixed** — Server/client asymmetry ใน `SkillObject.Return()` (line 958 early-returns on client) ทำให้ `OnFinish` callback ที่ clear `IsLoop=false` ไม่รันบน client. Fix: override `FixedUpdateNetwork` ใน `AnansiWAction` ทำ per-peer auto-cleanup. Verified 2-peer playtest + 3 regression scenarios (hit hero / hit tower / host self).
+- **BUG-0001 still deferred** — Race hypothesis ไม่ verify; rare intermittent. Stays deferred to Sprint 006.
 
-**Code changes ใน delta-unity จาก investigation นี้**: NONE — instrumentation ทั้งหมด reverted ก่อน wrap-up. ไม่มี production code modification.
+**Updated severity/priority:**
+- BUG-0001: S3 / **P3 backlog** (unchanged — rare cosmetic)
+- BUG-0002: S3 / P2 (restored from earlier downgrade) → **Closed**
 
-**Updated bug status:** ดู bug files แต่ละไฟล์สำหรับ full investigation trail.
+**Code changes in delta-unity:**
+- ✅ `AnansiWAction.cs` — added `FixedUpdateNetwork` override (~20 lines)
+- ❌ No other production code changes (BUG-0001 instrumentation all reverted)
+
+**Sprint 006 task seeds:**
+1. BUG-0001 animator architecture review (designer-led, ~2-3d)
+2. Apply BUG-0002 fix pattern to 4 other abilities with IsLoop (`GuanYuE`, `HorusE`, `HorusR`, `VolundW`) — review OnFinish side effects per ability (~1-2d)

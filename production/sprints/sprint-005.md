@@ -67,13 +67,20 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 | ID | Bug | Agent/Owner | Est. Days | Status | Notes |
 |----|-----|-------------|-----------|--------|-------|
 | S5-19 | [BUG-0001](../qa/bugs/BUG-0001-recall-locomotion-stuck.md) — Recall post-warp locomotion animation ไม่เล่น | gameplay-programmer + technical-artist | 0.5 | **Deferred → Sprint 006** | Investigation paused — race condition hypothesis ไม่ verify ผ่าน amplifier; bundled with S6 animator architecture review |
-| S5-20 | [BUG-0002](../qa/bugs/BUG-0002-anansi-w-idle-stuck.md) — Anansi W ค้างท่า Idle หลัง cast จบ | gameplay-programmer + technical-artist | 0.5 | **Deferred → Sprint 006** | Bundled กับ BUG-0001 — same architecture review |
+| S5-20 | [BUG-0002](../qa/bugs/BUG-0002-anansi-w-idle-stuck.md) — Anansi W ค้างท่า Idle หลัง cast จบ | gameplay-programmer | 0.5 | **✅ Done** | Root cause confirmed: `SkillObject.Return` server-only guard → client `IsLoop` ค้าง. Fix: `FixedUpdateNetwork` override ใน AnansiWAction ทำ per-peer cleanup. Verified 2-peer playtest + 3 regression scenarios |
 
-**Investigation outcome:** ทั้ง 2 bugs intermittent + reproduce ยาก. Race condition hypothesis ใน CheckViable timing ไม่ verify ผ่าน Thread.Sleep amplifier (5ms, 30-40 cycles). Detector proxy (`Recall_Viable=true + IsMoving + !IsRecalling`) มี false-positive rate 100% ในข้อมูล baseline → ไม่ใช่ stuck animator indicator ที่ดี
+**Investigation outcomes:**
 
-**Sprint 006 task seed:** Animator state machine architecture review — designer-led, examine exit transitions ของ Recall + skill states ทั่วระบบ; พิจารณา redesign จาก bool toggle → Trigger param สำหรับ exit signal. Est ~2-3d.
+- **BUG-0001**: race condition hypothesis ไม่ verify ผ่าน Thread.Sleep amplifier (5ms, 30-40 cycles). Detector proxy 100% false-positive. **Deferred** to Sprint 006 animator architecture review.
+- **BUG-0002**: User clarified bug is **deterministic on client** → re-investigated → confirmed `SkillObject.Return()` early-returns on `Runner.IsClient` (line 958) → `OnFinish` callback (where `IsLoop=false` is cleared) never runs on client peers → animator stuck. **Fix applied + verified**.
 
-**Code changes in delta-unity repo from this sprint's BUG investigation:** **NONE** — all instrumentation reverted; no production code modifications.
+**Sprint 006 task seeds:**
+1. Animator state machine architecture review for BUG-0001 (Recall) — designer-led, ~2-3d
+2. Apply BUG-0002 fix pattern to 4 other abilities using IsLoop (`GuanYuE`, `HorusE`, `HorusR`, `VolundW`) — each needs review of OnFinish side effects (e.g. VolundE's StartMainCooldown). Est ~1-2d total.
+
+**Code changes in delta-unity repo from this sprint's BUG investigation:**
+- ✅ `AnansiWAction.cs` — added `FixedUpdateNetwork` override for BUG-0002 fix (~20 lines)
+- ❌ No other production code changes — all BUG-0001 instrumentation reverted
 
 ---
 
@@ -97,8 +104,8 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 | S4-10 AI Bot Difficulty (1.0d) | depends S4-09 |
 | R-22 / R-23 implementation (stat /100 + AdditionalMoveSpeed rename) | Phase 2 scope already 3.75d — schedule with Phase 3 หรือ dedicated balance pass; ADR-only ใน Sprint 005 ถ้ามีเวลา |
 | S5-19 BUG-0001 (Recall locomotion stuck) | Race condition hypothesis ไม่ verify; needs animator architecture review (designer-led) |
-| S5-20 BUG-0002 (Anansi W stuck) | Bundled กับ BUG-0001 — same architecture review |
-| **NEW Sprint 006 seed: Animator architecture review** | Examine exit transitions ของ skill states; redesign bool→Trigger สำหรับ exit signal. Est ~2-3d |
+| **NEW Sprint 006 seed: Animator architecture review (BUG-0001)** | Examine exit transitions ของ skill states; redesign bool→Trigger สำหรับ exit signal. Est ~2-3d |
+| **NEW Sprint 006 seed: Apply BUG-0002 fix pattern to 4 abilities** | `GuanYuE`, `HorusE`, `HorusR`, `VolundW` — review OnFinish side effects per ability. Est ~1-2d |
 
 ---
 

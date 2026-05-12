@@ -4,8 +4,8 @@
 **Title**: Anansi Skill W — หลังใช้สกิลจบ ตัวค้างท่า Idle ไม่ transition กลับ locomotion
 **ID**: BUG-0002
 **Severity**: S3-Minor
-**Priority**: P3-Backlog (downgraded — bundled with BUG-0001 architecture review)
-**Status**: Investigation Paused — Deferred to Sprint 006
+**Priority**: P2-Next Sprint
+**Status**: **Verified Fixed** (2026-05-12)
 **Reported**: 2026-05-11
 **Reporter**: Tanapol Aekprapu
 
@@ -90,14 +90,98 @@ Debug.Log($"[BUG-0002] Anansi W start — SkillKey={AbilityData.SkillKey}, Hero=
 
 ---
 
-## Investigation Update (2026-05-12) — Defer to Sprint 006
+## Investigation Update (2026-05-12) — Re-opened after user clarified reproduction
 
-BUG-0001 investigation paused เพราะ race condition hypothesis ไม่ verify ผ่าน amplifier (ดู BUG-0001 file). Bug "บางครั้ง" จริงๆ — ไม่ reproduce ผ่าน stress test ปกติ.
+User clarified ว่า bug **เป็นทุกครั้งที่ client peer** (deterministic, not intermittent) — เปลี่ยน picture จาก rare race เป็น **server/client asymmetry**
 
-**Bundle กับ BUG-0001** สำหรับ Sprint 006 task: **Animator state machine architecture review**
+### Root cause (confirmed via static analysis)
 
-- ทั้งสอง bug มีอาการเดียวกัน (post-cast animator stuck) — น่าจะมี shared underlying pattern ใน animator controller setup
-- การ review animator transitions ของทุก skill state จะครอบทั้ง Recall + Anansi W + heroes อื่นที่อาจมีปัญหาเดียวกัน
-- Designer ที่เซ็ต animator ควรเป็น primary investigator
+**File**: `C:\GitHub\delta-unity\Assets\GameScripts\Gameplays\Vfxs\SkillObject.cs:956-985`
 
-**ยังไม่ต้องการ runtime debug log** จนกว่า Sprint 006 task เริ่ม — ถ้า bug เกิดบ่อยใน playtest user สามารถบันทึก reproduction context (hero, input pattern, timing) เพื่อใช้ใน investigation
+`SkillObject.Return()` method ที่ trigger `m_OnFinish?.Invoke(this)` (line 974) มี early return:
+
+```csharp
+public void Return(bool isForce = false)
+{
+    if (Runner.IsClient) return;  // ← line 958 — server-only guard
+    ...
+    m_OnFinish?.Invoke(this);  // ← line 974
+}
+```
+
+**Asymmetry:**
+
+| Step | Server | Client |
+|------|--------|--------|
+| 1. Anansi W start | `OnPerformEnter` → `IsLoop = true` (per-peer animator callback) | `OnPerformEnter` → `IsLoop = true` ✅ |
+| 2. W animation จบ | `SkillObject.Return()` → `OnFinish` → `IsLoop = false` ✅ | `Return()` early-return at line 958 ❌ — **`IsLoop` ค้าง true** |
+
+→ Client animator parameter `Loop` (`LoopKey` ที่ `ActorCombatAction.cs:521`) ค้าง `true` หลัง W → state machine stuck → Idle pose
+
+### Why deterministic (vs BUG-0001 intermittent)
+
+ไม่ใช่ race — เป็น **structural code path** ที่ guard ตรงๆ. ทุกครั้ง W จบบน client = ทุกครั้ง IsLoop ค้าง
+
+### Other abilities likely affected (Sprint 006)
+
+`IsLoop` pattern เดียวกันใช้ใน 4 abilities อื่น — น่าจะมีอาการเดียวกันบน client (ยังไม่ได้ verify):
+- `GuanYuEAction.cs` (line 20: IsLoop=true, line 28: IsLoop=false in DashEnd callback — server-side)
+- `HorusEAction.cs` (line 14, 24 — same pattern)
+- `HorusRAction.cs` (line 31, 39)
+- `VolundWAction.cs` (line 21, 116)
+
+Recommend: เปิด Sprint 006 task เพื่อ apply pattern เดียวกันให้ 4 abilities — ระวัง side effect ของ `OnFinish` ของแต่ละตัว (เช่น `VolundEAction.OnFinish` เรียก `StartMainCooldown` ที่ network-mutating)
+
+---
+
+## Fix Applied (2026-05-12)
+
+**File**: `C:\GitHub\delta-unity\Assets\GameScripts\Gameplays\Characters\Anansi\AnansiWAction.cs`
+
+**Approach**: Override `FixedUpdateNetwork` ใน AnansiWAction ให้ทำ per-peer auto-cleanup เมื่อ ability ออกจาก active W state — ไม่พึ่ง `SkillObject.Return` (server-only)
+
+**Diff:**
+
+```csharp
+// Added override after existing OnFinish method
+public override void FixedUpdateNetwork()
+{
+    base.FixedUpdateNetwork();
+
+    if (Actor == null || Actor.Animation == null || Actor.Animation.Running == null) return;
+    if (!IsLoop) return;
+
+    bool inActiveWState =
+        Progress == SkillState.Perform ||
+        Progress == SkillState.Perform2 ||
+        Progress == SkillState.Perform3 ||
+        Progress == SkillState.Perform4 ||
+        Progress == SkillState.Perform5;
+
+    if (!inActiveWState)
+    {
+        IsLoop = false;
+    }
+}
+```
+
+**ทำไม safe:**
+- `FixedUpdateNetwork` รันทุก peer; code หลัง `base.FixedUpdateNetwork()` execute เสมอ (base early-return ไม่หยุด derived class)
+- `IsLoop` getter/setter ใน `ActorCombatAction.cs:521-527` wraps local animator `SetBool` (LoopKey) — ไม่ใช่ networked mutation
+- `Progress` เป็น Networked → proxy clients เห็น Progress=None หลัง W chain จบ → cleanup trigger ทุก peer
+- Idempotent — เรียกซ้ำไม่มี side effect
+- Guard `inActiveWState` ป้องกัน reset กลางคัน (เก็บ true ระหว่าง Perform → Perform2 chain เมื่อ hook hit hero)
+
+## Closure Record
+
+**Closed**: 2026-05-12
+**Resolution**: Fixed — เพิ่ม `FixedUpdateNetwork` override ใน `AnansiWAction` ที่ auto-clear `IsLoop` เมื่อ Progress ออกจาก Perform[1-5] — ทำงานทุก peer, ไม่พึ่ง server-only `SkillObject.Return` callback
+**Fix commit / PR**: TBD (ใน delta-unity repo, ยังไม่ commit ที่นี่)
+**Verified by**: Tanapol Aekprapu (user playtest)
+**Verification details**:
+- ✅ 2-peer test — client peer ขยับหลัง W จบ → locomotion เล่นปกติ (เดิมค้าง Idle)
+- ✅ Anansi W → hit enemy hero (Perform → Perform2 hook → Perform4 damage chain) — ครบทุก phase
+- ✅ Anansi W → hit tower (Perform → Perform3 dash chain) — เล่นปกติ
+- ✅ Host peer regression — เล่นได้ปกติ (idempotent)
+**Regression test**: Manual playtest (ดูข้างบน) — automated test ต้อง PlayMode framework ที่โปรเจกต์ยังไม่มี (สอดคล้องกับ Sprint 005 finding #1)
+**Status**: Closed
