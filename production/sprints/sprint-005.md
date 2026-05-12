@@ -142,7 +142,14 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 
 ## Progress
 
-(populated as stories close)
+- **2026-05-12 — S5-09 COMPLETE** (delta-unity@claude/s5-09-hercules-bootstrap). ActorCombat.OnStartup now reads CBSUnit.SlotQ..SlotI aliases and dispatches to ISlotBinder.BindSlot ×6 + slot 7 Recall (Hero only). Introduced `ISlotBinder` interface in Radius asmdef to break Radius↔Abilities asmdef cycle (user-approved Option A). Dual-path retention: legacy `CreateSkill` continues to operate. 12/12 EditMode tests pass. Manual prefab attach (Unity Editor: drop AbilityComponent onto Hero prefab) deferred to S5-10 — warning log fires until done.
+- **2026-05-12 — BUG-0002 RESOLVED** (delta-unity@91697bf78e on dev) — Anansi W animator stuck idle on client peer. Tracked as S5-20 in sprint-status.yaml.
+
+### Must Have status
+- ✅ S5-01, S5-02, S5-03, S5-07, S5-08 — done (prior sessions)
+- ✅ S5-09 — done (2026-05-12, this session)
+- ⏳ S5-04, S5-05, S5-06 — ready to pick up (all deps satisfied)
+- ⏳ S5-10 — blocked until S5-04..S5-06 land + manual AbilityComponent prefab attach
 
 ---
 
