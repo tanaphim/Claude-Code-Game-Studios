@@ -4,8 +4,8 @@
 **Title**: Anansi Skill W — หลังใช้สกิลจบ ตัวค้างท่า Idle ไม่ transition กลับ locomotion
 **ID**: BUG-0002
 **Severity**: S3-Minor
-**Priority**: P2-Next Sprint
-**Status**: Open
+**Priority**: P3-Backlog (downgraded — bundled with BUG-0001 architecture review)
+**Status**: Investigation Paused — Deferred to Sprint 006
 **Reported**: 2026-05-11
 **Reporter**: Tanapol Aekprapu
 
@@ -87,3 +87,17 @@ Debug.Log($"[BUG-0002] Anansi W start — SkillKey={AbilityData.SkillKey}, Hero=
 ### Status
 
 **Blocked pending runtime test.** Static investigation จาก gameplay-programmer agent (2 รอบ, total ~63 tool calls) ไม่สามารถ resolve ได้ static-only.
+
+---
+
+## Investigation Update (2026-05-12) — Defer to Sprint 006
+
+BUG-0001 investigation paused เพราะ race condition hypothesis ไม่ verify ผ่าน amplifier (ดู BUG-0001 file). Bug "บางครั้ง" จริงๆ — ไม่ reproduce ผ่าน stress test ปกติ.
+
+**Bundle กับ BUG-0001** สำหรับ Sprint 006 task: **Animator state machine architecture review**
+
+- ทั้งสอง bug มีอาการเดียวกัน (post-cast animator stuck) — น่าจะมี shared underlying pattern ใน animator controller setup
+- การ review animator transitions ของทุก skill state จะครอบทั้ง Recall + Anansi W + heroes อื่นที่อาจมีปัญหาเดียวกัน
+- Designer ที่เซ็ต animator ควรเป็น primary investigator
+
+**ยังไม่ต้องการ runtime debug log** จนกว่า Sprint 006 task เริ่ม — ถ้า bug เกิดบ่อยใน playtest user สามารถบันทึก reproduction context (hero, input pattern, timing) เพื่อใช้ใน investigation

@@ -4,8 +4,8 @@
 **Title**: หลัง Recall (วาปกลับบ้าน) ตัวละครไม่เล่น animation ท่าเดิน
 **ID**: BUG-0001
 **Severity**: S3-Minor
-**Priority**: P2-Next Sprint
-**Status**: Open
+**Priority**: P3-Backlog (downgraded from P2 — see Investigation Update 2)
+**Status**: Investigation Paused — Deferred to Sprint 006
 **Reported**: 2026-05-11
 **Reporter**: Tanapol Aekprapu
 
@@ -155,3 +155,71 @@
 ### Shared with BUG-0002?
 
 **INDEPENDENT** — Anansi W ไม่ผ่าน `m_IsRecalling` lifecycle และ SkillKey ต่างกัน. BUG-0002 ต้อง runtime test แยก (ดู BUG-0002 file).
+
+---
+
+## Investigation Update 2 (2026-05-12) — Proposed fix INVALIDATED, root cause unconfirmed
+
+### Fix proposal #1 (StopRecalling) — INVALIDATED
+
+User reported: `StopRecalling()` legacy — debug log ใน function ไม่เคย trigger ตอน Recall จบปกติ → fix ที่ paste ใน StopRecalling **dead code path** → ไม่มีผลใดๆ
+
+Confirmed: ระบบใหม่ใช้ `RecallAction` (subclass ของ `ActorCombatAction`) เป็น authoritative path; `StopRecalling` ถูก trigger เฉพาะ damage/cancel paths บางตัว ไม่ใช่ recall-complete flow ปกติ
+
+### Hypothesis revision: race condition
+
+หลัง deeper trace พบว่า:
+- `OnPerformRelease` (server) → `IsStop = true`
+- `CheckViable` ครั้งถัดมา → `SetViable(Recall, false)`
+- **Same tick** → `OnStateExit` (`ActorCombatAction.cs:2882`) → `IsStop = false` (reset for next ability)
+- ครั้งถัดมา → `CheckViable` → `SetViable(Recall, true)` **กลับเป็น true ก่อน Unity Animator update sample parameter**
+- Race: ถ้า Animator update มาช้า → state machine ไม่เห็น false transition → stuck
+
+### Verification attempt (Method 2 + Method 3)
+
+ทำ:
+1. **Race amplifier** — เพิ่ม `Thread.Sleep(5)` ใน CheckViable หลัง `SetViable(Recall, false)` (`#if UNITY_EDITOR`) — ขยาย race window
+2. **Passive detector** — เพิ่ม `DetectBugStuckRecall()` ใน `ActorAvatar.OnFixedUpdateNetworkState` ที่ log error เมื่อ `IsMoving=true && Recall_Viable=true && !IsRecalling > 0.3s`
+
+### Result (2-peer playtest, ~5-10 นาที, 30-40 รอบ Recall)
+
+- **Detector events: 115 logged** — แต่ animator stuck **ไม่เห็นด้วยตาเลย** ตลอด test
+- **First detection at Tick 4319, first OnPerformRelease at Tick 6130** — detector fire **ก่อน Recall ใดๆ จบ 30+ วินาที** → false positive 100%
+- **2 unique animator state hashes** เด่นชัด (`-6471121`: 59 ครั้ง, `-1373074065`: 56 ครั้ง) — ส่วนใหญ่ probably เป็น locomotion states ไม่ใช่ Recall state
+- **Recall_Viable=true เป็น default state** เมื่อ skill ใช้ได้ → ไม่ใช่ proxy ที่ดีของ stuck animator
+
+### Conclusions
+
+1. **Race condition hypothesis ไม่ verify ผ่าน amplifier** — 5ms delay + 30-40 recalls ไม่ produce bug
+2. **Detector proxy ผิด** — false-positive 100% (เพราะ Recall_Viable=true เป็น default behavior ไม่ใช่ stuck indicator)
+3. **Bug "บางครั้ง" จริงๆ** — ไม่ reproduce ผ่าน stress test ปกติ + race forcing
+
+### Possible alternative root causes (untested)
+
+- **Specific input timing** — pattern กดเฉพาะ ที่ amplifier ไม่ stress
+- **Photon Fusion prediction rollback** — ไม่ใช่ทุก session ที่ replay sequence เดียวกัน
+- **Animator controller transition condition** — เงื่อนไข exit transition จาก Recall state อาจมี hidden gate
+- **State authority race** — ใน Fusion shared mode ระดับลึกกว่า animator parameter timing
+
+### Defer to Sprint 006 — recommended action
+
+**Task**: Animator state machine architecture review สำหรับ Recall state (และ skill states ทั่วระบบ)
+
+**Scope:**
+1. เปิด `RadiusBasicLocomotion.controller` ใน Unity Animator window
+2. Review exit transitions ของ Recall state — เงื่อนไขครบไหม
+3. ตรวจสอบ `Recall_Viable` dual-role conflict (entry condition vs exit signal)
+4. พิจารณา redesign: ใช้ Trigger parameter (one-shot) สำหรับ exit แทน bool toggle
+5. Designer ที่เซ็ต animator ควรเป็น primary investigator
+
+**Estimate (Sprint 006)**: 1-2d animator review + 0.5d implement + 0.5d test = ~2-3d
+
+**Detection re-enable**: ถ้า bug เกิดบ่อยขึ้นใน playtest อนาคต → re-add detector แต่ใช้ animator state hash proxy ที่ accurate (ต้อง identify Recall state hash ก่อน)
+
+### Files reverted (no production changes)
+
+- `C:\GitHub\delta-unity\Assets\GameScripts\Gameplays\Characters\ActorCombatAction.cs` (CheckViable Thread.Sleep removed)
+- `C:\GitHub\delta-unity\Assets\GameScripts\Gameplays\Characters\Common\RecallAction.cs` (Debug.Log removed)
+- `C:\GitHub\delta-unity\Assets\GameScripts\Gameplays\Characters\Actors\ActorAvatar.cs` (detector + counter removed)
+
+ไม่มี code change commit ใน delta-unity จาก investigation นี้.

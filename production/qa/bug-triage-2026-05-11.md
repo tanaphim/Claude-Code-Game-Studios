@@ -74,3 +74,17 @@
 1. **Root-cause investigation ร่วม BUG-0001 + BUG-0002** (0.25-0.5d) ก่อนเขียน fix แยก — flag ใน Investigation note ของ sprint-005 แล้ว
 2. **Verify BUG-0002 regression-vs-S5-06** — ถ้า Anansi W ใช้ AnimationEvent ปิด state และ S5-06 ทำให้ event fire ผิด slot → bump เป็น S2 + reopen S5-06 acceptance
 3. **เพิ่ม "animation transition coverage" เข้า manual playtest checklist (S5-10)** เพื่อจับ pattern นี้ในฮีโร่อื่น ๆ ก่อน end-of-sprint
+
+---
+
+## Update 2026-05-12 — Both bugs deferred to Sprint 006
+
+Investigation จาก Sprint 005 (Recommended Action #1 ข้างบน) ทำแล้ว แต่:
+
+- **BUG-0001**: race condition hypothesis (CheckViable timing) ไม่ verify ผ่าน Thread.Sleep amplifier — bug ไม่ reproduce ใน editor 30-40 รอบ. Status: Investigation Paused. **Severity unchanged S3; Priority downgraded P2 → P3** (rare cosmetic, ไม่ block release)
+- **BUG-0002**: ยังต้อง runtime test (SkillKey resolved from CBS at runtime) — defer พร้อม BUG-0001 ใน animator architecture review
+- **Sprint 006 task created**: animator state machine architecture review — designer-led, ~2-3d. ครอบทั้ง 2 bugs + ป้องกัน heroes อื่นๆ ที่อาจมีปัญหาเดียวกัน
+
+**Code changes ใน delta-unity จาก investigation นี้**: NONE — instrumentation ทั้งหมด reverted ก่อน wrap-up. ไม่มี production code modification.
+
+**Updated bug status:** ดู bug files แต่ละไฟล์สำหรับ full investigation trail.

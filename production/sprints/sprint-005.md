@@ -64,12 +64,16 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 
 ### Bugs (filed during sprint)
 
-| ID | Bug | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
-|----|-----|-------------|-----------|-------------|-------------------|
-| S5-19 | [BUG-0001](../qa/bugs/BUG-0001-recall-locomotion-stuck.md) — Recall post-warp locomotion animation ไม่เล่น | gameplay-programmer + technical-artist | 0.5 | — | Animator transitions back to locomotion after Recall; manual playtest confirms walk/run plays |
-| S5-20 | [BUG-0002](../qa/bugs/BUG-0002-anansi-w-idle-stuck.md) — Anansi W ค้างท่า Idle หลัง cast จบ | gameplay-programmer + technical-artist | 0.5 | — | Animator exits W state correctly; locomotion resumes; manual playtest passes |
+| ID | Bug | Agent/Owner | Est. Days | Status | Notes |
+|----|-----|-------------|-----------|--------|-------|
+| S5-19 | [BUG-0001](../qa/bugs/BUG-0001-recall-locomotion-stuck.md) — Recall post-warp locomotion animation ไม่เล่น | gameplay-programmer + technical-artist | 0.5 | **Deferred → Sprint 006** | Investigation paused — race condition hypothesis ไม่ verify ผ่าน amplifier; bundled with S6 animator architecture review |
+| S5-20 | [BUG-0002](../qa/bugs/BUG-0002-anansi-w-idle-stuck.md) — Anansi W ค้างท่า Idle หลัง cast จบ | gameplay-programmer + technical-artist | 0.5 | **Deferred → Sprint 006** | Bundled กับ BUG-0001 — same architecture review |
 
-**Investigation note:** BUG-0001 และ BUG-0002 มีอาการ post-cast animator-state-stuck เหมือนกัน — แนะนำ investigate ร่วมเพื่อหา root cause ก่อนเขียน fix แยก
+**Investigation outcome:** ทั้ง 2 bugs intermittent + reproduce ยาก. Race condition hypothesis ใน CheckViable timing ไม่ verify ผ่าน Thread.Sleep amplifier (5ms, 30-40 cycles). Detector proxy (`Recall_Viable=true + IsMoving + !IsRecalling`) มี false-positive rate 100% ในข้อมูล baseline → ไม่ใช่ stuck animator indicator ที่ดี
+
+**Sprint 006 task seed:** Animator state machine architecture review — designer-led, examine exit transitions ของ Recall + skill states ทั่วระบบ; พิจารณา redesign จาก bool toggle → Trigger param สำหรับ exit signal. Est ~2-3d.
+
+**Code changes in delta-unity repo from this sprint's BUG investigation:** **NONE** — all instrumentation reverted; no production code modifications.
 
 ---
 
@@ -92,6 +96,9 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 | S4-09 AI Bot item-buying (2.0d) | รอ S5-11 (R-21 Role Restriction decision) ก่อน — design ของ Bot item priority depends on whether role gating enforced |
 | S4-10 AI Bot Difficulty (1.0d) | depends S4-09 |
 | R-22 / R-23 implementation (stat /100 + AdditionalMoveSpeed rename) | Phase 2 scope already 3.75d — schedule with Phase 3 หรือ dedicated balance pass; ADR-only ใน Sprint 005 ถ้ามีเวลา |
+| S5-19 BUG-0001 (Recall locomotion stuck) | Race condition hypothesis ไม่ verify; needs animator architecture review (designer-led) |
+| S5-20 BUG-0002 (Anansi W stuck) | Bundled กับ BUG-0001 — same architecture review |
+| **NEW Sprint 006 seed: Animator architecture review** | Examine exit transitions ของ skill states; redesign bool→Trigger สำหรับ exit signal. Est ~2-3d |
 
 ---
 
