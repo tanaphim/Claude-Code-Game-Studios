@@ -5,7 +5,7 @@
 **ID**: BUG-0002
 **Severity**: S3-Minor
 **Priority**: P2-Next Sprint
-**Status**: Open
+**Status**: Resolved (delta-unity@91697bf78e on `dev`, 2026-05-12)
 **Reported**: 2026-05-11
 **Reporter**: Tanapol Aekprapu
 

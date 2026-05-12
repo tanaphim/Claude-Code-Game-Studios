@@ -6,7 +6,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-10"
+updated: "2026-05-12"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -94,11 +94,11 @@ stories:
     name: "Hercules bootstrap — ActorCombat.OnStartup reads CBSUnit.Slot* aliases, BindSlot x6 (revised per ADR-0008)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: backlog
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 0.5
-    blocker: "depends S5-01"
-    completed: ""
+    blocker: ""
+    completed: "2026-05-12 — delta-unity@claude/s5-09-hercules-bootstrap, 12/12 EditMode tests pass. ISlotBinder interface added to break Radius↔Abilities asmdef cycle. AbilityComponent prefab attach deferred to S5-10 (legacy CreateSkill keeps Hercules playable; warning log surfaces missing attach)."
 
   - id: "S5-10"
     name: "Manual playtest checklist + 1-match Training playthrough (P2-10)"
@@ -191,3 +191,24 @@ stories:
     estimate_days: 1.5
     blocker: ""
     completed: ""
+
+  # Bugs (filed during sprint)
+  - id: "S5-19"
+    name: "BUG-0001 — Recall post-warp locomotion animation ไม่เล่น"
+    file: "production/qa/bugs/BUG-0001-recall-locomotion-stuck.md"
+    priority: bug
+    status: backlog
+    owner: "gameplay-programmer + technical-artist"
+    estimate_days: 0.5
+    blocker: ""
+    completed: ""
+
+  - id: "S5-20"
+    name: "BUG-0002 — Anansi W ค้างท่า Idle หลัง cast จบ"
+    file: "production/qa/bugs/BUG-0002-anansi-w-idle-stuck.md"
+    priority: bug
+    status: done
+    owner: "gameplay-programmer + technical-artist"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-05-12 — delta-unity@91697bf78e, dev branch"
