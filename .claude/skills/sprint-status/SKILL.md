@@ -60,6 +60,9 @@ If it exists, read it directly — it is the authoritative source of truth.
 Extract status for each story from the `status` field. No markdown scanning needed.
 Use its `sprint`, `goal`, `start`, `end` fields instead of re-parsing the sprint plan.
 
+Also extract `assignee` (human handle) for each story. If `assignee` is missing,
+treat it as `"unassigned"` (legacy yaml files written before the schema update).
+
 **If `sprint-status.yaml` does not exist** (legacy sprint or first-time setup),
 fall back to markdown scanning:
 
@@ -132,12 +135,20 @@ Keep the total output to 30 lines or fewer. Use this format:
 
 ### Progress: [complete/total] tasks ([%])
 
-| Story / Task         | Priority   | Status      | Owner   | Blocker        |
-|----------------------|------------|-------------|---------|----------------|
-| [title]              | Must Have  | DONE        | [owner] |                |
-| [title]              | Must Have  | IN PROGRESS | [owner] |                |
-| [title]              | Must Have  | BLOCKED     | [owner] | [brief reason] |
-| [title]              | Should Have| NOT STARTED | [owner] |                |
+| Story / Task         | Priority   | Status      | Owner (role) | Assignee  | Est. Days | Blocker        |
+|----------------------|------------|-------------|--------------|-----------|-----------|----------------|
+| [title]              | Must Have  | DONE        | [owner]      | [handle]  | [N]d      |                |
+| [title]              | Must Have  | IN PROGRESS | [owner]      | [handle]  | [N]d      |                |
+| [title]              | Must Have  | BLOCKED     | [owner]      | [handle]  | [N]d      | [brief reason] |
+| [title]              | Should Have| NOT STARTED | [owner]      | unassigned| [N]d      |                |
+
+### Workload by Assignee
+*(Only show this section if 2+ distinct assignees exist, including `unassigned`.)*
+
+| Assignee   | Done | In Progress | Blocked | Not Started | Est. Days Remaining |
+|------------|------|-------------|---------|-------------|---------------------|
+| [handle]   | [N]  | [N]         | [N]     | [N]         | [sum of estimate_days where status != done]d |
+| unassigned | [N]  | [N]         | [N]     | [N]         | [sum]d |
 
 ### Attention Needed
 | Story / Task         | Status      | Last Updated   | Days Stale | Note           |

@@ -1,0 +1,118 @@
+# Delta Project — Team Roster
+#
+# Single source of truth สำหรับสมาชิกทีม ใช้โดย /sprint-plan, /sprint-status,
+# /story-done และ skill อื่นๆ ที่ต้อง assign งาน
+#
+# Handle convention:
+#   - first-name lowercase (จาก git config user.name)
+#   - ถ้าไม่ทราบชื่อจริง → GitHub handle lowercase เป็น proxy
+#   - ห้ามใช้ Claude account email ระบุตัวตน (เป็นเมลบริษัท)
+#
+# Velocity multiplier:
+#   - 1.0× = senior / pace ปกติ
+#   - 0.6–0.8× = junior หรือคนที่กำลัง onboard
+#   - 1.2× = expert ใน domain นั้น (rare)
+#
+# Roles (agent types) จะ map ตอน assign — ดู .claude/agents/ สำหรับ role list
+
+active:
+  - handle: tanapol
+    name: "Tanapol Aekprapu"
+    git_email: tanapol.aekprapu@gmail.com
+    github: radiuszon
+    roles: [lead-programmer, gameplay-programmer, producer]
+    velocity: 1.0
+    notes: "Project owner / lead"
+
+  - handle: donlawat
+    name: "Donlawat Nootim"
+    git_email: pureva51@gmail.com
+    github: purebateman
+    roles: []
+    velocity: 1.0
+    notes: ""
+
+  - handle: jirawat
+    name: "Jirawat (Earth)"
+    git_email: jirawatforworkk@gmail.com
+    github: EarthRDS
+    roles: []
+    velocity: 1.0
+    notes: "ใช้หลายชื่อใน git: EarthRDS, Earth_notebook-RDS, Earthtiz"
+
+  - handle: garvil
+    name: "Garvil Villadiego"
+    git_email: Garvil.Personal@gmail.com
+    github: villadiego2020
+    roles: []
+    velocity: 1.0
+    notes: "ใช้หลายชื่อใน git: Winny, Win"
+
+  - handle: kritamet
+    name: "Kritamet Janphram"
+    git_email: kritamet.jan.metaversexr@gmail.com
+    github: JameSlaYerZ
+    roles: []
+    velocity: 1.0
+    notes: ""
+
+  - handle: kantachai
+    name: "Kantachai Rungruang"
+    git_email: kantachai.rungruang1996@gmail.com
+    github: kantachai-Rungruang
+    roles: []
+    velocity: 1.0
+    notes: ""
+
+  - handle: chindanai
+    name: "Chindanai Peerapattanapaiboon"
+    git_email: ""
+    github: ""
+    roles: []
+    velocity: 1.0
+    notes: "ไม่มี email ใน git history — ขอ git config ก่อนเริ่ม commit"
+
+  - handle: palmathe
+    name: ""
+    git_email: palmathe_k@cmu.ac.th
+    github: palmathe
+    roles: []
+    velocity: 1.0
+    notes: "สอง GitHub account (palmathe, unitodev) แต่ email ซ้ำ — คนเดียวกัน"
+
+  - handle: aekkapan
+    name: ""
+    git_email: aekkapan.csw@gmail.com
+    github: aekkacsw
+    roles: []
+    velocity: 1.0
+    notes: "หลาย account (aekkacsw, aekkapannumz) email: csw + numz"
+
+  - handle: jdacha
+    name: ""
+    git_email: jdacha.radius@gmail.com
+    github: jdacha
+    roles: []
+    velocity: 1.0
+    notes: ""
+
+  - handle: makesarit
+    name: ""
+    git_email: ""
+    github: Makesarit2543
+    roles: []
+    velocity: 1.0
+    notes: "github noreply only — ขอ git config user.email ก่อน commit จริง"
+
+  - handle: santisuk
+    name: ""
+    git_email: santisuk_502@hotmail.com
+    github: santisuk502
+    roles: []
+    velocity: 1.0
+    notes: "possibly = overnoob alias"
+
+# Past contributors / upstream — ไม่ assign งานใหม่
+upstream:
+  - github: Donchitos
+    notes: "เจ้าของ repo ต้นทางก่อน fork ไม่ใช่สมาชิกทีม"

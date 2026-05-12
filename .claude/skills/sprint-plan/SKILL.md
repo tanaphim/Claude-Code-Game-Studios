@@ -31,6 +31,16 @@ See `.claude/docs/director-gates.md` for the full check pattern.
 
 4. **Check the risk register** at `production/risk-register/`.
 
+5. **Read the team roster** at `production/team.yaml`. Extract the list of
+   active members (`active:` section), their handles, velocity multipliers,
+   and notes. This is the authoritative source for who can be assigned work.
+   - If `production/team.yaml` is missing, fall back to a single-person sprint
+     (handle = `unassigned`, velocity = 1.0) and note: "No team.yaml found —
+     assuming solo sprint. Create `production/team.yaml` to enable multi-member
+     capacity planning."
+   - Do NOT use names from memory or guess from git history — `team.yaml` is
+     the source of truth in the repo.
+
 ---
 
 ## Phase 2: Generate Output
@@ -46,23 +56,42 @@ For `new`:
 [One sentence describing what this sprint achieves toward the milestone]
 
 ## Capacity
-- Total days: [X]
-- Buffer (20%): [Y days reserved for unplanned work]
-- Available: [Z days]
+
+**Sprint window:** [N] calendar days ([start] → [end])
+
+### Per-member capacity
+
+| Handle | Role | Calendar days | Velocity × | Effective days |
+|--------|------|---------------|------------|----------------|
+| `[handle]` | [primary role] | [N] | [V]× | [N×V]d |
+| **Team total (gross)** | | | | **[sum]d** |
+
+### Buffer
+
+- Buffer (20% of gross): **[B]d** สำรองสำหรับงานที่ไม่ได้วางแผน + coordination overhead
+- **Available effective: ~[A]d**
+
+> Build this table from `production/team.yaml`. One row per active member who
+> is actually working this sprint (not the entire roster). For solo sprints,
+> include only the working member; note other roster members are not assigned.
 
 ## Tasks
 
+> **Field guide:** `Owner` = role / agent type (e.g. `gameplay-programmer`).
+> `Assignee` = human handle from `production/team.yaml` (e.g. `tanapol`).
+> Use `unassigned` if no person has picked it up yet.
+
 ### Must Have (Critical Path)
-| ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
-|----|------|-------------|-----------|-------------|-------------------|
+| ID | Task | Owner (role) | Assignee | Est. Days | Dependencies | Acceptance Criteria |
+|----|------|--------------|----------|-----------|-------------|-------------------|
 
 ### Should Have
-| ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
-|----|------|-------------|-----------|-------------|-------------------|
+| ID | Task | Owner (role) | Assignee | Est. Days | Dependencies | Acceptance Criteria |
+|----|------|--------------|----------|-----------|-------------|-------------------|
 
 ### Nice to Have
-| ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
-|----|------|-------------|-----------|-------------|-------------------|
+| ID | Task | Owner (role) | Assignee | Est. Days | Dependencies | Acceptance Criteria |
+|----|------|--------------|----------|-----------|-------------|-------------------|
 
 ## Carryover from Previous Sprint
 | Task | Reason | New Estimate |
@@ -149,7 +178,8 @@ stories:
     file: "[production/stories/path.md]"
     priority: must-have        # must-have | should-have | nice-to-have
     status: ready-for-dev      # backlog | ready-for-dev | in-progress | review | done | blocked
-    owner: ""
+    owner: ""                  # role / agent type (e.g. gameplay-programmer)
+    assignee: ""               # human handle from production/team.yaml (e.g. tanapol); "unassigned" if not yet picked up
     estimate_days: 0
     blocker: ""
     completed: ""
@@ -159,6 +189,9 @@ Initialize each story from the sprint plan's task tables:
 - Must Have tasks → `priority: must-have`, `status: ready-for-dev`
 - Should Have tasks → `priority: should-have`, `status: backlog`
 - Nice to Have tasks → `priority: nice-to-have`, `status: backlog`
+- `assignee`: copy from the sprint plan's Assignee column. If the sprint plan
+  has no assignment yet, use `"unassigned"`. For solo sprints, all stories
+  may default to the sole working member's handle.
 
 For `update`: read the existing `sprint-status.yaml`, carry over statuses for
 stories that haven't changed, add new stories, remove dropped ones.
