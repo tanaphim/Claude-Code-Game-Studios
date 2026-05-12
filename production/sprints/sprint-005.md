@@ -12,9 +12,26 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 
 ## Capacity
 
-- Total days: 14 (2 สัปดาห์)
-- Buffer (20%): 2.8 วัน สำรองสำหรับงานที่ไม่ได้วางแผน
-- Available: ~11 วัน
+**Sprint window:** 14 calendar days (2026-05-09 → 2026-05-22)
+
+### Per-member capacity
+
+| Handle | Role | Calendar days | Velocity × | Effective days |
+|--------|------|---------------|------------|----------------|
+| `tanapol` | gameplay-programmer (lead, senior) | 14 | 1.0× | 14.0d |
+| **Team total (gross)** | | | | **14.0d** |
+
+### Buffer
+
+- Buffer (20% of gross): **2.8d** สำรองสำหรับงานที่ไม่ได้วางแผน
+- **Available effective: ~11.2d**
+
+### Notes
+
+- Sprint 005 มีคนเดียว (`tanapol`) — ส่วนสมาชิกคนอื่นใน [team roster](../../memory link via /onboard) ยังไม่ได้รับ assign ใน sprint นี้
+- ถ้ามีสมาชิกเพิ่มกลางทาง → อัพเดต table นี้พร้อม velocity ของคนนั้น
+- Re-evaluate velocity ตอน Sprint 005 retrospective — เก็บ actual vs estimate ต่อคนใน `production/velocity/`
+- `assignee` field ใน `sprint-status.yaml` track ว่าใครรับ story ไหน — ใช้ git config `user.name` (first-name lowercase) เป็น handle
 
 ---
 
