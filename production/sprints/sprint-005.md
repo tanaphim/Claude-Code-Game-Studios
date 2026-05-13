@@ -90,6 +90,234 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 
 ---
 
+## Story Details
+
+### S5-05 — Pattern-B/C/D one-liner replacements
+
+**Type**: Logic
+**ADR**: ADR-0006 §5.2 (Pattern B), §5.3 (Pattern C), §5.4 (Pattern D); revised per ADR-0008
+**Manifest Version**: N/A (control-manifest.md not yet created)
+
+#### Context
+
+ADR-0006 §5 identifies 4 distinct refactor patterns in `ActorCombatAction`. S5-04
+landed Pattern A (`IsActiveSlotOwner` helper, 5 sites). S5-05 lands the remaining
+three patterns — each is a smaller one-line rewrite leveraging facades already
+landed in S5-02/S5-03 and the `BoundSlot` networked property from S5-04.
+
+**Pattern B (4 sites) — Input-to-slot binding** (ADR-0006 §5.2):
+- B1: `ActorCombatAction.cs` ~line 1749–1754 (press path)
+- B2: ~line 1764–1769 (release path)
+- B3: ~line 1781–1786 (charge-press variant)
+- B4: ~line 1909 (single-line condition — `input.Buttons.IsSet(Buttons.Q/W/E/R/Recall)` match)
+
+Replacement (ADR-0006 §5.2, revised per ADR-0008 — `AbilityData.Slot` reverted,
+use `BoundSlot` from S5-04 instead):
+
+```csharp
+// Press:    if (input.PressedSlot != 0 && input.PressedSlot == BoundSlot) { ... }
+// Release:  if (input.ReleasedSlot != 0 && input.ReleasedSlot == BoundSlot) { ... }
+```
+
+**Pattern C (1 site) — Rank-up exclusions** (ADR-0006 §5.3):
+- C1: `ActorCombatAction.cs` ~line 2115/2125/2133 region
+
+```csharp
+// Old: if (SkillKey == SkillKey.A || SkillKey.Item || SkillKey.Recall) return;
+// New: if (AbilityData.MaxRank <= 1) return;
+```
+
+**Correction (2026-05-13)**: ADR-0006 §5.3 referenced `IsLeveled` which is on
+`AbilityDataSnapshot` — not on `CBSAbility` (`AbilityData` on `ActorCombatAction`).
+The concrete check is `MaxRank <= 1` (A/Item/Recall have `cbs.MaxRank == 1` per
+ADR §5.3 equivalence claim).
+
+**Pattern D (1 site) — Quick-cast settings** (ADR-0006 §5.4):
+- D1: `ActorCombatAction.cs` ~line 1790–1795
+
+```csharp
+// Old: if (Actor.Combat.IsQuickQ && SkillKey.Q || IsQuickW && SkillKey.W || ...)
+// New: if (Actor.Combat.IsQuickCast(BoundSlot)) { ... }
+```
+
+**S5-04 dual-path consistency**: Like S5-04, all 3 patterns must handle the
+legacy heroes (`BoundSlot == 0`) path. Suggested approach: keep legacy SkillKey
+check as fallback when `BoundSlot == 0` (same dual-path strategy as
+`IsActiveSlotOwner` + `ResolveLegacyOwnerBySkillKey`), removable in Phase 3.
+
+#### Acceptance Criteria
+
+1. **Pattern B (4 sites)**: All 4 sites use `PressedSlot/ReleasedSlot == BoundSlot`
+   for migrated heroes (Hercules); legacy SkillKey fallback retained when
+   `BoundSlot == 0`. Verified via code review.
+2. **Pattern C (1 site)**: SkillKey chain replaced with `!IsLeveled` check.
+   `IsLeveled` already populated by S3-03 — no new field needed.
+3. **Pattern D (1 site)**: Quick-cast chain replaced with `IsQuickCast(BoundSlot)`
+   facade (added in S5-03). Legacy SkillKey fallback retained when `BoundSlot == 0`.
+4. **Multipeer harness Pass #1–5 still pass** — regression gate. Bandwidth
+   ≤ 65 B/s preserved (no new networked state added).
+5. **Hercules QWER playable in Training match**: cast, deal damage, no input
+   errors, 1-match playthrough completes without regression vs. pre-S5-05 baseline.
+6. **EditMode tests pass**: existing `ActorCombatActionOwnerGuardTests` (S5-04)
+   stay green; if a pure helper is extracted for Pattern D's `IsQuickCast`-fallback
+   logic, add a test (otherwise N/A).
+
+#### Out of Scope
+
+- Removing legacy SkillKey fallback path (Phase 3 cleanup)
+- Pattern A refactor (done in S5-04)
+- `HerculesRAction` / `HerculesWAction` sites (done in S5-07/S5-08)
+- `AnimationEvent` shim wiring (S5-06)
+- `AbilityComponent` prefab attach on Hero prefab (gates S5-10, deferred to manual step)
+
+#### Test Evidence
+
+**Required**:
+- Multipeer harness log: `production/qa/evidence/S5-05-multipeer.txt` — capture
+  Pass #1–5 (parity + bandwidth)
+- Hercules playthrough note: `production/qa/evidence/S5-05-playthrough.md`
+  documenting 1-match Training session result + screenshot of HUD post-match
+
+**Optional**:
+- EditMode test additions (if helper extraction warranted) under
+  `Assets/UnitTests/TestEditMode/`
+
+#### Performance Impact
+
+No performance impact expected — refactor is pure code transformation (same
+runtime behavior, fewer branches). Hot-path branch count drops marginally
+(7-way SkillKey switch → 1-way slot equality + 1 fallback branch).
+
+#### Files to Modify
+
+- `Assets/GameScripts/Gameplays/Characters/ActorCombatAction.cs` (4+1+1 = 6 sites)
+- No new files expected (helpers, if any, → same file as S5-04 pattern)
+
+---
+
+### S5-06 — AnimationEvent Option A (43 shim methods)
+
+**Type**: Logic
+**ADR**: ADR-0006 Phase 2 Migration Plan §6.2 (AnimationEvent Option A confirmation)
+**Manifest Version**: N/A (control-manifest.md not yet created)
+
+#### Context
+
+`AnimationEvent.cs` เป็น `INetworkActor` helper ที่รับ callback จาก animator
+clips ของฮีโร่ทุกตัว (Hercules pilot + heroes ทั้ง ~25 ตัวใน Phase 3) ผ่าน
+43 method shims ที่ animator state เรียกชื่อตรง ๆ (e.g. animator state
+`Q_Perform` มี Animation Event เรียก `Skill_Q_Perform`).
+
+ปัจจุบันทุก shim เรียก `StateRelease(SkillKey.X, SkillState.Y, param)` ซึ่ง
+hardcode SkillKey literal. **Option A** จาก audit (ADR §6.2):
+
+```csharp
+// Before:
+public void Skill_Q_Perform(int param) => StateRelease(SkillKey.Q, SkillState.Perform, param);
+// After:
+public void Skill_Q_Perform(int param) => StateReleaseSlot(Actor.Combat.GetActiveSlot(), SkillState.Perform, param);
+```
+
+**เหตุผลที่เลือก Option A:**
+- **Zero animator clip edits** — ทั้ง 25+ hero clips ยัง bind ชื่อ method เดิม (`Skill_Q_Perform`, etc.)
+- ไม่ต้อง rename / re-bind / migrate SkinObject dictionary
+- เปลี่ยนแค่ method body — diff เล็ก, rollback ง่าย
+- (Option B/C ต้อง rebind animator events → rejected)
+
+**Implementation note (ค้นพบจาก survey 2026-05-13):**
+- `GetActiveSlot()` มีอยู่แล้วใน `ActorCombat:221` (เพิ่มใน S5-03) — return latest pressed slot 1-7
+- `StateReleaseSlot(byte, SkillState, int)` **ยังไม่มี** — ต้องเพิ่มใหม่ใน AnimationEvent.cs
+- Dictionary registration APIs (`AddReleaseEvent`/`AddEnterEvent`/`AddExitEvent`) ยัง key ด้วย `SkillKey` — `StateReleaseSlot` ต้อง resolve `SkillKey` จาก slot เพื่อ lookup dictionary เดิม (หรือเพิ่ม slot-keyed dictionary parallel — ตัดสินใจตอน implement)
+- Legacy heroes (Anansi/Merlin/Garen — `BoundSlot==0`): `GetActiveSlot()` ปัจจุบัน return อะไร? ต้องตรวจ + กำหนด fallback (dual-path ตาม pattern S5-04/S5-05)
+
+#### Acceptance Criteria
+
+1. **`StateReleaseSlot(byte slot, SkillState state, int id)` method ใหม่** — รับ slot index แทน SkillKey; route ไปยัง dictionary callback ที่มีอยู่ผ่านการ resolve SkillKey จาก slot (`Actor.Combat.GetSlotAction(slot)?.AbilityData?.SkillKey`) หรือ slot-keyed dictionary parallel
+2. **40 shim methods** เปลี่ยนจาก `StateRelease(SkillKey.X, ...)` → `StateReleaseSlot(Actor.Combat.GetActiveSlot(), ...)`:
+   - 6 A's (Attack_1Event, _2Event, _3Event, Skill_A_Empower, _Empower2, _Empower3)
+   - 8 Q's, 8 W's, 8 E's, 8 R's (Perform/2/3/4/5 + Empower/2/3 each)
+   - 1 Recall, 1 Item
+   - **3 Skill_I_Empower/2/3 retained on legacy `StateRelease(SkillKey.I, ...)`** per code-review finding F2: Innate/Passive abilities have no `SetActiveSlot` write path; migrating would silently route animation events to the most-recently-cast slot (Q/W/E/R). Phase 3 unblocks once passive slot-binding path exists.
+3. **Item aliases (4 methods)** — `Skill_Item_{Recall,Consume,Spell,Attack}_Perform` ยังเรียก `Skill_Item_Perform(param)` เหมือนเดิม (ไม่ต้องแก้ — wrapper layer)
+4. **Dual-path fallback** — ถ้า `GetActiveSlot()` return 0 (legacy hero / no active skill), fall back ไปเรียก legacy `StateRelease(SkillKey.X, ...)` หรือ no-op พร้อม warning log (decide ตอน implement; document inline)
+5. **No animator clip touches** — ตรวจ Hercules animator clip events ก่อน/หลัง: bind ชื่อ method เดิมไม่เปลี่ยน
+6. **EditMode tests pass** — `AnimationEventSlotTests.cs` (NEW): mock `GetActiveSlot()` แล้ว call ทั้ง 43 shims, assert `StateReleaseSlot` ได้รับ slot ถูกต้อง + SkillState ถูกต้อง
+7. **Multipeer harness Pass #1–5 ยัง green** — bandwidth ไม่เปลี่ยน (pure runtime substitution)
+8. **Hercules Training playthrough** — cast Q/W/E/R/A/Recall ครบ 6 abilities, animation event fire ทุกจุด, ไม่มี NRE ใน Editor.log
+
+#### Out of Scope
+
+- ลบ `StateRelease(SkillKey, ...)` method เดิม — เก็บไว้เป็น legacy fallback (Phase 3 cleanup)
+- ลบ `m_OnReleaseDictionary` / `m_OnEnterDictionary` / `m_OnExitDictionary` SkillKey keys — เก็บไว้ (Phase 3)
+- เปลี่ยน `OnEnter(SkillKey, ...)` / `OnExit(SkillKey, ...)` signatures — Phase 3 candidate
+- Migrate `AddReleaseEvent(SkillKey, callback)` registration API → slot-based — Phase 3
+- `SkillObjectDictionary` / `SkillVfxDictionary` / `SkinObject` rekey — Phase 3 (ADR §6.3)
+- Non-hero AnimationEvent users (monster/boss animations) — ยังใช้ legacy path
+- Recall edge case (`SkillKey.Recall` → slot 7 hard-bind) — verify mapping ใน implement; ถ้า GetActiveSlot ไม่ track Recall ให้ใช้ legacy fallback
+
+#### Test Evidence
+
+**Required:**
+- EditMode tests: `Assets/UnitTests/TestEditMode/AnimationEventSlotTests.cs` (NEW)
+  - 43 cases — one per shim method (assert correct slot routing)
+  - 1 case — `GetActiveSlot() == 0` fallback path
+  - 4 cases — Item aliases route through `Skill_Item_Perform`
+- Multipeer log: `production/qa/evidence/S5-06-multipeer.txt` — Pass #1–5
+- Hercules playthrough note: `production/qa/evidence/S5-06-playthrough.md` — 1-match Training session
+
+**Optional:**
+- Static helper extraction (e.g., `ResolveSkillKeyFromSlot(byte)`) ถ้า dual-path logic ซับซ้อน → เพิ่ม unit test ตามลำดับ pattern S5-04/S5-05
+
+#### Performance Impact
+
+ไม่มี — pure code substitution; runtime path เพิ่ม 1 indirection (`GetActiveSlot()` call ที่ return cached `m_ActiveSlot` byte field) ต่อ animation event. Animation events fire ~5-10 ครั้งต่อ skill cast → negligible (<1µs total per cast).
+
+#### Files to Modify
+
+- `Assets/GameScripts/Gameplays/Characters/AnimationEvent.cs`
+  - 1 method addition: `StateReleaseSlot(byte, SkillState, int)` (~15 lines)
+  - 43 method body changes (1-liner each → ~43 lines diff)
+  - **Total**: ~60 lines diff
+- `Assets/UnitTests/TestEditMode/AnimationEventSlotTests.cs` (NEW, ~150–200 lines, ~48 test cases)
+
+#### Dual-Path Strategy
+
+ตาม pattern ที่ใช้ใน S5-04/S5-05 (`IsActiveSlotOwner`, `IsInputSlotMatch`):
+
+```csharp
+private void StateReleaseSlot(byte slot, SkillState state, int id)
+{
+    // Slot-bound path (Hercules + migrated heroes)
+    if (slot != 0)
+    {
+        var action = Actor.Combat.GetSlotAction(slot);
+        if (action?.AbilityData != null)
+        {
+            StateRelease(action.AbilityData.SkillKey, state, id);
+            return;
+        }
+    }
+    // Legacy fallback: GetActiveSlot returned 0 → no active skill / unmigrated hero
+    // Phase 3: delete this branch when all heroes migrated
+}
+```
+
+**Removal target:** Phase 3 — เมื่อ `SkillKey` enum ถูกลบ และ dictionaries ย้ายเป็น slot-keyed
+
+#### Dependencies
+
+- **S5-03** ✅ (`GetActiveSlot` + `GetSlotAction` facades — DONE 2026-05-10)
+- ไม่มี blocker
+
+#### Risks
+
+- **R1 (per ADR §8)**: `GetActiveSlot()` return wrong slot ระหว่าง multi-skill chain (e.g., Q ยังเล่น animation อยู่ตอนกด W) → animation event ของ Q routes ไปที่ W's slot.
+  **Mitigation**: EditMode test simulate Q→W press sequence, assert AnimationEvent fired ระหว่าง Q animation ยัง return Q's slot. Verify `m_ActiveSlot` semantics ใน `ActorCombat`.
+- **R2**: `SkillKey.A` / `SkillKey.I` / `SkillKey.Recall` / `SkillKey.Item` ไม่มี slot binding ที่ชัดเจนใน BindSlot pipeline — `GetActiveSlot()` อาจ return 0 ขณะ animation fire.
+  **Mitigation**: Test ทั้ง 4 SkillKey types; ถ้า fail → enhance dual-path fallback หรือ keep legacy SkillKey-based path สำหรับ A/I/Recall/Item
+
+---
+
 ## Carryover from Previous Sprint
 
 ### Accepted into Sprint 005
@@ -161,12 +389,22 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 
 - **2026-05-12 — S5-09 COMPLETE** (delta-unity@claude/s5-09-hercules-bootstrap). ActorCombat.OnStartup now reads CBSUnit.SlotQ..SlotI aliases and dispatches to ISlotBinder.BindSlot ×6 + slot 7 Recall (Hero only). Introduced `ISlotBinder` interface in Radius asmdef to break Radius↔Abilities asmdef cycle (user-approved Option A). Dual-path retention: legacy `CreateSkill` continues to operate. 12/12 EditMode tests pass. Manual prefab attach (Unity Editor: drop AbilityComponent onto Hero prefab) deferred to S5-10 — warning log fires until done.
 - **2026-05-12 — BUG-0002 RESOLVED** (delta-unity@91697bf78e on dev) — Anansi W animator stuck idle on client peer. Tracked as S5-20 in sprint-status.yaml.
+- **2026-05-13 — S5-04 COMPLETE** (delta-unity@claude/s5-04-pattern-a-helper). `IsActiveSlotOwner()` helper with dual-path: slot-indexed (`[Networked] BoundSlot` + `ResolveIsActiveSlotOwner` reference equality) for migrated heroes (Hercules), legacy `ResolveLegacyOwnerBySkillKey` fallback when `BoundSlot==0` for unmigrated heroes (Anansi/Merlin/Garen/etc.). All 5 owner-guard sites in Enter/Release/Exit/FixedUpdateNetwork/OnFixedUpdateState replaced. 14/14 EditMode tests pass. Multipeer harness Pass #4 (parity) + #5 (bandwidth ≤65 B/s) verified. ADR-0006 §5.1 sample code stale post-ADR-0008 (`AbilityData.Slot` reverted) — user-approved option [D] applied; ADR amendment candidate for Phase 3 backlog.
+- **2026-05-13 — Bonus work landed in S5-04 branch** (user-approved sidecar fixes):
+  - **S5-09 follow-up:** `ActorCombat.BootstrapSlotBindings` warning gated on `Actor.ObjectType == TargetType.Hero` — eliminates log spam from creep/tower/monster/objective spawns (warning was intended for missing Hero AbilityComponent only).
+  - **BUG-0003 band-aid:** `NetworkRunnerInput.cs` Q/W/E/R/Recall methods — 8 sites null-conditional `?.` patched. NRE was pre-existing (observed before S5-04 branch) but blocked S5-04 playtest verification. Filed at `production/qa/bugs/BUG-0003-network-runner-input-nre.md` with root-cause investigation plan; root cause TBD in Sprint 006.
+
+- **2026-05-13 — S5-05 COMPLETE** (delta-unity, uncommitted on top of dev). Pattern-B/C/D one-liner replacements landed: `IsInputSlotMatch` (instance, dual-path) + `ResolveLegacySkillKeyButtonMatch` (static, EditMode-testable) + `IsQuickCastForBoundSlot` (instance) + `ResolveLegacyQuickCast` (static). 6 sites replaced (B1/B2/B3/D in `GetInput` pressed/released paths, B4 in `GetInputBot`, C `MaxRank <= 1` rank-up gate). 18 new EditMode tests pass (108/108 assembly green). Code review (unity-specialist) caught a **BLOCKING** bot regression: `BotActor.Auto` / `WithTarget` never populated `msg.PressedSlot` — fix landed (set `msg.PressedSlot = skill.BoundSlot;` in both methods). Multipeer Pass #1-5 (3 sessions "Both runners online") + Hercules Training playthrough with bots clean (Editor.log 0 S5-05 NRE). Deviations: Pattern C `AbilityData.IsLeveled` (ADR §5.3) → `MaxRank <= 1` (concrete field on `CBSAbility`); Pattern B4 semantic shift (slot path `PressedSlot` vs legacy `Buttons.IsSet`). BUG-0004 filed (pre-existing `BotActor.WithTarget` `msg`→`msg2` typo — out of S5-05 scope).
+
+- **2026-05-13 — S5-06 INFRASTRUCTURE-ONLY (migration deferred)** (delta-unity@claude/s5-06-animation-event-option-a). Initial implementation migrated 40 shim methods to `StateReleaseSlot(Actor.Combat.GetActiveSlot(), ...)`, passed 44/44 EditMode + APPROVED code review. **Manual playtest in Unity Editor revealed VFX/SFX animation events were silently dropped on all heroes** — root cause: ADR-0006 §6.2 promised `ActorCombat.SetActiveSlot()` would be wired in `ActorCombatAction` input handlers, but that caller was never landed in S5-03. With no writer for `m_ActiveSlot`, `GetActiveSlot()` returns 0 for every hero, dual-path fallback fires, animation event dropped. **All 43 shim migrations reverted**; production behaviour fully restored. **Foundation retained**: `StateReleaseSlot(byte, SkillState, int)` dispatcher + pure static `TryResolveSlotRoute(...)` helper + 12 EditMode tests stay in file as no-op infrastructure ready for follow-up. **New tech debt TD-006**: SetActiveSlot wiring missing (HIGH priority — gates S5-21 + Phase 3 Option A). Code-review findings F1 (LogWarning gate) + F2 (Skill_I_* legacy) preserved in code as belt-and-braces for when migration retries.
 
 ### Must Have status
 - ✅ S5-01, S5-02, S5-03, S5-07, S5-08 — done (prior sessions)
-- ✅ S5-09 — done (2026-05-12, this session)
-- ⏳ S5-04, S5-05, S5-06 — ready to pick up (all deps satisfied)
-- ⏳ S5-10 — blocked until S5-04..S5-06 land + manual AbilityComponent prefab attach
+- ✅ S5-09 — done (2026-05-12)
+- ✅ S5-04 — done (2026-05-13)
+- ✅ S5-05 — done (2026-05-13)
+- ⚠️ S5-06 — **PARTIAL: infrastructure landed, migration reverted** (2026-05-13). Follow-up S5-21 will land `SetActiveSlot` wiring + 40 shim migration atomically.
+- ⏳ S5-10 — unblocked for the Phase 2 Hercules pilot scope (S5-06 was a parallelizable non-blocker per ADR §7); requires manual AbilityComponent prefab attach + multipeer + playtest
 
 ---
 
