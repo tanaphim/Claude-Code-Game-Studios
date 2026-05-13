@@ -12,7 +12,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-12"
+updated: "2026-05-13 (S5-06 close)"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -53,34 +53,34 @@ stories:
     name: "ActorCombatAction Pattern-A helper (IsActiveSlotOwner) — replace 5 blocks (P2-04)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: backlog
+    status: done
     owner: "gameplay-programmer"
     assignee: "tanapol"
     estimate_days: 0.5
-    blocker: "depends S5-01, S5-02"
-    completed: ""
+    blocker: ""
+    completed: "2026-05-13 — delta-unity@89ecec9da3 (bundled with S5-05 in single Phase 2 commit). 14/14 EditMode tests pass; multipeer Pass #4 (parity) + #5 (bandwidth <65 B/s) verified; legacy SkillKey fallback added for unmigrated heroes (ADR-0006 §5.1 sample stale post-ADR-0008, deviation user-approved). Bonus: S5-09 warning gated on isHero; BUG-0003 NetworkRunnerInput NRE band-aid (8 sites null-safed)."
 
   - id: "S5-05"
     name: "ActorCombatAction Pattern-B/C/D one-liner replacements — 4 sites (P2-05)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: backlog
+    status: done
     owner: "gameplay-programmer"
     assignee: "tanapol"
     estimate_days: 0.5
-    blocker: "depends S5-01, S5-02, S5-03"
-    completed: ""
+    blocker: ""
+    completed: "2026-05-13 — delta-unity@89ecec9da3 (claude/s5-04-pattern-a-helper, bundled with S5-04), 4 helpers (IsInputSlotMatch + ResolveLegacySkillKeyButtonMatch + IsQuickCastForBoundSlot + ResolveLegacyQuickCast) + 6 site replacements (B1/B2/B3/D/B4/C). 18 new EditMode tests pass (108/108 assembly green). Code review APPROVED WITH SUGGESTIONS (unity-specialist blocking fix: BotActor.Auto/WithTarget populate msg.PressedSlot = skill.BoundSlot). Multipeer Pass #1-5 verified + Hercules Training playthrough with bots clean (Editor.log 0 S5-05 NRE). Deviations: Pattern C uses AbilityData.MaxRank <= 1 (ADR-0006 §5.3 IsLeveled doesn't exist on CBSAbility — equivalence claim trusted per ADR); Pattern B4 semantic shift (slot path PressedSlot vs legacy Buttons.IsSet). BUG-0004 filed (pre-existing BotActor.WithTarget msg2 typo, out of scope)."
 
   - id: "S5-06"
-    name: "AnimationEvent Option A — wire 42 shim methods through GetActiveSlot() (P2-06)"
+    name: "AnimationEvent Option A — infrastructure only (migration deferred to S5-21)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: backlog
+    status: partial
     owner: "gameplay-programmer"
     assignee: "tanapol"
     estimate_days: 0.5
-    blocker: "depends S5-03"
-    completed: ""
+    blocker: ""
+    completed: "2026-05-13 — delta-unity@claude/s5-06-animation-event-option-a. PARTIAL LAND: migration reverted after Unity Editor playtest revealed VFX/SFX animation events silently dropped (root cause: SetActiveSlot caller was never landed in S5-03 — m_ActiveSlot stays 0 forever → dual-path fallback drops every event). Infrastructure retained as no-op foundation: StateReleaseSlot dispatcher + TryResolveSlotRoute pure static helper + 12 EditMode tests (44/44 still green). All 43 shim methods reverted to legacy StateRelease(SkillKey.X, ...) — production behaviour fully restored. New tech debt TD-006 (HIGH): SetActiveSlot wiring missing; gates S5-21. Code-review F1 (LogWarning gate) + F2 (Skill_I_* retention) preserved in code for future retry."
 
   - id: "S5-07"
     name: "HerculesRAction.GetInput rewrite (PressedSlot path) (P2-07)"
