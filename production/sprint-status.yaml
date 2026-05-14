@@ -12,7 +12,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-14 (S5-10 close + TD-007 fix — Phase 2 Hercules pilot PASS)"
+updated: "2026-05-14 (S5-21 close — TD-006 RESOLVED, Phase 2 Hercules pilot fully shipped, 10/10 Must Have PASS)"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -125,6 +125,17 @@ stories:
     estimate_days: 0.5
     blocker: ""
     completed: "2026-05-14 — delta-unity@claude/s5-10-hercules-playtest (PR #353). PASS. Step 1: AbilityComponent attached to base_avatar.prefab (single Hero template — propagates to all 25+ heroes). Step 2: Multipeer Pass #4 (parity) explicit ✅ in Editor.log (slot=1..4 host↔client converge), Pass #5 (bandwidth ≤65 B/s) baseline carry-forward from S5-04/S5-05. Step 3: Hercules QWER + A + Recall + Item all functional in scene_game_map.unity (user-verified 'ปกติ'). Pre-merge fix: TD-007 (AbilityRegistry not registered with DeltaService) resolved by creating AbilityRegistryService.prefab via Unity Editor + adding to DeltaConfiguration.Services list (12→13). 14 BindSlot warnings/match → 0; Phase 2 Exit Criterion #5 now fully satisfied end-to-end. TD-006 (SetActiveSlot caller missing) remains → S5-21 for AnimationEvent 40-shim retry. Cosmetic errors documented as known (S5-17 Photon GameIsFull, BUG-0003 NRE cascade). Evidence: production/qa/evidence/sprint-005-hercules-playthrough.md + S5-10-multipeer.txt. Sign-off: tanapol (both hats). Phase 2 Hercules pilot CLOSED — 1-week soak 2026-05-14 → 2026-05-21 per ADR-0006 §10 handover gate."
+
+  - id: "S5-21"
+    name: "TD-006 SetActiveSlot wiring + S5-06 40-shim re-migration (Phase 2 polish — blocks Phase 3)"
+    file: "production/sprints/sprint-005.md"
+    priority: must-have
+    status: done
+    owner: "gameplay-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.25
+    blocker: ""
+    completed: "2026-05-14 — delta-unity@claude/s5-21-setactiveslot-wiring. TD-006 RESOLVED. Added ResolveSlotFromSkillKey static helper (8 cases: Q/W/E/R/A/I/Recall + Item→0) + wired Actor.Combat.SetActiveSlot in ActorCombatAction.Progress setter (single source of truth for state transitions — catches manual press AND auto-attack paths) + re-landed 40-shim migration in AnimationEvent.cs (3 Skill_I_* + 4 Item aliases retained on legacy). 8 new EditMode tests pass (116/116 in Radius.Tests.Characters). v2 learning: initial v1 placed SetActiveSlot in OnPressButtons, playtest revealed Normal Attack auto-target sets Progress=Attack1 directly at lines 2693/2770 bypassing OnPressButtons → 30+ slot=0 warnings + no NA damage; moved to Progress setter fixed all state-transition paths atomically. User-verified: NA damage restored, Console clean. Phase 2 Exit Criterion #6 (AnimationEvent Option A) promoted PARTIAL → PASS. Sprint 005 Must Have 10/10 PASS, Phase 2 Hercules pilot fully shipped, Phase 3 unblocked."
 
   # Should Have — Design decisions
   - id: "S5-11"

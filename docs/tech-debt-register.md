@@ -35,14 +35,13 @@ Each entry: ID, origin, description, impact, removal target, owner.
 - **Lessons learned**: 3rd surfacing this sprint of the "ADR specifies API + caller pair; only API lands" anti-pattern. Worth codifying in `control-manifest.md` per Sprint 005 retro.
 - **Owner**: gameplay-programmer
 
-## TD-006 — `ActorCombat.SetActiveSlot()` has no caller (gates S5-21 + Phase 3 Option A)
+## TD-006 — `ActorCombat.SetActiveSlot()` has no caller
 
 - **Origin**: S5-06 (2026-05-13) — surfaced by manual VFX playtest after initial implementation passed CR + 44/44 EditMode
-- **Status**: **HIGH PRIORITY** — blocks all slot-routed animation event migration
-- **Description**: ADR-0006 §6.2 specified that `ActorCombat.SetActiveSlot(byte slot)` would be "Updated via SetActiveSlot from ActorCombatAction input handlers when an ability triggers". S5-03 (P2-02) landed the API (`[Networked] byte m_ActiveSlot`, `GetActiveSlot()`, `SetActiveSlot()` with HasStateAuthority guard) but **the caller was never wired**. As a result `m_ActiveSlot` stays 0 for the entire match on every hero. Discovered during S5-06 playtest: VFX/SFX animation events were silently dropped because `GetActiveSlot()=0` → dual-path fallback fired → event dropped.
-- **Impact**: HIGH — S5-06 migration reverted (animation events functional again). Cannot land slot-routed animation events until SetActiveSlot writes are sprinkled into the ability press path (e.g., `ActorCombatAction.Enter()` or `OnPressButtons`). For legacy heroes (BoundSlot==0) need additional SkillKey→slot mapping to avoid the same drop.
-- **Mitigation candidate**: S5-21 (new story) — wire `Actor.Combat.SetActiveSlot(BoundSlot ?? SkillKeyToSlot(AbilityData.SkillKey))` into the press handler, then re-attempt the 43 shim migration as one atomic commit. EditMode test should include integration coverage (PlayMode harness with mocked input) to catch any future "API exists with no caller" gap.
-- **Removal target**: S5-21 (Sprint 005 or 006) — wire SetActiveSlot + re-land migration atomically.
+- **Status**: ✅ **RESOLVED** (2026-05-14, S5-21, delta-unity@claude/s5-21-setactiveslot-wiring)
+- **Description**: ADR-0006 §6.2 specified that `ActorCombat.SetActiveSlot(byte slot)` would be "Updated via SetActiveSlot from ActorCombatAction input handlers when an ability triggers". S5-03 (P2-02) landed the API but the caller was never wired. As a result `m_ActiveSlot` stayed 0 for the entire match on every hero. Discovered during S5-06 playtest: VFX/SFX animation events were silently dropped.
+- **Resolution**: S5-21 added `ResolveSlotFromSkillKey(SkillKey) → byte` static helper (8 cases: Q/W/E/R/A/I/Recall + Item→0) and wired `Actor.Combat.SetActiveSlot(slot)` into `ActorCombatAction.Progress` setter (line 402). Dual-path: BoundSlot if migrated (S5-04), else legacy SkillKey→slot map. After v1 attempt placed the call in `OnPressButtons` and broke Normal Attack (auto-target bypasses OnPressButtons by setting Progress=Attack1 directly at lines 2693/2770), v2 moved the call into the Progress setter — the single source of truth for state transitions. 40 AnimationEvent shims re-landed atomically. 116/116 EditMode tests pass; user-verified production playtest clean (NA damage restored, 0 "slot=0" warnings).
+- **Lessons learned**: When wiring is "called from N entry points", instrument at the central state-transition point (here: Progress setter), not at one of the entry points. v1's mistake was assuming all ability activations go through OnPressButtons — auto-attack doesn't.
 - **Owner**: gameplay-programmer
 
 ## TD-003 — Multi-skill chain race in `AnimationEvent.GetActiveSlot()` routing
