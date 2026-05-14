@@ -12,7 +12,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-14 (S5-22 Phase 2 lessons-learned doc — Phase 3 prep ready)"
+updated: "2026-05-14 (S5-12 deferred-to-S6-committed — briefing prepared, 4th carryover, no further defer permitted)"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -153,12 +153,12 @@ stories:
     name: "AI Bot fate decision (commit Sprint 006 OR descope post-launch)"
     file: "production/sprints/sprint-005.md"
     priority: should-have
-    status: backlog
+    status: deferred-to-S6-committed
     owner: "producer + creative-director"
     assignee: "tanapol"
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-05-14 — DEFERRED WITH HARD COMMITMENT to Sprint 006 Day-1. 4th carryover of AI Bot work (S2→S3→S4→S5→S6); Sprint 003 retro action #5 mandates no further defer. Briefing prepared at production/sprint-006-prep/S5-12-ai-bot-fate-briefing.md (~280 lines) with Path A (commit S6 full focus on S4-09+S4-10 ~3.0d) / Path B (descope to post-launch backlog, free S6 capacity for Phase 3 heroes) / Path C (cherry-pick MVP-critical pieces). Includes carryover history, current AI Bot state from GDD §3.7 (functional MVP via existing 11-state machine + Fuzzy Utility AI + AFK replacement), creative-director discussion prompts, and decision deliverables checklist. Sprint 006 plan MUST close S5-12 before any other work starts."
 
   - id: "S5-13"
     name: "Confirm 3 Garen variant controllers (legacy or production)"
