@@ -12,7 +12,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-14 (S5-21 close — TD-006 RESOLVED, Phase 2 Hercules pilot fully shipped, 10/10 Must Have PASS)"
+updated: "2026-05-14 (S5-22 Phase 2 lessons-learned doc — Phase 3 prep ready)"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -226,6 +226,17 @@ stories:
     estimate_days: 1.5
     blocker: ""
     completed: ""
+
+  - id: "S5-22"
+    name: "Codify Phase 2 lessons-learned in docs/architecture/phase-2-lessons-learned.md"
+    file: "production/sprints/sprint-005.md"
+    priority: nice-to-have
+    status: done
+    owner: "gameplay-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.25
+    blocker: ""
+    completed: "2026-05-14 — claude/s5-22-phase-2-lessons. NEW doc docs/architecture/phase-2-lessons-learned.md (5 patterns, ~280 lines): (1) Dual-path retention with slot-or-legacy guard — origins S5-04/S5-05/S5-09/S5-21; (2) Static-helper extraction for NetworkBehaviour testability — pattern from 4 static helpers in Sprint 005; (3) Central state-transition instrumentation — S5-21 v1→v2 fix lesson (Progress setter > OnPressButtons); (4) Server-authoritative networked writes — HasStateAuthority + Runner.IsServer guards; (5) API+caller pair audit — story-readiness gate to prevent TD-006/TD-007 anti-pattern (4 surfacings this sprint). Includes Phase 3 application checklist for ~20 remaining hero migrations. ADR README index linked. Living document — append as Phase 3 surfaces new lessons."
 
   # Bugs (filed during sprint)
   - id: "S5-19"

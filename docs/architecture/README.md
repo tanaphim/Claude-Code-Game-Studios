@@ -13,6 +13,10 @@
 | [ADR-0004](ADR-0004-actor-combat-action-skill-pipeline.md) | ActorCombatAction + SkillKey Skill Pipeline | Accepted | 2024-01-01 |
 | [ADR-0005](ADR-0005-item-animation-type-routing.md) | ItemAnimationType Per-Item Animation Routing | Accepted | 2026-04-03 |
 
+## Supporting Documents
+
+- [Phase 2 Lessons Learned](phase-2-lessons-learned.md) — 5 patterns from Sprint 005 Hercules migration (dual-path retention, static-helper extraction, central state-transition instrumentation, server-authoritative writes, API+caller pair audit). Required reading before starting Phase 3 hero migrations.
+
 ## การสร้าง ADR ใหม่
 
 ใช้ `/architecture-decision` skill หรือ copy template จาก
