@@ -77,6 +77,7 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 | S5-16 | Carry-forward S3-retro action #4: `origin/dev` merge cadence metric (track per Sprint 005) | lead-programmer | 0.25 | — | Metric defined; tracked starting Sprint 005 |
 | S5-17 (S4-P1) | `AbilityMultipeerRunner` duplicate-Start guard | network-programmer | 0.5 | — | Console clean ตอน multipeer harness run — ไม่มี GameIsFull cascade |
 | S5-18 (S4-P2) | `AbilityRegistry` boot-time optimization (Resources.LoadAll → Addressables) | unity-addressables-specialist | 1.5 | — | Cold-start scan < 100 ms / 158 prefabs |
+| S5-22 (Phase 2 retro) | Codify Phase 2 lessons-learned in `docs/architecture/phase-2-lessons-learned.md` | gameplay-programmer | 0.25 | S5-21 ✅ | 5 patterns documented (dual-path, static-helper, central instrumentation, server-auth, API+caller audit); ADR README index updated |
 
 **Nice to Have Subtotal: 2.75d** (pull only ถ้า Must + Should เสร็จเร็ว)
 
