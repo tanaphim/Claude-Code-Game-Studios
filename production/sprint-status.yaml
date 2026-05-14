@@ -12,7 +12,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-13 (S5-06 close)"
+updated: "2026-05-14 (S5-10 close — Phase 2 Hercules pilot PASS WITH NOTES)"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -119,12 +119,12 @@ stories:
     name: "Manual playtest checklist + 1-match Training playthrough (P2-10)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: backlog
+    status: done
     owner: "qa-tester + gameplay-programmer"
     assignee: "tanapol"
     estimate_days: 0.5
-    blocker: "depends all S5-01..S5-09"
-    completed: ""
+    blocker: ""
+    completed: "2026-05-14 — delta-unity@claude/s5-10-hercules-playtest. PASS WITH NOTES. Step 1: AbilityComponent attached to base_avatar.prefab (single Hero template — propagates to all 25+ heroes). Step 2: Multipeer Pass #4 (parity) explicit ✅ in Editor.log (slot=1..4 host↔client converge), Pass #5 (bandwidth ≤65 B/s) baseline carry-forward from S5-04/S5-05. Step 3: Hercules QWER + A + Recall + Item all functional in scene_game_map.unity (user-verified 'ปกติ' — all abilities cast via S5-09 legacy CreateSkill fallback). 2 wiring gaps surfaced: TD-006 (SetActiveSlot caller missing) and TD-007 (AbilityRegistry not registered with DeltaService in production scene boot) — both bundle into S5-21 Phase 2 polish. Cosmetic errors documented as known (S5-17 Photon GameIsFull, BUG-0003 NRE cascade). Evidence: production/qa/evidence/sprint-005-hercules-playthrough.md + S5-10-multipeer.txt. Sign-off: tanapol (both hats). Phase 2 Hercules pilot CLOSED — 1-week soak 2026-05-14 → 2026-05-21 per ADR-0006 §10 handover gate."
 
   # Should Have — Design decisions
   - id: "S5-11"

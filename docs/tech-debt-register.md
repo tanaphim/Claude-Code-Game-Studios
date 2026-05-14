@@ -25,6 +25,21 @@ Each entry: ID, origin, description, impact, removal target, owner.
 - **Removal target**: Phase 3 — SkillKey enum deletion + Hercules migration cleanup.
 - **Owner**: gameplay-programmer
 
+## TD-007 — `AbilityRegistry` not registered with `DeltaService` in production scene boot
+
+- **Origin**: S5-10 (2026-05-14) — surfaced during Hercules Training playthrough in `scene_game_map.unity`
+- **Status**: **HIGH PRIORITY** — pairs with TD-006; bundle into S5-21 Phase 2 polish
+- **Description**: S5-09 wired `ActorCombat.OnStartup` to call `AbilityComponent.BindSlot(slot, abilityId)` ×7 (Q/W/E/R/A/I/Recall) for Hero spawns. The new pipeline requires `AbilityRegistry` to be registered with `DeltaService` **before** Hero spawn. In production scene flow (`scene_game_map.unity`), this registration never happens (or happens after the spawn), so 7 BindSlot calls per hero fail with:
+  ```
+  [AbilityComponent] BindSlot('hercules_q'): AbilityRegistry not registered with DeltaService.
+                     For test harness scenes use BindSlotForTestHarness instead.
+  ```
+  Observed: 14 warnings per match (2 hero spawns × 7 slots) — Hercules + bot.
+- **Impact**: MEDIUM — Game is fully playable because S5-09 retained the legacy `CreateSkill` fallback per dual-path strategy. VFX/SFX/damage/animation all work via legacy path. However the new slot-binding pipeline (the whole point of Phase 2 §6.1 / ADR-0008) is **dormant in production**. ADR-0006 §3 Phase 2 Exit Criterion #5 ("`CBSAbility.Slot` source-of-truth wired") is satisfied at the API level (S5-01 aliases + S5-09 caller in code) but NOT end-to-end in scene flow.
+- **Mitigation candidate**: S5-21 (Phase 2 polish bundle) — locate `DeltaService` lifecycle in scene_initial → scene_login → scene_game_map boot chain, register `AbilityRegistry` before any Hero `OnStartup` fires. Likely a 1-line `DeltaService.Register<AbilityRegistry>(...)` insertion at the right initialization step. Integration test should spawn a Hero in scene_game_map and assert `AbilityComponent.Slots.Count == 7` post-Spawned.
+- **Removal target**: S5-21 (Sprint 005 polish OR early Sprint 006) — must ship before Phase 3 starts (handover gate "Hercules live ≥1 week with no slot bugs" assumes BindSlot path is actually live).
+- **Owner**: gameplay-programmer
+
 ## TD-006 — `ActorCombat.SetActiveSlot()` has no caller (gates S5-21 + Phase 3 Option A)
 
 - **Origin**: S5-06 (2026-05-13) — surfaced by manual VFX playtest after initial implementation passed CR + 44/44 EditMode

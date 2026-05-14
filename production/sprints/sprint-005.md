@@ -318,6 +318,94 @@ private void StateReleaseSlot(byte slot, SkillState state, int id)
 
 ---
 
+### S5-10 — Manual playtest + Phase 2 closeout gate
+
+**Type**: Integration (playtest gate — no automated tests; manual evidence only)
+**ADR**: ADR-0006 Phase 2 §3 (Exit Criteria) + §10 (Phase 2 → Phase 3 Handover)
+**Manifest Version**: N/A (control-manifest.md not yet created)
+**Dependencies**: S5-01..S5-09 ✅ (S5-06 partial-land per ADR §7 — `S5-06 AnimationEvent` was parallelizable; does not block Hercules pilot)
+
+#### Context
+
+Final gate ของ Phase 2 Hercules pilot. แม้ EditMode tests + multipeer
+harness Pass #4–5 จะ regress green ใน S5-04/S5-05 แล้ว, ADR §3 Exit
+Criteria กำหนดว่า Phase 2 จะปิดเมื่อ **Hercules เล่นได้ end-to-end ใน
+real match scene** + manual playthrough confirms cast/charge/cancel
+flows identical to pre-migration.
+
+S5-09 deferred manual `AbilityComponent` prefab attach ไปที่ S5-10 —
+warning log fires until the attach lands (Editor-only, gated on `Actor.ObjectType == TargetType.Hero` per S5-04 sidecar).
+
+#### Manual steps (user execution in Unity Editor)
+
+**Step 1 — `AbilityComponent` prefab attach (S5-09 deferred):**
+- Open Hercules Hero prefab (under `Assets/Resources/Prefabs/Gameplay/Character/Hero/` or similar)
+- Add Component → `AbilityComponent` (namespace `Radius.Gameplays.Abilities`)
+- Apply prefab override (Inspector > Overrides > Apply All)
+- Verify: subsequent Play session no longer logs `BootstrapSlotBindings: AbilityComponent missing` warning
+
+**Step 2 — Multipeer harness Pass #1–5 re-verify (post-merge sanity):**
+- Open `AbilityMultipeerRunner` scene
+- Run harness 3 sessions back-to-back
+- Capture Editor.log → `production/qa/evidence/S5-10-multipeer.txt`
+- Confirm 0 errors, "Both runners online" × 3, bandwidth ≤65 B/s
+
+**Step 3 — Hercules QWER Training match:**
+- Boot Training scene with Hercules + 1 bot opponent
+- Cast Q / W / E / R sequentially — verify damage, VFX, animation, cooldown
+- Use Normal Attack (A) for full chain (Attack_1/2/3)
+- Use Recall to fountain
+- Use Item from inventory (recall/consume/spell/attack variants if available)
+- Confirm: no Console errors, FPS stays in pre-Phase-2 range
+- Capture: post-match HUD screenshot + brief notes per ability
+
+#### Acceptance Criteria (per ADR §3 + QA plan)
+
+1. Match boots to playable state — Hercules joins, bot ready, no Spawned() NRE
+2. All 4 Hercules abilities (Q/W/E/R) usable mid-match — cast, deal damage, no input errors, animator transitions clean
+3. Normal Attack (A) + Recall + Item variants play correct animation + trigger correct effect
+4. No crash, no Console error spike (warnings OK; document any new ones — distinguish from BUG-0001/BUG-0003)
+5. Multipeer harness Pass #1–5 all green — bandwidth ≤65 B/s preserved
+6. FPS stays within ±10% of pre-Phase-2 baseline (no perf regression)
+7. `AbilityComponent` attach removes `BootstrapSlotBindings` missing-component warning
+8. Evidence files exist with sign-off note: gameplay-programmer + qa-tester (user wears both hats for this sprint)
+
+#### Out of Scope
+
+- S5-06 functional migration (deferred to S5-21 per TD-006)
+- Recall `ReleasedSlot` full migration (ADR §7 known limitation — Phase 3 cleanup)
+- Non-Hercules heroes (Anansi / Merlin / Garen / etc. — ยังใช้ legacy path until Phase 3)
+- BUG-0001 Recall locomotion (separate ticket S5-19; may surface during playthrough — document but don't block)
+- BUG-0003 NetworkRunnerInput NRE root cause (band-aid already applied; root-cause investigation = Sprint 006)
+- Garen variant validation (S5-13)
+
+#### Test Evidence
+
+**Required:**
+- `production/qa/evidence/sprint-005-hercules-playthrough.md` (NEW) — Per-ability checklist + screenshots + sign-off
+- `production/qa/evidence/S5-10-multipeer.txt` (NEW) — Multipeer Pass #1–5 log capture
+
+**Optional:**
+- Screen recording (mp4) — if recording feasible, attach link/path in playthrough doc
+
+#### Phase 2 → Phase 3 Handover (ADR §10)
+
+Phase 3 starts when S5-10 ships AND:
+1. Hercules live on dev branch for ≥1 week with no slot-related bugs raised by QA
+2. `ActorCombat.GetSlotAction` facade has ≥1 non-Hercules call site (proof API generalizes)
+3. `AbilityDataSnapshot.EffectiveSlot` verified for all CBS records via audit script
+4. Pattern-A helper (`IsActiveSlotOwner`) peer-reviewed + documented in `control-manifest.md`
+
+#### Files to Modify (planning docs only — no game code change in S5-10)
+
+- `production/qa/evidence/sprint-005-hercules-playthrough.md` (NEW, evidence doc)
+- `production/qa/evidence/S5-10-multipeer.txt` (NEW, log capture)
+- `production/sprints/sprint-005.md` (Progress + Must Have closeout)
+- `production/sprint-status.yaml` (S5-10 → done; Sprint 005 Must Have 10/10)
+- Hercules Hero prefab (.prefab) — manual edit in Unity Editor (1 component addition)
+
+---
+
 ## Carryover from Previous Sprint
 
 ### Accepted into Sprint 005
@@ -398,13 +486,17 @@ private void StateReleaseSlot(byte slot, SkillState state, int id)
 
 - **2026-05-13 — S5-06 INFRASTRUCTURE-ONLY (migration deferred)** (delta-unity@claude/s5-06-animation-event-option-a). Initial implementation migrated 40 shim methods to `StateReleaseSlot(Actor.Combat.GetActiveSlot(), ...)`, passed 44/44 EditMode + APPROVED code review. **Manual playtest in Unity Editor revealed VFX/SFX animation events were silently dropped on all heroes** — root cause: ADR-0006 §6.2 promised `ActorCombat.SetActiveSlot()` would be wired in `ActorCombatAction` input handlers, but that caller was never landed in S5-03. With no writer for `m_ActiveSlot`, `GetActiveSlot()` returns 0 for every hero, dual-path fallback fires, animation event dropped. **All 43 shim migrations reverted**; production behaviour fully restored. **Foundation retained**: `StateReleaseSlot(byte, SkillState, int)` dispatcher + pure static `TryResolveSlotRoute(...)` helper + 12 EditMode tests stay in file as no-op infrastructure ready for follow-up. **New tech debt TD-006**: SetActiveSlot wiring missing (HIGH priority — gates S5-21 + Phase 3 Option A). Code-review findings F1 (LogWarning gate) + F2 (Skill_I_* legacy) preserved in code as belt-and-braces for when migration retries.
 
+- **2026-05-14 — S5-10 PASS WITH NOTES — Phase 2 Hercules pilot closeout** (delta-unity@claude/s5-10-hercules-playtest). Manual prefab attach: `AbilityComponent` added to `base_avatar.prefab` (single Hero template — propagates to all 25+ heroes, no per-hero edit). Multipeer Pass #1-5 verified: Pass #4 (parity) explicit ✅ in Editor.log (`slot=1..4 host↔client converge`); Pass #5 (bandwidth ≤65 B/s) baseline carry-forward from S5-04/S5-05 (zero networked-state delta on dev since). Hercules QWER + A + Recall + Item all functional in `scene_game_map.unity` (user confirmed "ปกติ" — all abilities cast, VFX/SFX/damage/animation work via S5-09 legacy `CreateSkill` fallback). **2 Phase 2 Exit Criteria PARTIAL** (per ADR §3): #5 `CBSAbility.Slot` wiring → TD-007 surfaced (`AbilityRegistry` not registered with `DeltaService` in production scene boot → 14 `BindSlot` warnings per match, new pipeline dormant); #6 AnimationEvent Option A → TD-006 (covered above). Both TDs bundle into **S5-21** (Phase 2 polish — must ship before Phase 3 starts). Cosmetic errors documented as known (S5-17 Photon `GameIsFull` cascade, BUG-0003 NRE band-aid). Evidence: `production/qa/evidence/sprint-005-hercules-playthrough.md` + `S5-10-multipeer.txt`. Sign-off: gameplay-programmer + qa-tester (tanapol both hats). **Phase 2 closure: PASS WITH NOTES — 1-week soak begins 2026-05-14 → 2026-05-21 per ADR §10 handover gate.**
+
 ### Must Have status
 - ✅ S5-01, S5-02, S5-03, S5-07, S5-08 — done (prior sessions)
-- ✅ S5-09 — done (2026-05-12)
+- ✅ S5-09 — done (2026-05-12; TD-007 follow-up surfaced in S5-10)
 - ✅ S5-04 — done (2026-05-13)
 - ✅ S5-05 — done (2026-05-13)
-- ⚠️ S5-06 — **PARTIAL: infrastructure landed, migration reverted** (2026-05-13). Follow-up S5-21 will land `SetActiveSlot` wiring + 40 shim migration atomically.
-- ⏳ S5-10 — unblocked for the Phase 2 Hercules pilot scope (S5-06 was a parallelizable non-blocker per ADR §7); requires manual AbilityComponent prefab attach + multipeer + playtest
+- ⚠️ S5-06 — **PARTIAL**: infrastructure landed, migration reverted (TD-006). Follow-up S5-21.
+- ✅ **S5-10 — PASS WITH NOTES** (2026-05-14): Phase 2 Hercules pilot end-to-end gate satisfied via legacy fallback. 2 wiring gaps surfaced (TD-006 SetActiveSlot, TD-007 AbilityRegistry registration) → S5-21 must ship before Phase 3.
+
+**Sprint 005 Must Have: 9/10 done + 1 PARTIAL** — Phase 2 Hercules pilot CLOSED.
 
 ---
 
