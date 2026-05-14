@@ -12,7 +12,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-14 (S5-13 Garen variants RESOLVED — 4 orphan controllers deleted; S5-11 + S5-12 deferred-to-S6 with briefings prepared)"
+updated: "2026-05-14 (S5-19 BUG-0001 RESOLVED via AnimatorStateSync stale-hash fix; S5-13 Garen variants RESOLVED; S5-11/S5-12 deferred-to-S6 with briefings)"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -243,12 +243,12 @@ stories:
     name: "BUG-0001 — Recall post-warp locomotion animation ไม่เล่น"
     file: "production/qa/bugs/BUG-0001-recall-locomotion-stuck.md"
     priority: bug
-    status: backlog
+    status: done
     owner: "gameplay-programmer + technical-artist"
     assignee: "tanapol"
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-05-14 — RESOLVED via delta-unity PR #357 (merged). Root cause: AnimatorStateSync.SynchronizeStates() skipped writing _state when host entered Idle/Run but never cleared the prior ability StateHash, leaving stale data that client peers force-replayed via Animator.Play() on Render ticks. Fix: clear StateHash to 0 when entering Idle/Run (client UpdateStates already skips StateHash==0). Single source-of-truth fix at root — likely closes cousin bugs (GuanYuE/HorusE/HorusR/VolundW) flagged in BUG-0002 fix commit, pending ad-hoc verification. Playtest verified by tanapol: F3 (Recall + WASD spam) PASS, F4 (hold direction pre-warp) PASS, Anansi W regression (BUG-0002 fix) PASS. Bandwidth +12 bytes/ability-end (negligible vs 65 B/s). Forensic diagnosis PR #44 (Delta-Project) merged before fix PR. Final time: ~0.3d (under 0.5d estimate)."
 
   - id: "S5-20"
     name: "BUG-0002 — Anansi W ค้างท่า Idle หลัง cast จบ"
