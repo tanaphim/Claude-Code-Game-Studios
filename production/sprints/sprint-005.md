@@ -51,10 +51,11 @@ schedule) ที่ Sprint 004 retro flag ไว้ — เพื่อ unblock 
 | S5-08 (P2-08) | `HerculesWAction` slot-indexed sibling reads (5 sites) | gameplay-programmer | 0.25 | S5-02 | 5 sibling reads use GetSlotAction; behavior unchanged |
 | S5-09 (P2-09, revised ADR-0008) | `Hercules` avatar bootstrap — `ActorCombat.OnStartup` reads `unit.SlotQ[0]..SlotI[0]` from CBSUnit and calls `AbilityComponent.BindSlot(slot, id)` × 6 (Q/W/E/R/A/I); slot 7 Recall bound globally | gameplay-programmer | 0.5 | S5-01 | 6 BindSlot calls in OnStartup, all reading from CBSUnit aliases (no hardcoded ability ids); PeerMode=Single playtest no errors |
 | S5-10 (P2-10) | Manual playtest checklist + 1-match Training playthrough verification | qa-tester + gameplay-programmer | 0.5 | all S5-01..S5-09 | Hercules QWER playable end-to-end; multipeer harness passes; evidence in `production/qa/evidence/` |
+| S5-21 (P2-polish) | TD-006 SetActiveSlot wiring + S5-06 40-shim re-migration (atomic) | gameplay-programmer | 0.25 | S5-06 ✅, S5-10 ✅ | `ResolveSlotFromSkillKey` helper + `OnPressButtons` SetActiveSlot call + 40 shims migrated; EditMode tests pass; production playtest 0 regressions; ships before Phase 3 kickoff 2026-05-21 |
 
-**Must Have Subtotal: 3.75d** (~2.0d critical path serial; rest parallelizable)
+**Must Have Subtotal: 4.0d** (~2.0d critical path serial; rest parallelizable)
 
-**Critical path:** S5-01 → S5-04 → S5-09 → S5-10
+**Critical path:** S5-01 → S5-04 → S5-09 → S5-10 → S5-21 (Phase 3 unlock)
 **Parallelizable:** S5-02, S5-03, S5-06, S5-07, S5-08
 
 ### Should Have — Design decisions (Sprint 004 retro action #2, #3, #5)
@@ -318,6 +319,166 @@ private void StateReleaseSlot(byte slot, SkillState state, int id)
 
 ---
 
+### S5-21 — TD-006 SetActiveSlot wiring + S5-06 40-shim re-migration
+
+**Type**: Logic (Phase 2 polish — must ship before Phase 3 starts 2026-05-21)
+**ADR**: ADR-0006 Phase 2 §6.2 (Option A) + §3 Exit Criterion #6 (AnimationEvent)
+**Manifest Version**: N/A (control-manifest.md not yet created)
+**Dependencies**: S5-06 ✅ (infrastructure landed PR #351), S5-10 ✅ (TD-007 resolved, BindSlot pipeline live)
+
+#### Context
+
+S5-06 landed `StateReleaseSlot` dispatcher + `TryResolveSlotRoute` pure helper + 12 tests as **infrastructure-only** because the 40-shim migration broke production VFX. Root cause (TD-006): ADR-0006 §6.2 promised `ActorCombat.SetActiveSlot()` would be wired in `ActorCombatAction` input handlers, but the caller was never landed in S5-03. With no writer for `m_ActiveSlot`, `GetActiveSlot()` returns 0 → dispatcher dual-path fallback drops every animation event in shipping builds.
+
+S5-21 closes the gap: **wire the caller, then re-land the 40-shim migration atomically**.
+
+#### Key code locations (from survey)
+
+- `Assets/GameScripts/Gameplays/Characters/ActorCombatAction.cs:511` — `[Networked] byte BoundSlot { get; private set; }` (S5-04 added)
+- `Assets/GameScripts/Gameplays/Characters/ActorCombatAction.cs:2222` — `OnPressButtons(InputMessage input)` — central press handler, 5 call sites (B1/B2/B3/D/B4 from S5-05). **Insertion point for SetActiveSlot.**
+- `Assets/GameScripts/Gameplays/Characters/ActorCombat.cs:131` — `GetSlotAction(byte)` facade with slot mapping (1=Q, 2=W, 3=E, 4=R, 5=A, 6=I, 7=Recall).
+- `Assets/GameScripts/Gameplays/Characters/ActorCombat.cs:233` — `SetActiveSlot(byte)` — has `HasStateAuthority` guard.
+- `Assets/GameScripts/Gameplays/Characters/AnimationEvent.cs:167` — `StateReleaseSlot` dispatcher (no-op infrastructure from PR #351).
+- `Assets/GameScripts/Gameplays/Characters/AnimationEvent.cs:213-303` — 43 shim methods (currently 40 on legacy + 3 Skill_I_* on legacy per F2 retention).
+
+#### Implementation
+
+**Step 1 — Add `ResolveSlotFromSkillKey` static helper** (`ActorCombatAction.cs`, near other Resolve* helpers):
+
+```csharp
+/// <summary>
+/// Maps a <see cref="SkillKey"/> to its corresponding slot index for legacy
+/// (unmigrated) heroes whose <see cref="BoundSlot"/> is still 0. Slot indexing
+/// matches <see cref="ActorCombat.ResolveSlotAction"/> (1=Q, 2=W, 3=E, 4=R,
+/// 5=A, 6=I, 7=Recall). Returns 0 for SkillKey.Item / None.
+/// Phase 3: delete when SkillKey enum is retired (ADR-0006 §10).
+/// </summary>
+public static byte ResolveSlotFromSkillKey(SkillKey key) => key switch
+{
+    SkillKey.Q => 1,
+    SkillKey.W => 2,
+    SkillKey.E => 3,
+    SkillKey.R => 4,
+    SkillKey.A => 5,
+    SkillKey.I => 6,
+    SkillKey.Recall => 7,
+    _ => 0,
+};
+```
+
+**Step 2 — Wire SetActiveSlot in `OnPressButtons`** (`ActorCombatAction.cs:2222`, at top of method):
+
+```csharp
+protected void OnPressButtons(InputMessage input)
+{
+    // S5-21 (TD-006 fix): Update active slot for animation event routing.
+    // Dual-path: BoundSlot if migrated (S5-04 SetBoundSlot via ISlotBinder),
+    // else legacy SkillKey→slot map for unmigrated heroes. Phase 3: drop the
+    // legacy fallback when SkillKey enum is retired (ADR-0006 §10).
+    var slot = BoundSlot != 0 ? BoundSlot : ResolveSlotFromSkillKey(AbilityData.SkillKey);
+    if (slot != 0) Actor.Combat.SetActiveSlot(slot);
+
+    // ... existing body unchanged ...
+}
+```
+
+**Step 2 REVISED (post-v1 regression, 2026-05-14):** Initial plan above placed SetActiveSlot in `OnPressButtons`, but Unity playtest revealed that **Normal Attack auto-target flow sets `Progress = SkillState.Attack1` directly at lines 2693/2770 — bypassing `OnPressButtons` entirely** → m_ActiveSlot stayed 0 for Normal Attack → 30+ "slot=0" warnings + no damage popups.
+
+The fix: move SetActiveSlot into the `Progress` setter (line 402) — single source of truth for "ability is now active". Every state transition path (manual press, auto-attack, R-charge release, passive triggers) writes through it. Server-only guard (`Runner.IsServer`) already in place.
+
+```csharp
+public SkillState Progress
+{
+    set
+    {
+        if (Object == null || !Object.IsValid) return;
+        if (m_Progress == value) return;
+        if (Runner.IsServer)
+        {
+            m_Progress = value;
+
+            // S5-21 (TD-006 fix): Update active slot whenever ability transitions
+            // to a non-None state. Catches auto-attack path that bypasses
+            // OnPressButtons. Skip None so late animation events still route.
+            if (value != SkillState.None && AbilityData != null)
+            {
+                var activeSlot = BoundSlot != 0
+                    ? BoundSlot
+                    : ResolveSlotFromSkillKey(AbilityData.SkillKey);
+                if (activeSlot != 0) Actor.Combat.SetActiveSlot(activeSlot);
+            }
+        }
+    }
+}
+```
+
+`OnPressButtons` keeps a 3-line comment pointing at the Progress setter — no behavioural change in OnPressButtons.
+
+**Step 3 — Re-land 40-shim migration in `AnimationEvent.cs`** (lines 213-303):
+
+- Flip 40 shim bodies from `StateRelease(SkillKey.X, ...)` → `StateReleaseSlot(Actor.Combat.GetActiveSlot(), ...)`
+- **Retain** 3 Skill_I_* shims on legacy `StateRelease(SkillKey.I, ...)` (F2 — passive has no `OnPressButtons` call path, so SetActiveSlot never fires for slot 6)
+- **Retain** 4 Item aliases unchanged (they route through `Skill_Item_Perform` which IS one of the 40)
+- **Remove** S5-06 inline comment "S5-06 scope revert" — replace with concise S5-21 done note
+
+#### Acceptance Criteria
+
+1. **`ResolveSlotFromSkillKey(SkillKey) → byte` static helper** added with 7 active cases + default 0 fallback. Pure function, zero Unity deps, EditMode-testable.
+2. **`OnPressButtons` calls `Actor.Combat.SetActiveSlot(slot)`** at top of method, with dual-path slot resolution (BoundSlot first, else SkillKey map fallback).
+3. **40 shim methods migrated** in `AnimationEvent.cs` to `StateReleaseSlot(Actor.Combat.GetActiveSlot(), ...)`. 3 Skill_I_* + 4 Item aliases + `Attack_Event` (empty) unchanged.
+4. **EditMode tests pass** — new `ActorCombatActionSlotResolverTests.cs` (8 cases: Q/W/E/R/A/I/Recall + Item-returns-0). Existing 108 tests stay green.
+5. **No production-breaking regression**: VFX/SFX/animation events fire correctly in `scene_game_map.unity` for Hercules QWER + A + Recall + Item. 14 BindSlot warnings → still 0 (TD-007 fix from S5-10 stays effective).
+6. **No animator clip touches** — 43 method names preserved.
+7. **Multipeer Pass #1–5 still green** — bandwidth ≤65 B/s preserved (no new networked-state added; SetActiveSlot is an existing networked write).
+
+#### Out of Scope
+
+- Removing legacy `StateRelease(SkillKey, ...)` method (Phase 3 cleanup — still called by 3 Skill_I_* and as dispatch target from `StateReleaseSlot`)
+- Migrating `AddReleaseEvent(SkillKey, ...)` registration API to slot-based (Phase 3)
+- Touching `OnEnter`/`OnExit` SkillKey signatures (Phase 3)
+- Removing `SkillKey` enum (Phase 3/4)
+- PlayMode test framework for Fusion NetworkBehaviour (Sprint 006 candidate — too expensive for this story)
+- Bot input path SetActiveSlot — `BotActor.Auto/WithTarget` already populates `PressedSlot` per S5-05 fix; if bots route through `OnPressButtons` too, they get SetActiveSlot for free. If not, defer to Sprint 006 polish.
+
+#### Test Evidence
+
+**Required:**
+- EditMode tests: `Assets/UnitTests/TestEditMode/ActorCombatActionSlotResolverTests.cs` (NEW, 8 cases)
+- Manual playthrough: confirm `scene_game_map.unity` Console has 0 `BindSlot not registered` warnings (was the TD-007 fix from S5-10) and no new error/warning spikes.
+- Multipeer log capture: `production/qa/evidence/S5-21-multipeer.txt` — Pass #1–5
+
+**Optional:**
+- Extend `AbilityMultipeerRunner` parity check to assert `m_ActiveSlot` updates after simulated press (≤15 min effort; surfaces same regression if it reoccurs)
+
+#### Performance Impact
+
+Negligible. `OnPressButtons` is called once per ability press (~10 Hz max per player). Adding 1 byte field write + 1 enum switch is sub-microsecond. `[Networked]` write replicates at Fusion tick rate (~30 Hz) — bandwidth delta ≤2 B/s (already accounted for in S5-04 Pass #5 budget).
+
+#### Files to Modify
+
+- `Assets/GameScripts/Gameplays/Characters/ActorCombatAction.cs` (~12 lines added: helper + OnPressButtons insertion)
+- `Assets/GameScripts/Gameplays/Characters/AnimationEvent.cs` (40 shim bodies + 1 comment block replaced)
+- `Assets/UnitTests/TestEditMode/ActorCombatActionSlotResolverTests.cs` (NEW, ~80 lines)
+
+#### Dual-Path Strategy & Phase 3 Removal
+
+Two dual-paths exist after this story:
+1. **OnPressButtons slot resolution**: `BoundSlot != 0 ? BoundSlot : ResolveSlotFromSkillKey(AbilityData.SkillKey)`
+   - Removal: Phase 3 hero migration drains BoundSlot=0 heroes → fallback unused → delete legacy branch.
+2. **AnimationEvent.StateReleaseSlot fallback**: `slot != 0 ? route : warn` (LogWarning gated under `#if UNITY_EDITOR || DEVELOPMENT_BUILD` per S5-06 F1)
+   - Removal: Phase 3 same trigger — when BoundSlot=0 is impossible, this branch is dead.
+
+#### Risks
+
+- **R1**: Multi-skill chain race (Q animation frame fires after W pressed → reads slot=2 not slot=1).
+  **Mitigation**: Documented as TD-003 (Phase 3 candidate — single-slot tracker by design). Multipeer + manual playtest confirms current cast cadence (~10 Hz max) doesn't trigger the race in practice.
+- **R2**: `BotActor` input path doesn't route through `OnPressButtons` → bot abilities silently broken.
+  **Mitigation**: Verify in manual playtest that bot Hercules (vs human Hercules) animations + damage fire. If gap, scope expand or revert.
+- **R3**: `AbilityData == null` at `OnPressButtons` entry → NRE in `ResolveSlotFromSkillKey(AbilityData.SkillKey)`.
+  **Mitigation**: Existing code at `OnPressButtons:2225` already dereferences `AbilityData.SkillKey` — so this NRE path was already present pre-S5-21. No new risk.
+
+---
+
 ### S5-10 — Manual playtest + Phase 2 closeout gate
 
 **Type**: Integration (playtest gate — no automated tests; manual evidence only)
@@ -486,6 +647,8 @@ Phase 3 starts when S5-10 ships AND:
 
 - **2026-05-13 — S5-06 INFRASTRUCTURE-ONLY (migration deferred)** (delta-unity@claude/s5-06-animation-event-option-a). Initial implementation migrated 40 shim methods to `StateReleaseSlot(Actor.Combat.GetActiveSlot(), ...)`, passed 44/44 EditMode + APPROVED code review. **Manual playtest in Unity Editor revealed VFX/SFX animation events were silently dropped on all heroes** — root cause: ADR-0006 §6.2 promised `ActorCombat.SetActiveSlot()` would be wired in `ActorCombatAction` input handlers, but that caller was never landed in S5-03. With no writer for `m_ActiveSlot`, `GetActiveSlot()` returns 0 for every hero, dual-path fallback fires, animation event dropped. **All 43 shim migrations reverted**; production behaviour fully restored. **Foundation retained**: `StateReleaseSlot(byte, SkillState, int)` dispatcher + pure static `TryResolveSlotRoute(...)` helper + 12 EditMode tests stay in file as no-op infrastructure ready for follow-up. **New tech debt TD-006**: SetActiveSlot wiring missing (HIGH priority — gates S5-21 + Phase 3 Option A). Code-review findings F1 (LogWarning gate) + F2 (Skill_I_* legacy) preserved in code as belt-and-braces for when migration retries.
 
+- **2026-05-14 — S5-21 COMPLETE — TD-006 closed, Phase 2 fully shipped** (delta-unity@claude/s5-21-setactiveslot-wiring). Wired `Actor.Combat.SetActiveSlot()` into the `Progress` setter (single source of truth for state transitions) + added `ResolveSlotFromSkillKey` static helper (8 cases: Q/W/E/R/A/I/Recall + Item→0) + re-landed 40-shim migration in `AnimationEvent.cs` (3 Skill_I_* + 4 Item aliases retained on legacy per F2 + alias chain). **v2 fix learning**: initial v1 placed SetActiveSlot in `OnPressButtons`, but playtest revealed Normal Attack auto-target sets `Progress = SkillState.Attack1` directly at lines 2693/2770 — bypassing OnPressButtons → 30+ "slot=0" warnings + no NA damage. Moving to Progress setter caught all state-transition paths atomically. 8 new EditMode tests pass (116/116 in `Radius.Tests.Characters`); user-verified post-fix: Normal Attack damage restored, Console clean of `[S5-06] StateReleaseSlot ... slot=0` warnings, Hercules QWER all functional. **TD-006 RESOLVED**. Phase 2 Hercules pilot now fully shipped — Phase 2 Exit Criterion #6 (AnimationEvent Option A) ✅ promoted from PARTIAL to PASS.
+
 - **2026-05-14 — S5-10 PASS — Phase 2 Hercules pilot closeout** (delta-unity@claude/s5-10-hercules-playtest, PR #353). Manual prefab attach: `AbilityComponent` added to `base_avatar.prefab` (single Hero template — propagates to all 25+ heroes, no per-hero edit). Multipeer Pass #1-5 verified: Pass #4 (parity) explicit ✅ in Editor.log (`slot=1..4 host↔client converge`); Pass #5 (bandwidth ≤65 B/s) baseline carry-forward from S5-04/S5-05 (zero networked-state delta on dev since). Hercules QWER + A + Recall + Item all functional in `scene_game_map.unity` (user confirmed "ปกติ" via S5-09 dual-path). **Pre-merge fix landed (2026-05-14)**: TD-007 surfaced during playtest (14 `BindSlot` warnings/match — `AbilityRegistry` not in `DeltaService.Services` list). Resolved by creating `Assets/Resources/Prefabs/Data/Services/AbilityRegistryService.prefab` (via Unity Editor) and adding to `DeltaConfiguration.Services` (12 → 13). Verified: 14 warnings → 0; Phase 2 Exit Criterion #5 now fully satisfied end-to-end (production scene exercises S5-09 BindSlot pipeline, was previously legacy-fallback-only). **TD-006** (SetActiveSlot caller missing) remains → S5-21 for AnimationEvent 40-shim migration retry. Cosmetic errors documented as known (S5-17 Photon `GameIsFull` cascade, BUG-0003 NRE band-aid). Evidence: `production/qa/evidence/sprint-005-hercules-playthrough.md` + `S5-10-multipeer.txt`. Sign-off: gameplay-programmer + qa-tester (tanapol both hats). **Phase 2 closure: PASS — 1-week soak begins 2026-05-14 → 2026-05-21 per ADR §10 handover gate.**
 
 ### Must Have status
@@ -493,10 +656,11 @@ Phase 3 starts when S5-10 ships AND:
 - ✅ S5-09 — done (2026-05-12; TD-007 follow-up surfaced in S5-10)
 - ✅ S5-04 — done (2026-05-13)
 - ✅ S5-05 — done (2026-05-13)
-- ⚠️ S5-06 — **PARTIAL**: infrastructure landed, migration reverted (TD-006). Follow-up S5-21.
-- ✅ **S5-10 — PASS** (2026-05-14): Phase 2 Hercules pilot end-to-end gate satisfied. TD-007 (`AbilityRegistry` registration) fixed pre-merge; new pipeline now exercised in production. TD-006 (SetActiveSlot caller missing) remains → S5-21 for AnimationEvent 40-shim retry.
+- ⚠️ S5-06 — infrastructure landed (PR #351); 40-shim migration completed in S5-21.
+- ✅ **S5-10 — PASS** (2026-05-14): Phase 2 Hercules pilot end-to-end gate satisfied. TD-007 fixed pre-merge.
+- ✅ **S5-21 — COMPLETE** (2026-05-14): TD-006 RESOLVED. SetActiveSlot wired in Progress setter (single source of truth); 40-shim migration landed atomically. Phase 2 Exit Criterion #6 (AnimationEvent Option A) promoted PARTIAL → PASS.
 
-**Sprint 005 Must Have: 9/10 done + 1 PARTIAL** — Phase 2 Hercules pilot CLOSED.
+**Sprint 005 Must Have: 10/10 PASS** ✅ — Phase 2 Hercules pilot fully shipped. Phase 3 unblocked.
 
 ---
 
