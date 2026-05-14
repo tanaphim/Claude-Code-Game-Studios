@@ -12,7 +12,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-14 (S5-12 deferred-to-S6-committed — briefing prepared, 4th carryover, no further defer permitted)"
+updated: "2026-05-14 (S5-11 + S5-12 deferred-to-S6 batch — both briefings prepared; S5-12 is 4th carryover with hard commitment)"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -139,15 +139,15 @@ stories:
 
   # Should Have — Design decisions
   - id: "S5-11"
-    name: "Item Role Restriction decision (R-21) + ADR-0008"
+    name: "Item Role Restriction decision (R-21) + ADR (note: was 'ADR-0008' in original plan but ADR-0008 now used for slot binding — new ADR will be ADR-0009)"
     file: "production/sprints/sprint-005.md"
     priority: should-have
-    status: backlog
+    status: deferred-to-S6
     owner: "game-designer + gameplay-programmer"
     assignee: "tanapol"
     estimate_days: 1.0
     blocker: ""
-    completed: ""
+    completed: "2026-05-14 — DEFERRED to Sprint 006 Day-1. 1st carryover (ahead of 3-carryover threshold but should not slip again). Briefing prepared at production/sprint-006-prep/S5-11-r-21-item-role-restriction-briefing.md with Path A (implement gating: AvailableToPurchase + Shop UI filter + 158-item designer fill, 1.0d) / Path B (remove dead field: delete Positions schema + commented UI, 0.35d, MVP-friendly) / Path C (soft hint badge only, 0.5d, ambiguity risk). Decide before or alongside S5-12 — S5-12 Path A bot logic depends on S5-11 outcome. Closes risk register R-21 + Sprint 004 retro action #2."
 
   - id: "S5-12"
     name: "AI Bot fate decision (commit Sprint 006 OR descope post-launch)"
