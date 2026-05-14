@@ -392,11 +392,13 @@ CraftPrice = ItemFullPrice - Σ(ComponentPrice สำหรับชิ้นส
   Bool parameter `Item_Viable` มีอยู่แล้วใน `RadiusBasicLocomotion.controller`.
   `GetViable(SkillKey.Item)` / `SetViable(SkillKey.Item, true/false)` ทำงาน
   โดยไม่ error สำหรับทุก hero ที่ override จาก base นี้
-- ⚠️ **Garen variant controllers gap** (S4-01, 2026-05-08): 3 override
-  controllers ใช้ `GameCreator/CompleteLocomotion.controller` (plugin) เป็น
-  base — **ไม่มี item states และไม่มี `Item_Viable` parameter**:
-  `GarenCompleteLocomotion`, `GarenButKingArthurCompleteLocomotion`,
-  `GarenButXinZhoaCompleteLocomotion`. ชื่อแบบ "GarenBut*" สื่อว่าเป็น
-  hybrid prototypes (legacy test). Action: (a) confirm ว่าไม่ใช่ production
-  hero แล้วพิจารณาลบ; (b) ถ้ายังใช้ → swap base เป็น `RadiusBasicLocomotion`
-  หรือ port states เข้า `CompleteLocomotion.controller`. Defer ไป Sprint 005+
+- ✅ **Garen variant controllers — RESOLVED** (S5-13, 2026-05-14): 4 orphan
+  override controllers ลบทิ้งทั้งหมด — `GarenCompleteLocomotion`,
+  `GarenButAthenaCompleteLocomotion`, `GarenButKingArthurCompleteLocomotion`,
+  `GarenButXinZhoaCompleteLocomotion`. หลักฐาน: (a) Garen ไม่มีอยู่ใน
+  `Assets/GameData/Heros/` (production hero roster ไม่มี Garen); (b) GUID
+  grep ทั่ว project — ไม่มี prefab/scene/script ใดอ้างอิงทั้ง 4 GUID;
+  (c) ใช้ base `GameCreator/CompleteLocomotion.controller` ที่ผิดอยู่แล้ว
+  (production heroes 22/25 ใช้ `RadiusBasicLocomotion`). ถ้าอนาคต Garen
+  กลับมาเป็น production hero → สร้าง override ใหม่จาก `RadiusBasicLocomotion`
+  base (สืบทอด item states + `Item_Viable` parameter อัตโนมัติ)
