@@ -5,10 +5,11 @@
 **ID**: BUG-0001
 **Severity**: S3-Minor
 **Priority**: P2-Next Sprint
-**Status**: Open — Diagnosed (awaiting Editor repro for targeted fix)
+**Status**: **Resolved** (Sprint 005 S5-19, 2026-05-14)
 **Reported**: 2026-05-11
 **Reporter**: Tanapol Aekprapu
 **Investigation update**: 2026-05-14 (Sprint 005 S5-19)
+**Resolution**: delta-unity PR #357 merged 2026-05-14 — playtest F3/F4 + Anansi W regression PASS
 
 ## Classification
 - **Category**: Visual / Gameplay
@@ -116,3 +117,59 @@ Same client-peer cleanup gap pattern อาจมีใน:
 
 - **ทางหลัก**: รอ reporter (Tanapol) repro 1 ครั้งใน Editor + capture screenshots → ผู้ดูแลทำ targeted fix (~0.3d เพิ่ม)
 - **ทางสำรอง**: Defer ไป Sprint 006 รวมกับ cleanup-pattern audit (GuanYuE/HorusE/HorusR/VolundW) เป็น batch task
+
+---
+
+## Resolution 2026-05-14 (Sprint 005 S5-19)
+
+**Fix shipped**: [delta-unity PR #357](https://github.com/radiuszon/delta-unity/pull/357) — merged 2026-05-14
+
+### Actual root cause (confirmed by playtest)
+
+`AnimatorStateSync.SynchronizeStates()` intentionally skipped writing `_state.States` when host
+was in Idle/Run (lines 138-140 pre-fix) — locomotion is driven locally per peer to avoid
+continuous NormalizedTime sync. But the **previously written ability StateHash was never
+cleared**, leaving stale data in networked state.
+
+On client peers (`Runner.IsClient && !HasInputAuthority`), `UpdateStates()` reads the stale
+hash every Render tick. If the client's local animator already transitioned to Run (input-driven),
+`localHash != stateHash` → `stateChanged=true` → `Animator.Play(stale ability hash, ...)` force-replays
+the finished ability state, masking the locomotion blend tree.
+
+**Intermittency explained**: race between client's local input-driven transition and the next
+Render() tick. If local animator hasn't transitioned yet → skip force replay → escapes.
+If it has → re-pinned to stale state → stuck.
+
+### Fix
+
+Single source-of-truth fix in `AnimatorStateSync.SynchronizeStates()` (delta-unity@32e154d43a):
+when host enters Idle/Run, clear stored `StateHash` to 0. Client's `UpdateStates()` already skips
+`stateHash == 0` (line 170), releasing the client animator to its own input-driven locomotion path.
+Guarded by `existing.StateHash != 0` to avoid spamming networked state every tick.
+
+**Bandwidth cost**: +12 bytes per ability-end transition (Photon Fusion delta compression on
+single `StateData` slot + SyncTick). Negligible vs 65 B/s budget.
+
+### Playtest verification (2026-05-14)
+
+- ✅ **F3** Recall + WASD spam during channel → locomotion plays normally post-warp
+- ✅ **F4** Hold direction 0.5s before warp completes → no stick
+- ✅ **Anansi W regression** (BUG-0002 fix) → still cleans up correctly on client
+- (Smoke tests Hercules QWER, other heroes — not formally captured but no new bugs reported)
+
+### Cousin bugs — likely resolved by the same fix
+
+Per BUG-0002 fix commit message (`91697bf78e`), same client-peer cleanup gap pattern was
+suspected in: **GuanYuE, HorusE, HorusR, VolundW**.
+
+Because the AnimatorStateSync fix is at the root (every ability that ends in Idle/Run),
+all of these are **expected to be resolved** by the same PR. **Not formally verified** —
+needs ad-hoc playtest as those abilities are encountered in normal play. File a new bug
+if any of them still stick post-S5-19.
+
+### Tech debt note
+
+`HasAnyLayerStateHashChanged()` still returns true while host is in Run (current Run hash
+≠ stored 0), which keeps `_pendingEventSyncTicks` retry loop futilely firing every auto-sync
+interval (2s) with no actual network writes. CPU cost is small but non-zero. Considered out
+of scope for BUG-0001 — file a separate optimization task if profiling shows it matters.
