@@ -12,7 +12,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-13 (S5-06 close)"
+updated: "2026-05-14 (S5-10 close + TD-007 fix — Phase 2 Hercules pilot PASS)"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -119,12 +119,12 @@ stories:
     name: "Manual playtest checklist + 1-match Training playthrough (P2-10)"
     file: "production/sprints/sprint-005.md"
     priority: must-have
-    status: backlog
+    status: done
     owner: "qa-tester + gameplay-programmer"
     assignee: "tanapol"
     estimate_days: 0.5
-    blocker: "depends all S5-01..S5-09"
-    completed: ""
+    blocker: ""
+    completed: "2026-05-14 — delta-unity@claude/s5-10-hercules-playtest (PR #353). PASS. Step 1: AbilityComponent attached to base_avatar.prefab (single Hero template — propagates to all 25+ heroes). Step 2: Multipeer Pass #4 (parity) explicit ✅ in Editor.log (slot=1..4 host↔client converge), Pass #5 (bandwidth ≤65 B/s) baseline carry-forward from S5-04/S5-05. Step 3: Hercules QWER + A + Recall + Item all functional in scene_game_map.unity (user-verified 'ปกติ'). Pre-merge fix: TD-007 (AbilityRegistry not registered with DeltaService) resolved by creating AbilityRegistryService.prefab via Unity Editor + adding to DeltaConfiguration.Services list (12→13). 14 BindSlot warnings/match → 0; Phase 2 Exit Criterion #5 now fully satisfied end-to-end. TD-006 (SetActiveSlot caller missing) remains → S5-21 for AnimationEvent 40-shim retry. Cosmetic errors documented as known (S5-17 Photon GameIsFull, BUG-0003 NRE cascade). Evidence: production/qa/evidence/sprint-005-hercules-playthrough.md + S5-10-multipeer.txt. Sign-off: tanapol (both hats). Phase 2 Hercules pilot CLOSED — 1-week soak 2026-05-14 → 2026-05-21 per ADR-0006 §10 handover gate."
 
   # Should Have — Design decisions
   - id: "S5-11"
