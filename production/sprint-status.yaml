@@ -12,7 +12,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-14 (S5-22 Phase 2 lessons-learned doc — Phase 3 prep ready)"
+updated: "2026-05-14 (S5-11 + S5-12 deferred-to-S6 batch — both briefings prepared; S5-12 is 4th carryover with hard commitment)"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -139,26 +139,26 @@ stories:
 
   # Should Have — Design decisions
   - id: "S5-11"
-    name: "Item Role Restriction decision (R-21) + ADR-0008"
+    name: "Item Role Restriction decision (R-21) + ADR (note: was 'ADR-0008' in original plan but ADR-0008 now used for slot binding — new ADR will be ADR-0009)"
     file: "production/sprints/sprint-005.md"
     priority: should-have
-    status: backlog
+    status: deferred-to-S6
     owner: "game-designer + gameplay-programmer"
     assignee: "tanapol"
     estimate_days: 1.0
     blocker: ""
-    completed: ""
+    completed: "2026-05-14 — DEFERRED to Sprint 006 Day-1. 1st carryover (ahead of 3-carryover threshold but should not slip again). Briefing prepared at production/sprint-006-prep/S5-11-r-21-item-role-restriction-briefing.md with Path A (implement gating: AvailableToPurchase + Shop UI filter + 158-item designer fill, 1.0d) / Path B (remove dead field: delete Positions schema + commented UI, 0.35d, MVP-friendly) / Path C (soft hint badge only, 0.5d, ambiguity risk). Decide before or alongside S5-12 — S5-12 Path A bot logic depends on S5-11 outcome. Closes risk register R-21 + Sprint 004 retro action #2."
 
   - id: "S5-12"
     name: "AI Bot fate decision (commit Sprint 006 OR descope post-launch)"
     file: "production/sprints/sprint-005.md"
     priority: should-have
-    status: backlog
+    status: deferred-to-S6-committed
     owner: "producer + creative-director"
     assignee: "tanapol"
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-05-14 — DEFERRED WITH HARD COMMITMENT to Sprint 006 Day-1. 4th carryover of AI Bot work (S2→S3→S4→S5→S6); Sprint 003 retro action #5 mandates no further defer. Briefing prepared at production/sprint-006-prep/S5-12-ai-bot-fate-briefing.md (~280 lines) with Path A (commit S6 full focus on S4-09+S4-10 ~3.0d) / Path B (descope to post-launch backlog, free S6 capacity for Phase 3 heroes) / Path C (cherry-pick MVP-critical pieces). Includes carryover history, current AI Bot state from GDD §3.7 (functional MVP via existing 11-state machine + Fuzzy Utility AI + AFK replacement), creative-director discussion prompts, and decision deliverables checklist. Sprint 006 plan MUST close S5-12 before any other work starts."
 
   - id: "S5-13"
     name: "Confirm 3 Garen variant controllers (legacy or production)"
