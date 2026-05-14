@@ -12,7 +12,7 @@ goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisio
 start: "2026-05-09"
 end: "2026-05-22"
 generated: "2026-05-08"
-updated: "2026-05-14 (S5-11 + S5-12 deferred-to-S6 batch — both briefings prepared; S5-12 is 4th carryover with hard commitment)"
+updated: "2026-05-14 (S5-13 Garen variants RESOLVED — 4 orphan controllers deleted; S5-11 + S5-12 deferred-to-S6 with briefings prepared)"
 
 stories:
   # Must Have — Phase 2 Hercules pilot
@@ -164,12 +164,12 @@ stories:
     name: "Confirm 3 Garen variant controllers (legacy or production)"
     file: "production/sprints/sprint-005.md"
     priority: should-have
-    status: backlog
+    status: done
     owner: "art-director + lead-programmer"
     assignee: "tanapol"
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-05-14 — VERDICT: legacy test artifacts → DELETED. 4 orphan override controllers removed from delta-unity/Assets/Animations/Hero/ (GarenCompleteLocomotion + GarenButAthena/KingArthur/XinZhoa variants + .meta files = 8 files). Evidence: (1) Garen ไม่มีใน Assets/GameData/Heros/ production roster; (2) GUID grep ทั่ว project — ทั้ง 4 GUID (cc2f260e/5888c00a/5fceedb5/c818ebc2) ไม่มี prefab/scene/script ใดอ้างอิง; (3) ใช้ base ผิด (GameCreator/CompleteLocomotion vs production RadiusBasicLocomotion 22/25); (4) ชื่อ GarenBut* + git history 2023-2024 บ่งชี้ว่าเป็น swap-test prototypes ตอนพัฒนา KingArthur/XinZhoa/Athena. design/gdd/item-system.md §Known Issues updated ⚠️→✅. Should Have 3/3 acknowledged (S5-11/S5-12 deferred-S6 + S5-13 done)."
 
   # Nice to Have — Process + polish
   - id: "S5-14"
