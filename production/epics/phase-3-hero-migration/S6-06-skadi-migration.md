@@ -2,6 +2,8 @@
 
 **Type**: Logic + Integration
 **ADR**: ADR-0006 Phase 2 Migration Plan (Phase 3 uses identical patterns §5-6); ADR-0008 Slot Binding via CBSUnit
+**GDD**: N/A — refactor story; hero-specific ability design lives in CBSUnit data + per-ability `*.cs` action files, not in any GDD
+**Engine notes**: N/A — Unity 2022.3 LTS (within LLM training data per `docs/engine-reference/unity/VERSION.md`); no post-cutoff API usage expected
 **Manifest Version**: N/A (control-manifest.md not yet created)
 **Estimate**: 0.5d
 **Priority**: Must Have
