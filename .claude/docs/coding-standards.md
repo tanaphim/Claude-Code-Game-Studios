@@ -63,3 +63,33 @@ All stories must have appropriate test evidence before they can be marked Done:
   - **Godot**: `godot --headless --script tests/gdunit4_runner.gd`
   - **Unity**: `game-ci/unity-test-runner@v4` (GitHub Actions)
   - **Unreal**: headless runner with `-nullrhi` flag
+
+# Asset Naming Conventions
+
+## Scene Files
+
+**Rule**: Scene files use `lowercase_snake_case` and follow this prefix convention:
+
+| Prefix | Purpose | Example |
+|---|---|---|
+| `scene_` | Production gameplay scenes | `scene_game_map.unity`, `scene_home_lobby.unity` |
+| `test_scene_` | Manual test / dev-only scenes (not shipped) | `test_scene_ability_multipeer.unity` |
+| `prototype_` | Throwaway prototype scenes (under `prototypes/`) | `prototype_combat_loop.unity` |
+
+**Story planning gate**: When a sprint plan or story specifies "create new scene X.unity":
+
+- **Default behavior** = create the new scene (do not assume the user has one in mind)
+- **Exception** = if the story name or context implies modifying an existing scene (e.g. "polish HUD in scene_game_map"), grep for `scene_*.unity` first to confirm target — if multiple candidates match, ask the user before creating a new one
+- **Naming approval**: scene names use the prefix table above; if a new prefix is needed, raise it in the sprint plan before the story starts
+
+**Origin**: Sprint 003 retrospective action #3. Sprint 003 story "create new scene for X" produced ambiguity ("did the user already have a scene? should I create one?"). The default-to-create + grep-first-on-modify rule eliminates that round-trip.
+
+## Other Assets
+
+Standard PascalCase per [technical-preferences.md](technical-preferences.md):
+
+- Prefabs / scriptable assets: `PascalCase.prefab`, `PascalCase.asset`
+- Animator controllers / animation clips: `PascalCase.controller`, `PascalCase.anim`
+- Materials / shaders: `PascalCase.mat`, `PascalCase.shader`
+
+The lowercase_snake_case rule is **scenes-only**, because scenes are discoverable via Unity's hierarchy panel and the snake_case is friendlier in command-line and CI log contexts.

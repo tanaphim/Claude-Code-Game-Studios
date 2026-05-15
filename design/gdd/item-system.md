@@ -286,7 +286,7 @@ CraftPrice = ItemFullPrice - Σ(ComponentPrice สำหรับชิ้นส
 | สถานการณ์ | พฤติกรรม |
 |-----------|---------|
 | ซื้อไอเทมนอกฐาน | ไม่อนุญาต → ไม่มีผลใดๆ |
-| Hero Role ไม่ตรงกับ `ItemObject.Positions` | **ไม่มีผล** (unimplemented) — ทุก Role ซื้อได้ทุกไอเทม; ดู §Known Issues / S4-05 |
+| Hero Role vs item availability | ทุก Role ซื้อได้ทุกไอเทม — by design per ADR-0009 (Role[] Positions field removed 2026-05-15) |
 | ใช้ Potion ที่ฐาน | ไม่อนุญาต |
 | ซื้อ Mythic ชิ้นที่ 2 | ถูกบล็อกโดย AvailableToPurchase() |
 | Inventory เต็ม + ซื้อ Ward | Ward ไปที่ Special Slot (Slot 6) ได้ถ้ายังไม่เต็ม |
@@ -308,7 +308,7 @@ CraftPrice = ItemFullPrice - Σ(ComponentPrice สำหรับชิ้นส
 | **Gold Economy (C3)** | ใช้ `Withdraw()` / `Deposit()` ระบบทอง; ราคาไอเทมมาจาก CBS |
 | **Data-Config System (F3)** | ข้อมูลไอเทมทั้งหมดมาจาก `CBSItemInGame` ผ่าน MetadataService |
 | **Level/XP System (C5)** | ไม่มีการ Lock ไอเทมตาม Level (ซื้อได้ทุก Tier ตั้งแต่ต้น) |
-| **Hero System (C2)** | ⚠️ **Role Restriction unimplemented** — `ItemObject.Positions : Role[]` field มี แต่ `AvailableToPurchase()` ไม่ check (ดู §Known Issues / S4-05). ปัจจุบัน Hero ทุก Role ซื้อไอเทมใดก็ได้ |
+| **Hero System (C2)** | All hero roles can purchase all items by design (ADR-0009, 2026-05-15). `Hero.Role` is still used for matchmaking role tags + UI display, but does not gate item purchases. |
 | **Photon Fusion (F5)** | `NetworkHeroInventory` ใช้ NetworkArray + NetworkBehaviourId สำหรับ Sync ทุก Client |
 
 ---
@@ -356,16 +356,13 @@ CraftPrice = ItemFullPrice - Σ(ComponentPrice สำหรับชิ้นส
 
 ## Known Issues / TODO
 
-- ⚠️ **Role Restriction** (S4-05, 2026-05-08): `ItemObject.Positions : Role[]`
-  declared ใน `ItemObject.cs:21` แต่ **unimplemented**. หลักฐาน:
-  (a) `NetworkHeroInventory.AvailableToPurchase()` (ll. 1045–1158) ไม่อ้าง
-  `Positions` เลย — gate ใช้แค่ Money / Mythic / Boots / Epic-Legendary recipe
-  / Potion / Inventory full;
-  (b) UI references ทั้งหมดใน `UIInGameShopView.cs:521-526, 750, 792` ถูก
-  comment-out (display only, ไม่ใช่ purchase gate);
-  (c) ไม่มี read site อื่นใน `Assets/GameScripts`. ถ้าจะ enforce จริงต้อง
-  Sprint 005+ story: เพิ่ม `case` ตรวจ `item.Positions.Contains(Hero.Role)` ใน
-  `AvailableToPurchase()` และ surface ใน Shop UI (recommend filter)
+- ✅ **Role Restriction** (S4-05, 2026-05-08 → **RESOLVED 2026-05-15 via Sprint 006 S6-02 / ADR-0009 Path B**):
+  Field `ItemObject.Positions : Role[]` ถูกลบออกจาก codebase แล้ว (delta-unity commit 2026-05-15).
+  No purchase-time role restriction — all hero roles can purchase all items, matching the de-facto behavior since pre-Sprint-002.
+  Decision rationale: AI Bot descope (S6-01 Path B) removed the strongest case for implementing role gating; field was dead code with no callers; cleanest MVP path.
+  Reversible if post-launch feedback demands build constraints by role.
+  See [ADR-0009](../../docs/architecture/ADR-0009-item-role-restriction.md) + [decision doc](../../production/decisions/S5-11-r-21-item-role-restriction.md).
+  Async pre-launch task: drop `Positions` column from CBS Item schema in PlayFab dashboard (non-blocking).
 - ⚠️ **Mythic Passive Formula** (S4-06, 2026-05-08): Schema documented ใน §3.7 + proposed formula §4. **Schema-only / unimplemented** — `ItemObject.MythicItemEffect` ไม่มี read site ใน `Assets/GameScripts`. ต้อง: (a) Sprint 005+ story สำหรับ wire-up `ApplyMythicBonus()` ใน `NetworkHeroInventory` หรือ `Actor.Trait`, (b) ADR ตอบ Open Questions §4, (c) CBS dashboard editor support สำหรับ `ItemEffectMythicPattern[]` field
 - ⚠️ **attack_speed / move_speed item-bonus /100 unconditional** (S4-03, 2026-05-08):
   `NetworkHeroInventory.cs:1299-1304` หาร item bonus /100 เสมอ ไม่ว่า

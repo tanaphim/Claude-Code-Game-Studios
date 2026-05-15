@@ -262,13 +262,11 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 - **Probability:** Realized
 - **Impact:** Low (balance: ทุก Role ซื้อทุกไอเทมได้; ไม่ block gameplay แต่
   ทำให้ระบบ build ไม่มี constraint ตามที่ออกแบบ)
-- **Status:** Open
+- **Status:** ✅ **RESOLVED 2026-05-15** (Sprint 006 S6-02, Path B per [ADR-0009](../../docs/architecture/ADR-0009-item-role-restriction.md) + [decision doc](../decisions/S5-11-r-21-item-role-restriction.md))
 - **Owner:** gameplay-programmer + game-designer
-- **Mitigation:** Sprint 005+ story: เพิ่ม case ใน `AvailableToPurchase()`
-  ตรวจ `item.Positions.Contains(Hero.Role)` + Shop UI recommend filter;
-  หรือ explicit decision ว่าจะลบ field `Positions` ทิ้ง
+- **Resolution:** **Path B accepted** — `Role[] Positions` field removed from `ItemObject` in delta-unity. No purchase-time role restriction; all hero roles can purchase all items (matches current de-facto behavior). Reversible if post-launch feedback demands build constraints. CBS dashboard `Positions` column drop noted as async pre-launch task.
 - **Trigger to escalate:** Designer สร้าง CBS item ที่ตั้ง `Positions[]` แล้ว
-  คาดว่าระบบจะ enforce → playtest พบว่าไม่ทำงาน
+  คาดว่าระบบจะ enforce → playtest พบว่าไม่ทำงาน (no longer possible — field removed)
 
 ### R-22 — attack_speed / move_speed item-bonus /100 unconditional
 - **Source:** S4-03 investigation (2026-05-08); `NetworkHeroInventory.cs:1299-1304`;
@@ -277,17 +275,18 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 - **Impact:** Medium (designer trap: item "+30 move_speed" Flat ให้ผล +0.30 runtime
   ≈ +8.6% บน base 3.5, ไม่ใช่ +30% ที่อาจคิด; `ModifierType.Flat` กับ `Percent`
   ให้ผลเหมือนกันสำหรับ 2 stats นี้ → label เลือกผิดไม่ส่งผลแต่อาจหลอกการอ่าน data)
-- **Status:** Open
+- **Status:** Open — **scheduled to Sprint 008 dedicated balance pass** (decision 2026-05-15, Sprint 006 S6-15)
 - **Owner:** gameplay-programmer + game-designer (balance pass)
+- **Schedule rationale (S6-15, 2026-05-15):** Both paths (honor ModifierType / rename stats) require re-tune of every item using `move_speed` or `attack_speed`. Phase 3 hero migration (S6+) focuses on slot binding, not item balance — inline mixing would expand Phase 3 scope and force balance churn before all heroes are migrated. Sprint 008 (post-Phase-3 stabilization) is the cleanest slot: designers have full migrated-hero data to re-tune against, balance pass can be a focused sprint theme. **Target sprint: 008.** Pre-launch deadline check needed at Sprint 007 retro.
 - **Mitigation:**
   (a) **Documentation done** — `item-system.md` + `movement-navigation-system.md`
       ระบุ scale convention และ /100 trap แล้ว (S4-03);
-  (b) **Phase 2 / balance pass:** ตัดสินใจว่าจะ honor `ModifierType` (เปลี่ยน
+  (b) **Sprint 008 balance pass:** ตัดสินใจว่าจะ honor `ModifierType` (เปลี่ยน
       `NetworkHeroInventory.cs:1302` ให้ /100 เฉพาะเมื่อ `Percent`) หรือ rename
       stats ให้ชัด (`move_speed_centi`) — ทั้งสอง path ต้อง re-tune ทุก item ที่มีอยู่
 - **Trigger to escalate:** (i) Designer ใหม่เข้ามา tune item แล้วรายงานว่า bonus
   ไม่ตรงกับที่ตั้ง; (ii) Balance pass พบ build dominant strategy ที่อาศัย scale
-  mismatch นี้
+  mismatch นี้; (iii) Sprint 008 slips and pre-launch date approaches
 
 ### R-23 — AdditionalMoveSpeed = misnamed override, no stack
 - **Source:** S4-07 investigation (2026-05-08); `NetworkVariable.cs:40-44`,
@@ -296,20 +295,22 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 - **Probability:** Medium (จะ realized เมื่อมี ability ที่ 3 ใช้ field นี้)
 - **Impact:** Medium (collision = silent move-speed bugs ระหว่าง ability charging /
   slow; SLOW status effect บน hero ที่กำลัง override จะไม่มีผล → balance escape)
-- **Status:** Open (documented, not currently exploitable)
+- **Status:** Open (documented, not currently exploitable) — **scheduled to Sprint 008 dedicated balance pass** (decision 2026-05-15, Sprint 006 S6-15)
 - **Owner:** gameplay-programmer + technical-director (semantics decision)
+- **Schedule rationale (S6-15, 2026-05-15):** R-23 redesign requires either a rename + Push/Pop priority stack API OR migration of Cupid Q + Hercules R + future override-uses to `move_speed` stat modifier — both paths require playtest re-tune. Phase 3 hero migrations (S6+) handle slot-binding, not field-rename refactors. Bundling with R-22 in Sprint 008 dedicated balance pass amortizes the playtest re-tune cost across both risks. **Hold-the-line rule stays in effect** during S6+ Phase 3: ห้าม Phase 3 hero migration code touch `AdditionalMoveSpeed`. **Target sprint: 008.** Pre-launch deadline check needed at Sprint 007 retro.
 - **Mitigation:**
   (a) **Documentation done** — `movement-navigation-system.md` §4 + §Known Issues
       ระบุ semantic ที่แท้จริง + write sites + bug taxonomy (S4-07);
   (b) **Hold the line** — ห้าม ability ใหม่เขียน `AdditionalMoveSpeed` จนกว่าจะ
       redesign field (use `move_speed` stat with ModifierType.Percent แทน);
-  (c) **Phase 2 redesign:** เลือก one of (1) rename → `OverrideMoveSpeed` +
+      enforced through Sprint 007 (Phase 3 hero migrations must not write this field);
+  (c) **Sprint 008 redesign:** เลือก one of (1) rename → `OverrideMoveSpeed` +
       เพิ่ม API `Push/Pop` พร้อม priority stack, หรือ (2) ลบ field แล้วย้าย
       Cupid Q + Hercules R ไปใช้ `move_speed` stat modifier (ModifierType
       override / temp-effect). Both paths ต้อง playtest re-tune
 - **Trigger to escalate:** (i) ออกแบบ ability ใหม่ที่ต้อง override move speed →
   เลือกทางไหน; (ii) Bug report จาก playtest ว่า SLOW ไม่มีผลกับ Cupid ตอน Q
-  หรือ Hercules ตอน R
+  หรือ Hercules ตอน R; (iii) Sprint 008 slips and pre-launch date approaches
 
 ---
 
@@ -323,9 +324,10 @@ known limitations ในแต่ละ ADR (ดูใน ADR ตรงๆ)
 | Low | 7 | R-08, R-11, R-12, R-13, R-14, R-19, R-21 |
 
 **By status:**
-- Open: 12 (R-02, R-07, R-09, R-11, R-16, R-17, R-18, R-19, R-20, R-21, R-22, R-23)
+- Open: 11 (R-02, R-07, R-09, R-11, R-16, R-17, R-18, R-19, R-20, R-22, R-23)
 - Mitigating: 8 (R-01, R-03, R-04, R-05, R-06, R-10, R-12, R-14, R-15)
 - Monitoring: 2 (R-08, R-13)
+- **Resolved: 1 (R-21 — 2026-05-15 via S6-02 / ADR-0009)**
 - Realized (active): 6 (R-05, R-09, R-10, R-11, R-16, R-17, R-18, R-19) — overlap กับ Open/Mitigating
 
 ---

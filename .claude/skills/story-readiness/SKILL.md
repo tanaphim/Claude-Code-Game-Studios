@@ -135,6 +135,40 @@ items pass or are explicitly marked N/A with a stated reason.
   manifest are referenced, OR "N/A — manifest not yet created" is stated.
   This item auto-passes if `docs/architecture/control-manifest.md` does not
   exist yet (do not penalize stories written before the manifest was created).
+- [ ] **API+Caller Pair Audit** (Phase 2 Lessons Learned Pattern #5): For each
+  AC that asserts a cross-module wiring — "X is wired in Y", "module A calls
+  module B's method M", "Y consumes B's property P", "method M from prior
+  story is invoked from Z" — verify the named caller exists in the codebase.
+
+  **Scope**: This check only fires when an AC names BOTH a callee (method /
+  property / event) AND a caller location (file / method / module / phase
+  name) that is supposed to already exist (i.e. not part of THIS story's
+  implementation work).
+
+  **Procedure** (5-min budget per pair):
+  1. Identify the trigger AC and extract `callee` + `expected caller`
+  2. Grep the codebase for invocations of `callee` (not just its declaration)
+  3. If caller exists at the named location or any plausible call site → pass
+  4. If callee declaration exists but no caller anywhere → **BLOCKED**:
+     "Phantom-caller: [callee] is declared but has no invocation site;
+     story AC assumes it is wired. Either (a) expand this story's scope to
+     include wiring the caller, or (b) split the wiring into a prerequisite
+     story before assigning this one."
+  5. If the named caller is in THIS story's own scope (the story is adding it)
+     → pass (the dev will create the caller as part of this work)
+  6. If callee doesn't exist either → that is a different gap (missing
+     prerequisite story); fall through to existing checks
+
+  **Origin**: Sprint 005 S5-06 / TD-006 incident — `Actor.Combat.SetActiveSlot`
+  was declared in S5-03 with AC stating "callers wired in ActorCombatAction
+  input handlers"; the caller was never landed; 40-shim migration in S5-06
+  shipped, broke production VFX, required full revert + S5-21 redo (~1.5d
+  lost). Pattern #5 in [phase-2-lessons-learned.md](../../docs/architecture/phase-2-lessons-learned.md)
+  codified the rule; this checklist item promotes it to a gate.
+
+  **Auto-pass**: when no AC contains a cross-module-wiring assertion (most
+  pure-logic / config / quick-design stories). Do not invent gaps; only fire
+  on explicit AC text.
 
 ### Scope Clarity
 
