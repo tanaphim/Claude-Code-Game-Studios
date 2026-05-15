@@ -12,7 +12,7 @@ goal: "Phase 3 hero migration kickoff (4-5 heroes) + Day-1 close S5-11/S5-12 des
 start: "2026-05-15"
 end: "2026-05-28"
 generated: "2026-05-15"
-updated: "2026-05-15 (Day-1 ALL non-soak-blocked stories closed: S6-01 + S6-02 + S6-08 + S6-09 + S6-10 + S6-13 (working — 4/4 PASS) + S6-15 + S6-B1; 2/7 Must Have + 3/3 Should Have + 3/6 Nice-to-Have done; ~4.1d burned vs ~5.25d budget = -22%; Phase 2 soak ends 2026-05-21 still gates S6-03..06 + S6-11/12 + S6-14)"
+updated: "2026-05-15 (Day-1 ALL non-soak-blocked stories closed + Phase 3 batch 1 prep: S6-03..06 story files authored at production/epics/phase-3-hero-migration/ with hero assignments Horus/Volund/GuanYu/Skadi; 2/7 Must Have + 3/3 Should Have + 3/6 Nice-to-Have done; ~4.1d burned vs ~5.25d budget = -22%; Phase 2 soak ends 2026-05-21 still gates S6-03..06 + S6-11/12 + S6-14)"
 
 stories:
   # Must Have — Day-1 decisions + Phase 3 batch 1
@@ -39,8 +39,8 @@ stories:
     completed: "2026-05-15 — Path B executed. Decision doc at production/decisions/S5-11-r-21-item-role-restriction.md; ADR-0009 Accepted at docs/architecture/ADR-0009-item-role-restriction.md; delta-unity code change: 1-line removal of `public Role[] Positions;` from Assets/GameScripts/Resources/ItemObject.cs:21 (commented Shop UI refs at UIInGameShopView.cs:521-526/750/792 left inert as out-of-scope dead code). Risk register R-21 → Resolved; GDD item-system.md §Known Issues / §5 / §6 updated. Async pre-launch user-side tasks: (a) Unity Editor smoke check on .asset reload, (b) PlayFab CBS dashboard drop Positions column. Estimate burn 0.35d vs 1.0d budget = -65%."
 
   - id: "S6-03"
-    name: "Phase 3 hero #1 migration (dual-path pattern)"
-    file: "production/sprints/sprint-006.md"
+    name: "Phase 3 hero #1 — Horus migration (BUG-0001 cousin verification: HorusE + HorusR)"
+    file: "production/epics/phase-3-hero-migration/S6-03-horus-migration.md"
     priority: must-have
     status: ready-for-dev
     owner: "gameplay-programmer"
@@ -50,8 +50,8 @@ stories:
     completed: ""
 
   - id: "S6-04"
-    name: "Phase 3 hero #2 migration"
-    file: "production/sprints/sprint-006.md"
+    name: "Phase 3 hero #2 — Volund migration (BUG-0001 cousin verification: VolundW; largest action file 118 lines)"
+    file: "production/epics/phase-3-hero-migration/S6-04-volund-migration.md"
     priority: must-have
     status: ready-for-dev
     owner: "gameplay-programmer"
@@ -61,8 +61,8 @@ stories:
     completed: ""
 
   - id: "S6-05"
-    name: "Phase 3 hero #3 migration"
-    file: "production/sprints/sprint-006.md"
+    name: "Phase 3 hero #3 — Guan Yu migration (BUG-0001 cousin: GuanYuE; 6 abilities + W/R sub-systems)"
+    file: "production/epics/phase-3-hero-migration/S6-05-guanyu-migration.md"
     priority: must-have
     status: ready-for-dev
     owner: "gameplay-programmer"
@@ -72,8 +72,8 @@ stories:
     completed: ""
 
   - id: "S6-06"
-    name: "Phase 3 hero #4 migration"
-    file: "production/sprints/sprint-006.md"
+    name: "Phase 3 hero #4 — Skadi migration (CONTROL CASE — clean baseline, no BUG-0001/R-23/special variants)"
+    file: "production/epics/phase-3-hero-migration/S6-06-skadi-migration.md"
     priority: must-have
     status: ready-for-dev
     owner: "gameplay-programmer"
