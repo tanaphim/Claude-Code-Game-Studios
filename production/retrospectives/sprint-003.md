@@ -99,9 +99,11 @@ These are session-level patterns the user + agents converged on by trial. Worth 
 |---|---|---|---|
 | 1 | ~~Investigate Photon STUN timeout + Version mismatch~~ ✅ **RESOLVED 2026-05-07** — Root cause: `NetworkProjectConfig.fusion` had `PeerMode=Multiple` (set during S3-01 multipeer harness work) leaking into production scene. Reverting to `PeerMode=Single` for production playtest restores connectivity. S4-09 AI Bot + Phase 2 P2-10 playtest unblocked. Workflow friction (manual toggle) tracked as `S4-P5`. See [peer-mode-toggle workflow doc](../../docs/dev-workflow/peer-mode-toggle.md). | network-programmer + producer | ~~Sprint 004 day 1~~ — closed pre-sprint |
 | 2 | Fix `AbilityMultipeerRunner` duplicate-Start cascade (S4-P1) — only 0.5d, but compounds future harness debugging | network-programmer | Sprint 004 polish slot |
-| 3 | Document scene-naming convention: when plan says "new scene X.unity," default = create-or-confirm-with-user | producer | Add to `coordination-rules.md` or `coding-standards.md` |
-| 4 | Schedule frequent `origin/dev` merge cadence on `feature/refactor-ability-claude` (every 2-3 sprint days) to limit asset conflict accumulation | lead-programmer | Sprint 004 +Sprint 005 |
+| 3 | ~~Document scene-naming convention~~ ✅ **RESOLVED 2026-05-15** — Sprint 006 S6-08 landed convention in [coding-standards.md § Asset Naming Conventions](../../.claude/docs/coding-standards.md) (prefix table: `scene_`/`test_scene_`/`prototype_` + default-to-create-but-grep-first-on-modify rule). | producer | ~~Add to `coordination-rules.md` or `coding-standards.md`~~ — done |
+| 4 | ~~Schedule frequent `origin/dev` merge cadence on `feature/refactor-ability-claude`~~ ✅ **RESOLVED 2026-05-15** — Sprint 006 S6-08 codified the rule in [coordination-rules.md § Branch Hygiene](../../.claude/docs/coordination-rules.md) (every 2-3 sprint days threshold + 5-day escalation gate + producer retro audit). | lead-programmer | ~~Sprint 004 +Sprint 005~~ — done |
 | 5 | Sprint 002 carryover (S4-01..S4-08) — if any story slips again in Sprint 004, root-cause review required before Sprint 005 plans | producer | End of Sprint 004 |
+
+> **Action #5 resolution (2026-05-15)** — ✅ **CLOSED**. The S4-01..S4-08 animator+bug batch did not slip in Sprint 004 (closed 8/8 Must Have, 2-day burn — see [Sprint 004 retro](sprint-004.md)). The rule was subsequently extended in spirit to the AI Bot carryover (S2-09/10 → S3-08/09 → S4-09/10 → S5-12, 4 carryovers). That extension closed via Sprint 006 S6-01 / S5-12 Path B descope to post-launch backlog (`production/decisions/S5-12-ai-bot-fate.md`). No further AI Bot defer permitted; carryover ledger closed.
 
 ---
 

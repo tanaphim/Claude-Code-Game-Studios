@@ -201,6 +201,8 @@ Cannot be EditMode-tested (no `NetworkRunner`). Verification path:
 
 ## Pattern 5 — API + caller pair audit (story-readiness gate)
 
+> **Status 2026-05-15 (Sprint 006 S6-09)** — ✅ **Promoted to `/story-readiness` gate**. Added as checklist item under "Architecture Completeness" with full procedure + auto-pass rules in [.claude/skills/story-readiness/SKILL.md](../../.claude/skills/story-readiness/SKILL.md). Test cases (5 scenarios covering phantom-caller, in-scope, no-trigger, missing-callee, vague-prose) at [.claude/skills/story-readiness/tests/api-caller-audit-test.md](../../.claude/skills/story-readiness/tests/api-caller-audit-test.md).
+
 **Origin**: 4 surfacings in Sprint 005 alone — TD-006 (S5-03 added `SetActiveSlot` API, no caller until S5-21), TD-007 (S5-09 added `BindSlot` caller, no `AbilityRegistry` registration until S5-10), S5-06 attempted shim migration without the upstream caller, S5-21 v1 wired the caller at the wrong entry point.
 
 ### Why

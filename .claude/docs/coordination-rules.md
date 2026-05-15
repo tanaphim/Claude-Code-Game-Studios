@@ -71,3 +71,58 @@ When an orchestration skill spawns multiple independent agents:
 2. Collect all results before proceeding to dependent phases
 3. If any agent is BLOCKED, surface it immediately — do not silently skip
 4. Always produce a partial report if some agents complete and others block
+
+## Sprint Planning Rules
+
+### 5-minute existence check (mandatory before estimating reverse-doc / carryover stories)
+
+**Rule**: Before assigning an estimate to any story that targets pre-existing code, the planner MUST spend ≤5 minutes verifying current implementation status.
+
+**Origin**: Sprint 004 retrospective action #1. Sprint 002 estimated 2.5d for `S4-01/02` (animator + Item_Viable parameter work), actual = 0d — both pre-existed in the shared `RadiusBasicLocomotion.controller`. The wrong estimate carried for 3 sprints as phantom planning weight. Sprint 004 retrospective §11 codified this as the "existence check as planning gate" process improvement.
+
+**How to apply**: Use the template below for any story imported from a carryover plan or framed as "investigate / verify / document existing X". If verification confirms the work is already done, close the story as "verified" without sprint allocation. If verification reveals partial implementation, re-scope before estimating.
+
+**Template** (paste into story file or sprint plan side-notes during planning):
+
+```text
+Story: [ID + title]
+Target class/file: [e.g. RadiusBasicLocomotion.controller, ItemObject.cs]
+Existence check (5-min budget):
+  - [ ] Grep target symbol/path — found at [file:line] OR not found
+  - [ ] Read target — implementation appears [complete / partial / absent]
+  - [ ] Cross-check — any caller of the target? at [file:line]
+Verdict:
+  [ ] Pre-existing → close as "verified", no estimate
+  [ ] Partial → re-scope before estimate (specify what's missing)
+  [ ] Absent → estimate as fresh implementation
+```
+
+**When this rule does not apply**:
+- Greenfield design work (new system, new GDD)
+- New feature stories that explicitly create new code paths
+- Stories with `Type: Logic` whose AC names a specific formula not present in the codebase
+
+**Skill integration**: `/story-readiness` should ask for this verification artifact before issuing READY verdict on any story flagged as reverse-doc or carryover. `/sprint-plan` skill description includes a reminder to run existence checks before estimating Should/Nice Have carryover items.
+
+## Branch Hygiene
+
+### `origin/dev` merge cadence (long-lived feature branches)
+
+**Rule**: Long-lived feature branches (those expected to live >1 sprint, e.g. `feature/refactor-ability-claude`) must merge `origin/dev` into themselves at least **every 2-3 sprint days**.
+
+**Origin**: Sprint 003 retrospective action #4. Long-lived refactor branches (`feature/refactor-ability-claude` was the trigger case during Phase 1b) drift quickly when `origin/dev` advances with other work. Late merges produced large asset-conflict surprises that consumed planning capacity.
+
+**How to apply**:
+- Owner of the long-lived branch tracks last-merge date in their personal sprint notes or branch description
+- If the gap exceeds 3 sprint days, the owner triggers a merge in the next available slot (typically end-of-day before logging off)
+- Conflicts that take >30 min to resolve are escalated to lead-programmer for an "emergency rebase" call
+- This rule applies to working branches in `delta-unity` first; Delta-Project worktree branches are usually short-lived and exempt
+
+**Metric tracked**: each long-lived feature branch records merge cadence in its first commit message of each sprint week (e.g. `merge cadence: last merged origin/dev 2026-05-12 (3 sprint days ago, on schedule)`). Producer audits this at sprint retros.
+
+**Escalation threshold**: if a single long-lived branch reaches 5+ sprint days without a merge, it becomes a sprint blocker — producer either schedules a merge slot mid-sprint or splits the branch into a smaller landable chunk.
+
+**When this rule does not apply**:
+- Throwaway prototype branches (in `prototypes/`)
+- Bug-fix branches expected to land within 1 sprint day
+- Tag/release branches (frozen by design)

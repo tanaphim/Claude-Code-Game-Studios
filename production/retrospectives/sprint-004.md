@@ -161,7 +161,7 @@ should it move to post-launch?
 
 | # | Action | Owner | Priority | Deadline |
 |---|---|---|---|---|
-| 1 | **Before estimating reverse-doc stories, run 5-min existence check** (grep target classes/files; spot-verify implementation status). If found pre-existing → close as "verified" without sprint allocation. | producer + lead-programmer | High | Sprint 005 planning |
+| 1 | ~~**Before estimating reverse-doc stories, run 5-min existence check**~~ ✅ **RESOLVED 2026-05-15** — Sprint 006 S6-08 codified the rule in [coordination-rules.md § Sprint Planning Rules](../../.claude/docs/coordination-rules.md) (mandatory 5-min existence check with template; integrated into `/story-readiness` + `/sprint-plan` skill descriptions). | producer + lead-programmer | High | ~~Sprint 005 planning~~ — done |
 | 2 | **Decide on Item Role Restriction** (R-21) — implement gating, or formally remove `Positions[]` from `ItemObject`. Blocks S4-09 AI Bot item priority design. | game-designer + gameplay-programmer | High | Before Sprint 005 mid-point |
 | 3 | **Decide AI Bot fate** — commit Sprint 005 or 006 to S4-09/S4-10 with full focus, OR descope to post-launch. 3-sprint carryover requires explicit call. | producer + creative-director | High | Sprint 005 planning |
 | 4 | **Schedule R-22 (stat /100) + R-23 (AdditionalMoveSpeed) in Phase 2 plan** — both touch ability migration; align rename/refactor with existing Phase 2 work. | technical-director + game-designer | Medium | During Sprint 005 |

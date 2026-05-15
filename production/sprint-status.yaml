@@ -7,207 +7,163 @@
 #              "unassigned" if no human has picked it up yet
 #   See .claude/memory or production/onboarding/ for handle conventions.
 
-sprint: 5
-goal: "Phase 2 Hercules pilot ability migration + 3 high-priority design decisions (R-21, AI Bot fate, Garen variants) to unblock Sprint 006+"
-start: "2026-05-09"
-end: "2026-05-22"
-generated: "2026-05-08"
-updated: "2026-05-14 (S5-19 BUG-0001 RESOLVED via AnimatorStateSync stale-hash fix; S5-13 Garen variants RESOLVED; S5-11/S5-12 deferred-to-S6 with briefings)"
+sprint: 6
+goal: "Phase 3 hero migration kickoff (4-5 heroes) + Day-1 close S5-11/S5-12 design decisions (S5-12 pre-decided Path B = descope AI Bot to post-launch) + 3-carryover process polish bundle"
+start: "2026-05-15"
+end: "2026-05-28"
+generated: "2026-05-15"
+updated: "2026-05-15 (Day-1 ALL non-soak-blocked stories closed: S6-01 + S6-02 + S6-08 + S6-09 + S6-10 + S6-13 (working — 4/4 PASS) + S6-15 + S6-B1; 2/7 Must Have + 3/3 Should Have + 3/6 Nice-to-Have done; ~4.1d burned vs ~5.25d budget = -22%; Phase 2 soak ends 2026-05-21 still gates S6-03..06 + S6-11/12 + S6-14)"
 
 stories:
-  # Must Have — Phase 2 Hercules pilot
-  - id: "S5-01"
-    name: "CBSUnit.SlotQ/W/E/R/A/I alias properties (revised per ADR-0008)"
-    file: "production/sprints/sprint-005.md"
+  # Must Have — Day-1 decisions + Phase 3 batch 1
+  - id: "S6-01"
+    name: "S5-12 AI Bot fate — execute Path B (descope to post-launch)"
+    file: "production/sprints/sprint-006.md"
     priority: must-have
     status: done
-    owner: "gameplay-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.25
-    blocker: ""
-    completed: "2026-05-08 — delta-unity@b7821a6dce, 14/14 EditMode tests pass"
-
-  - id: "S5-02"
-    name: "ActorCombat.GetSlotAction + AbilityComponent.GetSlotAction facade (P2-01)"
-    file: "production/sprints/sprint-005.md"
-    priority: must-have
-    status: done
-    owner: "gameplay-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.25
-    blocker: ""
-    completed: "2026-05-08 — delta-unity@f0e59e692d, EditMode tests pass"
-
-  - id: "S5-03"
-    name: "ActorCombat.GetActiveSlot + IsQuickCast(byte slot) accessor (P2-02)"
-    file: "production/sprints/sprint-005.md"
-    priority: must-have
-    status: done
-    owner: "gameplay-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.25
-    blocker: ""
-    completed: "2026-05-08 — delta-unity@f0e59e692d, EditMode tests pass (network-state behaviour deferred to multipeer harness + S5-10)"
-
-  - id: "S5-04"
-    name: "ActorCombatAction Pattern-A helper (IsActiveSlotOwner) — replace 5 blocks (P2-04)"
-    file: "production/sprints/sprint-005.md"
-    priority: must-have
-    status: done
-    owner: "gameplay-programmer"
+    owner: "producer"
     assignee: "tanapol"
     estimate_days: 0.5
     blocker: ""
-    completed: "2026-05-13 — delta-unity@89ecec9da3 (bundled with S5-05 in single Phase 2 commit). 14/14 EditMode tests pass; multipeer Pass #4 (parity) + #5 (bandwidth <65 B/s) verified; legacy SkillKey fallback added for unmigrated heroes (ADR-0006 §5.1 sample stale post-ADR-0008, deviation user-approved). Bonus: S5-09 warning gated on isHero; BUG-0003 NetworkRunnerInput NRE band-aid (8 sites null-safed)."
+    completed: "2026-05-15 — Path B executed end-to-end. Decision doc at production/decisions/S5-12-ai-bot-fate.md; S4-09 (item-buying 2.0d) + S4-10 (Difficulty 1.0d) → production/backlog/post-launch.md (NEW); design/gdd/ai-bot-system.md §3.7 features labeled Post-Launch; Sprint 003 retro action #5 marked CLOSED. 4-sprint AI Bot carryover ledger (S2→S3→S4→S5→S6) closed; ~3.0d S6 capacity freed for Phase 3 hero migration depth."
 
-  - id: "S5-05"
-    name: "ActorCombatAction Pattern-B/C/D one-liner replacements — 4 sites (P2-05)"
-    file: "production/sprints/sprint-005.md"
+  - id: "S6-02"
+    name: "S5-11 R-21 Item Role decision + ADR-0009 + implementation"
+    file: "production/sprints/sprint-006.md"
     priority: must-have
     status: done
-    owner: "gameplay-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.5
-    blocker: ""
-    completed: "2026-05-13 — delta-unity@89ecec9da3 (claude/s5-04-pattern-a-helper, bundled with S5-04), 4 helpers (IsInputSlotMatch + ResolveLegacySkillKeyButtonMatch + IsQuickCastForBoundSlot + ResolveLegacyQuickCast) + 6 site replacements (B1/B2/B3/D/B4/C). 18 new EditMode tests pass (108/108 assembly green). Code review APPROVED WITH SUGGESTIONS (unity-specialist blocking fix: BotActor.Auto/WithTarget populate msg.PressedSlot = skill.BoundSlot). Multipeer Pass #1-5 verified + Hercules Training playthrough with bots clean (Editor.log 0 S5-05 NRE). Deviations: Pattern C uses AbilityData.MaxRank <= 1 (ADR-0006 §5.3 IsLeveled doesn't exist on CBSAbility — equivalence claim trusted per ADR); Pattern B4 semantic shift (slot path PressedSlot vs legacy Buttons.IsSet). BUG-0004 filed (pre-existing BotActor.WithTarget msg2 typo, out of scope)."
-
-  - id: "S5-06"
-    name: "AnimationEvent Option A — infrastructure only (migration deferred to S5-21)"
-    file: "production/sprints/sprint-005.md"
-    priority: must-have
-    status: partial
-    owner: "gameplay-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.5
-    blocker: ""
-    completed: "2026-05-13 — delta-unity@claude/s5-06-animation-event-option-a. PARTIAL LAND: migration reverted after Unity Editor playtest revealed VFX/SFX animation events silently dropped (root cause: SetActiveSlot caller was never landed in S5-03 — m_ActiveSlot stays 0 forever → dual-path fallback drops every event). Infrastructure retained as no-op foundation: StateReleaseSlot dispatcher + TryResolveSlotRoute pure static helper + 12 EditMode tests (44/44 still green). All 43 shim methods reverted to legacy StateRelease(SkillKey.X, ...) — production behaviour fully restored. New tech debt TD-006 (HIGH): SetActiveSlot wiring missing; gates S5-21. Code-review F1 (LogWarning gate) + F2 (Skill_I_* retention) preserved in code for future retry."
-
-  - id: "S5-07"
-    name: "HerculesRAction.GetInput rewrite (PressedSlot path) (P2-07)"
-    file: "production/sprints/sprint-005.md"
-    priority: must-have
-    status: done
-    owner: "gameplay-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.25
-    blocker: ""
-    completed: "2026-05-10 — delta-unity@0cd6bd240d, ReleasedSlot path also re-enabled (StopCharging trigger). Behaviour gap covered by multipeer harness + S5-10."
-
-  - id: "S5-08"
-    name: "HerculesWAction slot-indexed sibling reads — 5 sites (P2-08)"
-    file: "production/sprints/sprint-005.md"
-    priority: must-have
-    status: done
-    owner: "gameplay-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.25
-    blocker: ""
-    completed: "2026-05-10 — delta-unity@0cd6bd240d, all 5 sites use GetSlotAction(3). NetworkBehaviour property substitution — coverage falls to multipeer harness + S5-10."
-
-  - id: "S5-09"
-    name: "Hercules bootstrap — ActorCombat.OnStartup reads CBSUnit.Slot* aliases, BindSlot x6 (revised per ADR-0008)"
-    file: "production/sprints/sprint-005.md"
-    priority: must-have
-    status: done
-    owner: "gameplay-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.5
-    blocker: ""
-    completed: "2026-05-12 — delta-unity@claude/s5-09-hercules-bootstrap, 12/12 EditMode tests pass. ISlotBinder interface added to break Radius↔Abilities asmdef cycle. AbilityComponent prefab attach deferred to S5-10 (legacy CreateSkill keeps Hercules playable; warning log surfaces missing attach)."
-
-  - id: "S5-10"
-    name: "Manual playtest checklist + 1-match Training playthrough (P2-10)"
-    file: "production/sprints/sprint-005.md"
-    priority: must-have
-    status: done
-    owner: "qa-tester + gameplay-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.5
-    blocker: ""
-    completed: "2026-05-14 — delta-unity@claude/s5-10-hercules-playtest (PR #353). PASS. Step 1: AbilityComponent attached to base_avatar.prefab (single Hero template — propagates to all 25+ heroes). Step 2: Multipeer Pass #4 (parity) explicit ✅ in Editor.log (slot=1..4 host↔client converge), Pass #5 (bandwidth ≤65 B/s) baseline carry-forward from S5-04/S5-05. Step 3: Hercules QWER + A + Recall + Item all functional in scene_game_map.unity (user-verified 'ปกติ'). Pre-merge fix: TD-007 (AbilityRegistry not registered with DeltaService) resolved by creating AbilityRegistryService.prefab via Unity Editor + adding to DeltaConfiguration.Services list (12→13). 14 BindSlot warnings/match → 0; Phase 2 Exit Criterion #5 now fully satisfied end-to-end. TD-006 (SetActiveSlot caller missing) remains → S5-21 for AnimationEvent 40-shim retry. Cosmetic errors documented as known (S5-17 Photon GameIsFull, BUG-0003 NRE cascade). Evidence: production/qa/evidence/sprint-005-hercules-playthrough.md + S5-10-multipeer.txt. Sign-off: tanapol (both hats). Phase 2 Hercules pilot CLOSED — 1-week soak 2026-05-14 → 2026-05-21 per ADR-0006 §10 handover gate."
-
-  - id: "S5-21"
-    name: "TD-006 SetActiveSlot wiring + S5-06 40-shim re-migration (Phase 2 polish — blocks Phase 3)"
-    file: "production/sprints/sprint-005.md"
-    priority: must-have
-    status: done
-    owner: "gameplay-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.25
-    blocker: ""
-    completed: "2026-05-14 — delta-unity@claude/s5-21-setactiveslot-wiring. TD-006 RESOLVED. Added ResolveSlotFromSkillKey static helper (8 cases: Q/W/E/R/A/I/Recall + Item→0) + wired Actor.Combat.SetActiveSlot in ActorCombatAction.Progress setter (single source of truth for state transitions — catches manual press AND auto-attack paths) + re-landed 40-shim migration in AnimationEvent.cs (3 Skill_I_* + 4 Item aliases retained on legacy). 8 new EditMode tests pass (116/116 in Radius.Tests.Characters). v2 learning: initial v1 placed SetActiveSlot in OnPressButtons, playtest revealed Normal Attack auto-target sets Progress=Attack1 directly at lines 2693/2770 bypassing OnPressButtons → 30+ slot=0 warnings + no NA damage; moved to Progress setter fixed all state-transition paths atomically. User-verified: NA damage restored, Console clean. Phase 2 Exit Criterion #6 (AnimationEvent Option A) promoted PARTIAL → PASS. Sprint 005 Must Have 10/10 PASS, Phase 2 Hercules pilot fully shipped, Phase 3 unblocked."
-
-  # Should Have — Design decisions
-  - id: "S5-11"
-    name: "Item Role Restriction decision (R-21) + ADR (note: was 'ADR-0008' in original plan but ADR-0008 now used for slot binding — new ADR will be ADR-0009)"
-    file: "production/sprints/sprint-005.md"
-    priority: should-have
-    status: deferred-to-S6
     owner: "game-designer + gameplay-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.35
+    blocker: ""
+    completed: "2026-05-15 — Path B executed. Decision doc at production/decisions/S5-11-r-21-item-role-restriction.md; ADR-0009 Accepted at docs/architecture/ADR-0009-item-role-restriction.md; delta-unity code change: 1-line removal of `public Role[] Positions;` from Assets/GameScripts/Resources/ItemObject.cs:21 (commented Shop UI refs at UIInGameShopView.cs:521-526/750/792 left inert as out-of-scope dead code). Risk register R-21 → Resolved; GDD item-system.md §Known Issues / §5 / §6 updated. Async pre-launch user-side tasks: (a) Unity Editor smoke check on .asset reload, (b) PlayFab CBS dashboard drop Positions column. Estimate burn 0.35d vs 1.0d budget = -65%."
+
+  - id: "S6-03"
+    name: "Phase 3 hero #1 migration (dual-path pattern)"
+    file: "production/sprints/sprint-006.md"
+    priority: must-have
+    status: ready-for-dev
+    owner: "gameplay-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.5
+    blocker: "Depends on S6-01, S6-02; Phase 2 soak green (2026-05-21)"
+    completed: ""
+
+  - id: "S6-04"
+    name: "Phase 3 hero #2 migration"
+    file: "production/sprints/sprint-006.md"
+    priority: must-have
+    status: ready-for-dev
+    owner: "gameplay-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.5
+    blocker: "Depends on S6-03"
+    completed: ""
+
+  - id: "S6-05"
+    name: "Phase 3 hero #3 migration"
+    file: "production/sprints/sprint-006.md"
+    priority: must-have
+    status: ready-for-dev
+    owner: "gameplay-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.5
+    blocker: "Depends on S6-04"
+    completed: ""
+
+  - id: "S6-06"
+    name: "Phase 3 hero #4 migration"
+    file: "production/sprints/sprint-006.md"
+    priority: must-have
+    status: ready-for-dev
+    owner: "gameplay-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.5
+    blocker: "Depends on S6-05"
+    completed: ""
+
+  - id: "S6-07"
+    name: "Phase 3 mini-batch playtest gate (4 heroes)"
+    file: "production/sprints/sprint-006.md"
+    priority: must-have
+    status: ready-for-dev
+    owner: "gameplay-programmer + qa-tester"
+    assignee: "tanapol"
+    estimate_days: 0.5
+    blocker: "Depends on S6-03..06"
+    completed: ""
+
+  # Should Have — Process + tech debt
+  - id: "S6-08"
+    name: "Process polish bundle (S5-14 + S5-15 + S5-16 — 3-carryover sweep)"
+    file: "production/sprints/sprint-006.md"
+    priority: should-have
+    status: done
+    owner: "producer"
+    assignee: "tanapol"
+    estimate_days: 0.75
+    blocker: ""
+    completed: "2026-05-15 — 3 rules landed: (1) 5-min existence check in .claude/docs/coordination-rules.md § Sprint Planning Rules (closes S4-retro #1); (2) Scene-naming convention in .claude/docs/coding-standards.md § Asset Naming Conventions with prefix table scene_/test_scene_/prototype_ + default-create + grep-first-on-modify rule (closes S3-retro #3); (3) origin/dev merge cadence (every 2-3 sprint days, 5-day escalation gate) in .claude/docs/coordination-rules.md § Branch Hygiene (closes S3-retro #4). Sprint 005 retro recurring items section updated. 2-3 sprint carryover pattern broken."
+
+  - id: "S6-09"
+    name: "API+caller pair audit gate for /story-readiness skill (codify Phase 2 lesson 5)"
+    file: "production/sprints/sprint-006.md"
+    priority: should-have
+    status: done
+    owner: "lead-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-05-15 — API+Caller Pair Audit checklist item added to .claude/skills/story-readiness/SKILL.md under Architecture Completeness, with full procedure (trigger detection, 5-min grep budget, BLOCKED verdict for phantom callers, auto-pass for in-scope/no-trigger/missing-callee/vague-prose cases). NEW test file .claude/skills/story-readiness/tests/api-caller-audit-test.md (5 cases: phantom callee BLOCKED, in-scope PASS, no claim AUTO-PASS, missing callee falls through, vague prose AUTO-PASS) + trigger keywords reference. phase-2-lessons-learned.md Pattern #5 marked promoted to gate. Phase 3 hero migration stories (S6-03..06) now have a gate against TD-006/TD-007-style anti-patterns before assignment."
+
+  - id: "S6-10"
+    name: "BUG-0003 root-cause investigation (NetworkRunnerInput NRE — band-aid → root fix or accept)"
+    file: "production/sprints/sprint-006.md"
+    priority: should-have
+    status: done
+    owner: "network-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-05-15 — Path B (Accept defensive null-conditional). Root cause: 3 distinct Fusion lifecycle nullable windows (pre-Behavior spawn ~1-3s scene boot, mid-respawn ~3s/death, pre-AbilityComponent BindSlot brief window per respawn) — all legitimate; client input handlers subscribe at scene boot and fire every frame regardless of network state. The `?.` chain is the correct defensive shape; alternatives (input-readiness gate, post-spawn subscription) are >0.5d work with no runtime benefit. Deliverables: (1) NEW production/qa/bugs/BUG-0003-network-runner-input-nre.md with full investigation + decision rationale + residual concern note; (2) delta-unity NetworkRunnerInput.cs:101-103 inline comment updated — dropped \"BAND-AID:\" + \"Follow-up: file bug\" prefix, replaced with concise lifecycle rationale that applies to all 5 Q/W/E/R/Recall methods. Residual concern flagged for future surveillance: DeltaService.I.GetService<NetworkConnectionService>().Behavior at the head of each method is not `?.`-guarded (5-sprint stability suggests infrastructure invariant holds, but future incident → file BUG-0003-follow-up)."
+
+  # Nice to Have — Stretch + spike
+  - id: "S6-11"
+    name: "Phase 3 hero #5 (stretch)"
+    file: "production/sprints/sprint-006.md"
+    priority: nice-to-have
+    status: backlog
+    owner: "gameplay-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.5
+    blocker: "Depends on S6-06"
+    completed: ""
+
+  - id: "S6-12"
+    name: "Phase 3 hero #6 (stretch, only if velocity ≥1.0× hero/day)"
+    file: "production/sprints/sprint-006.md"
+    priority: nice-to-have
+    status: backlog
+    owner: "gameplay-programmer"
+    assignee: "tanapol"
+    estimate_days: 0.5
+    blocker: "Depends on S6-11"
+    completed: ""
+
+  - id: "S6-13"
+    name: "PlayMode test framework spike (NetworkRunner fixture) — time-boxed 1.5d, abort condition"
+    file: "production/sprints/sprint-006.md"
+    priority: nice-to-have
+    status: done
+    owner: "lead-programmer + gameplay-programmer"
     assignee: "tanapol"
     estimate_days: 1.0
     blocker: ""
-    completed: "2026-05-14 — DEFERRED to Sprint 006 Day-1. 1st carryover (ahead of 3-carryover threshold but should not slip again). Briefing prepared at production/sprint-006-prep/S5-11-r-21-item-role-restriction-briefing.md with Path A (implement gating: AvailableToPurchase + Shop UI filter + 158-item designer fill, 1.0d) / Path B (remove dead field: delete Positions schema + commented UI, 0.35d, MVP-friendly) / Path C (soft hint badge only, 0.5d, ambiguity risk). Decide before or alongside S5-12 — S5-12 Path A bot logic depends on S5-11 outcome. Closes risk register R-21 + Sprint 004 retro action #2."
+    completed: "2026-05-15 — WORKING BRANCH (Unity Test Runner validation: 4/4 smoke tests PASS — Runner_IsRunning_AfterFixtureSetUp, Runner_HasLocalPlayer_InSinglePeerMode, Runner_IsServer_InSinglePeerMode, TickOnce_AdvancesFrameWithoutError). Fixture pattern viable; infrastructure works at unit-test scale. Deliverables: (1) NetworkRunnerFixture.cs (base class, single-peer GameMode.Single, async-coroutine WaitForTask bridge); (2) NetworkRunnerSmokeTest.cs (4 smoke tests); (3) UnitTestPlayMode.asmdef updated (precompiledReferences: Fusion.Runtime.dll + Fusion.Common.dll + Fusion.Log.dll); (4) Decision doc at production/decisions/S6-13-playmode-framework-spike.md with both branches + Sprint 007 follow-up section + 6 risks documented (#6 = asmdef gotchas with 3-round chronicle: Round 1 Fusion.Runtime+Common DLLs, Round 2 Fusion.Log.dll, Round 3 Fusion.Assert vs NUnit.Assert name collision). Burned ~1.0d (research + authoring + 3 compile-error iterations) vs 1.5d budget = -33%. Sprint 007 follow-up filed: S7-PROPOSED-PLAYMODE-SCALING (scale to first domain NetworkBehaviour coverage with spawn-and-exercise pattern + DeltaService coupling decision)."
 
-  - id: "S5-12"
-    name: "AI Bot fate decision (commit Sprint 006 OR descope post-launch)"
-    file: "production/sprints/sprint-005.md"
-    priority: should-have
-    status: deferred-to-S6-committed
-    owner: "producer + creative-director"
-    assignee: "tanapol"
-    estimate_days: 0.5
-    blocker: ""
-    completed: "2026-05-14 — DEFERRED WITH HARD COMMITMENT to Sprint 006 Day-1. 4th carryover of AI Bot work (S2→S3→S4→S5→S6); Sprint 003 retro action #5 mandates no further defer. Briefing prepared at production/sprint-006-prep/S5-12-ai-bot-fate-briefing.md (~280 lines) with Path A (commit S6 full focus on S4-09+S4-10 ~3.0d) / Path B (descope to post-launch backlog, free S6 capacity for Phase 3 heroes) / Path C (cherry-pick MVP-critical pieces). Includes carryover history, current AI Bot state from GDD §3.7 (functional MVP via existing 11-state machine + Fuzzy Utility AI + AFK replacement), creative-director discussion prompts, and decision deliverables checklist. Sprint 006 plan MUST close S5-12 before any other work starts."
-
-  - id: "S5-13"
-    name: "Confirm 3 Garen variant controllers (legacy or production)"
-    file: "production/sprints/sprint-005.md"
-    priority: should-have
-    status: done
-    owner: "art-director + lead-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.5
-    blocker: ""
-    completed: "2026-05-14 — VERDICT: legacy test artifacts → DELETED. 4 orphan override controllers removed from delta-unity/Assets/Animations/Hero/ (GarenCompleteLocomotion + GarenButAthena/KingArthur/XinZhoa variants + .meta files = 8 files). Evidence: (1) Garen ไม่มีใน Assets/GameData/Heros/ production roster; (2) GUID grep ทั่ว project — ทั้ง 4 GUID (cc2f260e/5888c00a/5fceedb5/c818ebc2) ไม่มี prefab/scene/script ใดอ้างอิง; (3) ใช้ base ผิด (GameCreator/CompleteLocomotion vs production RadiusBasicLocomotion 22/25); (4) ชื่อ GarenBut* + git history 2023-2024 บ่งชี้ว่าเป็น swap-test prototypes ตอนพัฒนา KingArthur/XinZhoa/Athena. design/gdd/item-system.md §Known Issues updated ⚠️→✅. Should Have 3/3 acknowledged (S5-11/S5-12 deferred-S6 + S5-13 done)."
-
-  # Nice to Have — Process + polish
-  - id: "S5-14"
-    name: "Codify 5-min existence check rule in coordination-rules.md"
-    file: "production/sprints/sprint-005.md"
-    priority: nice-to-have
-    status: backlog
-    owner: "producer"
-    assignee: "tanapol"
-    estimate_days: 0.25
-    blocker: ""
-    completed: ""
-
-  - id: "S5-15"
-    name: "Scene-naming convention doc (S3-retro carry-forward)"
-    file: "production/sprints/sprint-005.md"
-    priority: nice-to-have
-    status: backlog
-    owner: "producer"
-    assignee: "tanapol"
-    estimate_days: 0.25
-    blocker: ""
-    completed: ""
-
-  - id: "S5-16"
-    name: "origin/dev merge cadence metric (S3-retro carry-forward)"
-    file: "production/sprints/sprint-005.md"
-    priority: nice-to-have
-    status: backlog
-    owner: "lead-programmer"
-    assignee: "tanapol"
-    estimate_days: 0.25
-    blocker: ""
-    completed: ""
-
-  - id: "S5-17"
-    name: "AbilityMultipeerRunner duplicate-Start guard (S4-P1)"
-    file: "production/sprints/sprint-005.md"
+  - id: "S6-14"
+    name: "S5-17 AbilityMultipeerRunner duplicate-Start guard (was S4-P1)"
+    file: "production/sprints/sprint-006.md"
     priority: nice-to-have
     status: backlog
     owner: "network-programmer"
@@ -216,47 +172,24 @@ stories:
     blocker: ""
     completed: ""
 
-  - id: "S5-18"
-    name: "AbilityRegistry boot-time optimization (Resources.LoadAll → Addressables) (S4-P2)"
-    file: "production/sprints/sprint-005.md"
+  - id: "S6-15"
+    name: "R-22 / R-23 schedule call (inline Phase 3 vs. dedicated balance pass) + ADR draft"
+    file: "production/sprints/sprint-006.md"
     priority: nice-to-have
-    status: backlog
-    owner: "unity-addressables-specialist"
+    status: done
+    owner: "technical-director + game-designer"
     assignee: "tanapol"
-    estimate_days: 1.5
+    estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-05-15 — Both R-22 (stat /100 unconditional) + R-23 (AdditionalMoveSpeed misnamed override) DEFERRED to Sprint 008 dedicated balance pass. Rationale: both require playtest re-tune (R-22 = re-tune all move_speed/attack_speed items; R-23 = redesign field semantics with rename or stat-migration path). Phase 3 hero migrations (S6+) focus on slot binding, not item balance / field rename. Bundling both in Sprint 008 amortizes playtest re-tune cost across both risks. Hold-the-line rule stays in effect for R-23 through Sprint 007 (Phase 3 hero migrations must not write AdditionalMoveSpeed). Pre-launch escalation trigger added: Sprint 007 retro must confirm Sprint 008 still fits launch timeline. No ADR draft needed yet — drafted as part of Sprint 008 plan."
 
-  - id: "S5-22"
-    name: "Codify Phase 2 lessons-learned in docs/architecture/phase-2-lessons-learned.md"
-    file: "production/sprints/sprint-005.md"
+  - id: "S6-B1"
+    name: "BUG-0004 — BotActor.WithTarget msg→msg2 typo (filed S5-05)"
+    file: "production/sprints/sprint-006.md"
     priority: nice-to-have
     status: done
     owner: "gameplay-programmer"
     assignee: "tanapol"
     estimate_days: 0.25
     blocker: ""
-    completed: "2026-05-14 — claude/s5-22-phase-2-lessons. NEW doc docs/architecture/phase-2-lessons-learned.md (5 patterns, ~280 lines): (1) Dual-path retention with slot-or-legacy guard — origins S5-04/S5-05/S5-09/S5-21; (2) Static-helper extraction for NetworkBehaviour testability — pattern from 4 static helpers in Sprint 005; (3) Central state-transition instrumentation — S5-21 v1→v2 fix lesson (Progress setter > OnPressButtons); (4) Server-authoritative networked writes — HasStateAuthority + Runner.IsServer guards; (5) API+caller pair audit — story-readiness gate to prevent TD-006/TD-007 anti-pattern (4 surfacings this sprint). Includes Phase 3 application checklist for ~20 remaining hero migrations. ADR README index linked. Living document — append as Phase 3 surfaces new lessons."
-
-  # Bugs (filed during sprint)
-  - id: "S5-19"
-    name: "BUG-0001 — Recall post-warp locomotion animation ไม่เล่น"
-    file: "production/qa/bugs/BUG-0001-recall-locomotion-stuck.md"
-    priority: bug
-    status: done
-    owner: "gameplay-programmer + technical-artist"
-    assignee: "tanapol"
-    estimate_days: 0.5
-    blocker: ""
-    completed: "2026-05-14 — RESOLVED via delta-unity PR #357 (merged). Root cause: AnimatorStateSync.SynchronizeStates() skipped writing _state when host entered Idle/Run but never cleared the prior ability StateHash, leaving stale data that client peers force-replayed via Animator.Play() on Render ticks. Fix: clear StateHash to 0 when entering Idle/Run (client UpdateStates already skips StateHash==0). Single source-of-truth fix at root — likely closes cousin bugs (GuanYuE/HorusE/HorusR/VolundW) flagged in BUG-0002 fix commit, pending ad-hoc verification. Playtest verified by tanapol: F3 (Recall + WASD spam) PASS, F4 (hold direction pre-warp) PASS, Anansi W regression (BUG-0002 fix) PASS. Bandwidth +12 bytes/ability-end (negligible vs 65 B/s). Forensic diagnosis PR #44 (Delta-Project) merged before fix PR. Final time: ~0.3d (under 0.5d estimate)."
-
-  - id: "S5-20"
-    name: "BUG-0002 — Anansi W ค้างท่า Idle หลัง cast จบ"
-    file: "production/qa/bugs/BUG-0002-anansi-w-idle-stuck.md"
-    priority: bug
-    status: done
-    owner: "gameplay-programmer + technical-artist"
-    assignee: "tanapol"
-    estimate_days: 0.5
-    blocker: ""
-    completed: "2026-05-12 — delta-unity@91697bf78e, dev branch"
+    completed: "2026-05-15 — Typo fix landed at BOTH affected sites: (1) delta-unity Assets/GameScripts/Gameplays/Characters/BotAvatar/BotActor.cs:716 (originally filed in S5-05 code review); (2) delta-unity Assets/GameScripts/Gameplays/Characters/Actors/ActorDungeon.cs:401 (NEW cousin bug surfaced during S6-B1 investigation 2026-05-15 — identical copy-paste typo). Both sites: 1-char change msg → msg2 on second skill.GetInputBot() call. NEW production/qa/bugs/BUG-0004-bot-withtarget-msg-typo.md filed (was previously referenced but never created). No EditMode test added (1-char fix over surface not unit-testable without mocking framework setup — over-engineering; flagged as future tooling story candidate). Out of scope: refactor two-step pattern into helper, unify BotActor.WithTarget vs ActorDungeon.WithTarget (clear copy-paste — Phase 3+ refactor candidate)."

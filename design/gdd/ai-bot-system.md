@@ -122,15 +122,17 @@ R (Ultimate) → Q → W → E
 
 ### 3.7 สิ่งที่ Bot ยังไม่มี
 
-| Feature | สถานะ |
-|---------|-------|
-| ซื้อไอเทม | ❌ ไม่มี |
-| Last-hit Minion | ❌ ไม่มี |
-| Coordination กับ Bot ด้วยกัน | ❌ ไม่มี |
-| Objective awareness (Boss/Tower) | ❌ ไม่มี |
-| Gank / Roaming | ❌ ไม่มี |
-| ระดับความยาก | ❌ ค่า Hardcode ทั้งหมด |
-| Collision Avoidance | ❌ โค้ดมีแต่ถูก Comment Out |
+**Status update 2026-05-15** (Sprint 006 S6-01 / S5-12 Path B): MVP launch ship-as-is — รายการด้านล่างทั้งหมดถูก label เป็น **Post-Launch** หลังการตัดสินใจ descope AI Bot enhancement work เพื่อปลดล็อก Sprint 006 Phase 3 hero migration capacity. ดู [S5-12 decision](../../production/decisions/S5-12-ai-bot-fate.md) + [Post-launch backlog](../../production/backlog/post-launch.md).
+
+| Feature | สถานะ MVP | Post-Launch home |
+|---------|-----------|------------------|
+| ซื้อไอเทม | ❌ ไม่มี (MVP ship as-is) | **Post-Launch** — `backlog/post-launch.md` S4-09 (2.0d) |
+| Last-hit Minion | ❌ ไม่มี (MVP ship as-is) | **Post-Launch** — backlog future candidate (~0.5d) |
+| Coordination กับ Bot ด้วยกัน | ❌ ไม่มี (MVP ship as-is) | **Post-Launch** — backlog future candidate |
+| Objective awareness (Boss/Tower) | ❌ ไม่มี (MVP ship as-is) | **Post-Launch** — backlog future candidate |
+| Gank / Roaming | ❌ ไม่มี (MVP ship as-is) | **Post-Launch** — backlog future candidate |
+| ระดับความยาก | ❌ ค่า Hardcode ทั้งหมด (MVP ship as-is) | **Post-Launch** — `backlog/post-launch.md` S4-10 (1.0d) |
+| Collision Avoidance | ❌ โค้ดมีแต่ถูก Comment Out | **Post-Launch** — backlog future candidate (~0.5d, small effort) |
 
 ---
 
