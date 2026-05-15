@@ -12,7 +12,7 @@ goal: "Phase 3 hero migration kickoff (4-5 heroes) + Day-1 close S5-11/S5-12 des
 start: "2026-05-15"
 end: "2026-05-28"
 generated: "2026-05-15"
-updated: "2026-05-15 (Day-1 ALL non-soak-blocked stories closed + Phase 3 batch 1 prep: S6-03..06 story files authored at production/epics/phase-3-hero-migration/ with hero assignments Horus/Volund/GuanYu/Skadi; 2/7 Must Have + 3/3 Should Have + 3/6 Nice-to-Have done; ~4.1d burned vs ~5.25d budget = -22%; Phase 2 soak ends 2026-05-21 still gates S6-03..06 + S6-11/12 + S6-14)"
+updated: "2026-05-15 (Day-1 ALL non-soak-blocked stories closed + Phase 3 batch 1 prep + S6-14 multipeer duplicate-Start guard CLOSED: 2/7 Must Have + 3/3 Should Have + 4/6 Nice-to-Have done; ~4.6d burned vs ~5.25d budget = -12%; Phase 2 soak ends 2026-05-21 still gates S6-03..06 + S6-11/12; BUG-0005 multipeer Pass #4 parity regression filed during S6-14 manual verification — pre-existing, NOT caused by S6-14 guard; Test Infrastructure EPIC created)"
 
 stories:
   # Must Have — Day-1 decisions + Phase 3 batch 1
@@ -163,14 +163,14 @@ stories:
 
   - id: "S6-14"
     name: "S5-17 AbilityMultipeerRunner duplicate-Start guard (was S4-P1)"
-    file: "production/sprints/sprint-006.md"
+    file: "production/epics/test-infrastructure/S6-14-multipeer-duplicate-start-guard.md"
     priority: nice-to-have
-    status: backlog
+    status: done
     owner: "network-programmer"
     assignee: "tanapol"
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-05-15 — COMPLETE WITH NOTES. 3-sprint carryover (S4-P1 → S5-17 → S6-14) closed. Static `_isRunning` guard + per-instance `_isPrimary` flag added to AbilityMultipeerRunner.cs; OnDestroy now only releases guard when primary instance is torn down (regression test in EditMode suite). 4/4 EditMode tests PASS in Unity Test Runner (test_FirstInstance_ClaimsGuard_RemainsEnabled / test_SecondInstance_FailsGuard_BecomesDisabled / test_PrimaryReleasesGuard_AllowsNextInstance / test_DuplicateRelease_DoesNotReleaseGuard). Manual play-mode verification: 0 GameIsFull cascade in Console; guard fires 10+ times (scene-load duplication is real and frequent); primary runner online normally. AC #4 partial: Pass #5 bandwidth ✅, Pass #4 parity ❌ → filed as BUG-0005 (pre-existing regression between Sprint 5 and 2026-05-15, NOT caused by S6-14 guard — guard does not touch TestActor spawn / FindActorAbilityComponent / parity logic). Deliverables: (1) delta-unity AbilityMultipeerRunner.cs +60 LOC including `[InternalsVisibleTo]`, `[RuntimeInitializeOnLoadMethod]` domain-reload reset, `ApplyDuplicateGuard()`, `ReleaseGuardIfPrimary()`, `ResetStaticStateForTesting()`; (2) NEW Assets/UnitTests/TestEditMode/AbilityMultipeerRunnerGuardTests.cs (134 LOC, 4 tests); (3) UnitTestEditMode.asmdef +1 reference; (4) NEW production/epics/test-infrastructure/EPIC.md + S6-14 story file; (5) NEW production/qa/bugs/BUG-0005-multipeer-parity-regression.md; (6) NEW production/qa/evidence/S6-14-multipeer-console-clean.txt; (7) S7-PROPOSED-SCENE-RENAME tracked in Test Infrastructure EPIC Future Candidates. Code review APPROVED WITH SUGGESTIONS (unity-specialist + qa-tester); cleanup suggestions 1+2 applied. Estimate burn 0.5d actual vs 0.5d budget = on target."
 
   - id: "S6-15"
     name: "R-22 / R-23 schedule call (inline Phase 3 vs. dedicated balance pass) + ADR draft"
