@@ -1,9 +1,9 @@
 # BUG-0006 — Hercules E (dash) first cast per match: no movement, no cooldown
 
 **Filed**: 2026-05-18 (during Phase 2 soak manual verification, Sprint 006 Day 4)
-**Status**: 🟠 **OPEN — ROOT CAUSE LOCATED 2026-05-18** (smoking gun at `NetworkStatusEffect.cs:947`, fix scheduled for next session)
-**Severity**: S2 (high — feature broken on first use; workaround = cast twice)
-**Priority**: **P0** (upgraded 2026-05-18 — cousin risk HIGH; blocks Phase 3 batch 1 dash-bearing heroes Horus E + Volund W if H4b confirmed)
+**Status**: 🟠 **OPEN — ROOT CAUSE REVISED 2026-05-18 late-EOD** (Phase 2 dual-path duplicate spawn; fix decision pending — see 3 options below)
+**Severity**: **S1** (upgraded from S2 — affects EVERY Hero with AbilityComponent attached since S5-10 commit `748ddd410f` 2026-05-14, not just Hercules E; workaround = cast twice, unshippable)
+**Priority**: **P0** (cousin risk = ENTIRE Phase 3 batch 1 + all post-S5-10 heroes; blocks Phase 3 batch 1 implementation)
 **Owner**: gameplay-programmer (tanapol)
 
 ---
@@ -24,9 +24,51 @@
 | Silent pipeline failure (BindSlot not registered, slot=0) | ❌ Ruled out | Console **ไม่มี warning** ตอน first cast E |
 | Hercules-E-specific OR shared dispatcher with E entrypoint | ✅ Likely scope | Only E affected; Q/W/R/NA/Recall/Item ทำงาน |
 
-## Root cause — IDENTIFIED 2026-05-18
+## Root cause — REVISED 2026-05-18 late-EOD (after live diagnostic + user observation)
 
-🎯 **Smoking gun**: [`NetworkStatusEffect.cs:947`](../../../../../delta-unity/Assets/GameScripts/Gameplays/Cores/Stat/NetworkStatusEffect.cs:947)
+🎯 **Actual root cause**: **Phase 2 dual-path retention creates duplicate `ActorCombatAction` spawn per Hero ability**
+
+### Live diagnostic timeline (2026-05-18)
+
+1. **Initial hypothesis**: `NetworkStatusEffect.cs:947` silent guard (`!Object.HasStateAuthority || IsDashing`) — added diagnostic logs to RequestDash + all 5 `Dash()` overload guard sites + HerculesEAction.OnPerformRelease
+2. **First cast Play test (user)**: NO logs fired on first cast. NO `[S5-06] StateReleaseSlot dropped` warning either.
+3. **Operator observation surfaced the actual root cause**: user noticed **2 instances of the same ActorCombatAction prefab spawned simultaneously** — one inside `base_avatar` (correct child), one outside (orphan).
+4. **Code inspection confirmed**: `ActorCombat.OnStartup` (line 405-415) runs BOTH spawn paths unconditionally for Hero with AbilityComponent attached:
+   - `CreateSkill()` (legacy) — spawns via `Runner.SpawnAsync` (line 361), assigns to legacy `m_Skill3Action` NetworkProperty (orphan)
+   - `BootstrapSlotBindings()` (Phase 2 S5-09) — calls `AbilityComponent.BindSlot()` → `registry.CreateAction(abilityId, anchor: this)` (line 151 of AbilityComponent.cs) — spawns parented to base_avatar
+
+### Why first cast fails
+
+When user presses E:
+- Input routes through one instance (likely legacy `Skill3` orphan) → animation plays on base_avatar's Animator
+- AnimationEvent fires on base_avatar's Animator → calls `Skill_E_Perform()` → `StateReleaseSlot(Actor.Combat.GetActiveSlot(), ...)`
+- `GetActiveSlot() = 3` (S5-21 SetActiveSlot did wire correctly)
+- `GetSlotAction(3)` returns Phase 2 instance (under base_avatar) — but animation was actually played on legacy instance
+- Phase 2 instance has no "currently casting" state → silent drop somewhere in the routing
+- Result: animation plays visually, no `OnPerformRelease` reaches HerculesEAction, no dash, no CD trigger
+
+Second cast works because by then one of the pipelines' state has settled / re-synced — operator did not investigate which one.
+
+### Why prior diagnostics didn't catch this
+
+- S5-10 Hercules manual playthrough sign-off (2026-05-14) tested each ability once per match — operator didn't notice "first cast fails, second cast works" pattern because the workaround (cast twice) is invisible without explicit tracking
+- Multipeer harness `PrototypeTest.unity` uses a different setup (TestActor prefab without legacy CreateSkill path) — Pass #4 was always green
+- BUG-0001 cousin verification looked at AnimatorStateSync, not spawn counts
+
+### Original NetworkStatusEffect.cs:947 hypothesis — RULED OUT
+
+The silent guard at `RequestDash` line 947 is **not** the bug. Live diagnostic confirmed RequestDash is **never called** on first cast (no `[BUG-0006 RequestDash CALLED]` log). The chain breaks earlier — between `Skill_E_Perform()` AnimationEvent and `HerculesEAction.OnPerformRelease()` — likely at `GetSlotAction(3)` returning the wrong instance, or at `Release()` finding no active state on the bound instance.
+
+### Defensive fix retained (not root cause but good hygiene)
+
+A defensive change is retained in the BUG-0006 commit (delta-unity, pending commit):
+- `NetworkTrait.Despawned()` now resets `IsDashing = false; DashT = 0f;` via new private helper `NetworkStatusEffect.ResetRequestDashState()` — mirroring the existing `m_IsDash = false` pattern
+- Rationale: if `IsDashing` networked state ever leaks across match (different bug class, not BUG-0006), this prevents the silent-guard at line 947 from blocking RequestDash. Safe + matches existing pattern. Cheap insurance.
+
+All diagnostic logs (RequestDash entry log, 5 Dash overload guard logs, HerculesEAction entry log) **reverted** to keep delta-unity diff minimal.
+
+### Smoking gun (original — RULED OUT, kept for reference)
+🎯 ~~**Initial smoking gun**~~: [`NetworkStatusEffect.cs:947`](../../../../../delta-unity/Assets/GameScripts/Gameplays/Cores/Stat/NetworkStatusEffect.cs:947)
 
 ```csharp
 public void RequestDash(float range, float speed, Action callback = null, bool blockObstacle = false)
@@ -169,28 +211,56 @@ PASS WITH NOTES — assumed Hercules-E-specific, Phase 3 batch 1 unblocked.
 - Workaround exists (cast twice) — playable but unshippable for new player UX
 - Soak Day 4 of 7 — full sign-off on 2026-05-21 with explicit BUG-0006 status (RESOLVED before Phase 3 ideal; OPEN with mitigation acceptable)
 
-### Phase 3 batch 1 kickoff decision (revised 2026-05-18 EOD-late)
+### Phase 3 batch 1 kickoff decision (revised 2026-05-18 late-EOD — POST root cause revision)
 
-After cousin grep confirmed **Skadi has 0 dash calls** (S6-06 is dash-free clean control), Option C becomes the strongest plan:
+The earlier "Skadi-first ordering" plan (when root cause was thought to be dash-API-specific) is **NO LONGER VALID**. Actual root cause = Phase 2 dual-path duplicate spawn affects EVERY Hero with AbilityComponent (including Skadi). All Phase 3 batch 1 stories now inherit the bug equally.
 
-**Option A — Block all of batch 1 until BUG-0006 fixed**: simple but stalls; Phase 3 kickoff = 2026-05-22 earliest (1 day post-soak)
-**Option B — Proceed with batch 1, fix BUG-0006 parallel**: Horus/Volund/Guan Yu will exhibit first-cast bug; risky for closure
-**Option C ✅ RECOMMENDED — Reorder batch 1: Skadi first**: start S6-06 Skadi immediately after soak verdict (Skadi confirmed clean); BUG-0006 fix runs parallel (~0.5d); after fix verified, continue S6-03 Horus → S6-04 Volund → S6-05 Guan Yu in original order
+**Skadi is NOT a clean control case anymore**: even with 0 dash calls, Skadi will still suffer first-cast no-op on Q/W/E/R because the dual-path spawn affects every ability via the routing chain (Skill_X_Perform AnimationEvent → StateReleaseSlot → GetSlotAction returns wrong instance).
 
-**Critical path under Option C**:
+### Fix options (3 candidates — next session decision)
+
+**Option 1 — Gate legacy `CreateSkill` for Hero with AbilityComponent** (cleanest, most invasive)
+- In `ActorCombat.OnStartup`: if Actor is Hero AND has AbilityComponent attached → skip `CreateSkill()`, run only `BootstrapSlotBindings()`
+- Phase 2 path becomes sole source of ActorCombatAction for Hero
+- 👍 Architecturally correct (Phase 2 was always supposed to replace legacy)
+- 👎 Risk: code paths still reading `m_Skill3Action` / `Skill1..4` NetworkProperties will get null → audit + migrate input handlers + all UI / display code
+- 👎 Investigation + fix: ~1d (per-caller audit), may surface secondary issues
+- Recommended IF Phase 3 batch close requires clean state
+
+**Option 2 — Gate Phase 2 `BindSlot` if legacy spawned same ability** (minimal change, transitional)
+- In `AbilityComponent.BindSlot`: before `registry.CreateAction`, check if `ActorCombat.GetSkill[ID]` already exists → if yes, register existing instance into `Slots[]` dictionary instead of spawning new
+- Keeps legacy path as primary, Phase 2 wraps it
+- 👍 Minimal blast radius — no caller migration
+- 👎 Defeats purpose of Phase 2 architecture (Slot becomes a thin wrapper around legacy)
+- 👎 Investigation + fix: ~0.5-1d
+- Recommended IF Phase 3 batch needs to ship fast and proper migration is deferred to Phase 4
+
+**Option 3 — Despawn duplicate in `OnStartup` post-init** (quickest, hacky)
+- After both `CreateSkill()` and `BootstrapSlotBindings()` run, scan for duplicate ActorCombatAction prefabs on the actor, despawn the orphan
+- 👍 Quick — ~0.5d
+- 👎 Doesn't fix architectural issue, just papers over symptom
+- 👎 Risk: despawning wrong instance could break either path
+- Recommended ONLY as emergency stop-gap if Sprint 006 close requires Phase 3 closure
+
+### Phase 3 batch 1 kickoff decision (final reading)
+
+**Phase 3 batch 1 is BLOCKED in entirety** until BUG-0006 is RESOLVED. No Hero migration story (S6-03/04/05/06) can complete cleanly while duplicate spawn exists, because every per-hero AC #7 manual playthrough will reproduce the first-cast bug.
+
+**Revised critical path**:
 ```
-2026-05-21 soak verdict signed
+2026-05-19 to 2026-05-20 (2 days)
    ↓
-   ├── S6-06 Skadi START — 0.5d (validates non-dash pipeline)
-   ├── BUG-0006 fix (parallel) — 0.5d, verify Hercules E+R clean
+   BUG-0006 fix session — decide Option 1/2/3, implement, verify Hercules E + R + Q + W (regression check)
    ↓
-2026-05-23 (approx)
+2026-05-21 soak verdict — combined with BUG-0006 RESOLVED → soak GREEN
    ↓
-   S6-03 Horus → S6-04 Volund → S6-05 Guan Yu → S6-07 batch gate
-   0.5d × 4 = 2d
+   Phase 3 batch 1: S6-03 Horus → S6-04 Volund → S6-05 Guan Yu → S6-06 Skadi → S6-07 batch gate
+   0.5d × 5 = 2.5d
    ↓
-2026-05-27 = batch 1 complete (within Sprint 006 window, ends 2026-05-28)
+2026-05-26 batch 1 complete (within Sprint 006, ends 2026-05-28)
 ```
+
+Burn projection: ~4.85d (Day-4 close) + 1d (BUG-0006 fix) + 2.5d (batch 1) = **~8.35d** vs Sprint 006 budget 11d (with Should/Nice slack) = within budget but tight.
 
 Final decision by tanapol.
 

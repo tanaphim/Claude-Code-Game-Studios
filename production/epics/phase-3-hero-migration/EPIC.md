@@ -48,9 +48,27 @@ Stories run **sequentially** to allow each migration to test patterns before the
 
 **Combined Must Have**: 2.5d (within sprint capacity, soak permitting)
 
-### Ordering revision 2026-05-18 (post-BUG-0006 discovery)
+### Ordering revision 2026-05-18 (RETRACTED late-EOD after BUG-0006 root cause revision)
 
-After BUG-0006 cousin grep (2026-05-18 EOD-late) confirmed **Skadi has 0 dash API calls** (clean from `RequestDash` + `Dash()` overloads), the recommended kickoff order changes:
+**The Skadi-first ordering proposal below is NO LONGER VALID.** Late-EOD investigation revealed BUG-0006 root cause is **Phase 2 dual-path duplicate spawn** in `ActorCombat.OnStartup` (legacy `CreateSkill()` + Phase 2 `BootstrapSlotBindings()` both spawn `ActorCombatAction` per Hero ability). This affects EVERY Hero with AbilityComponent attached (= all Hero roster post-S5-10 commit `748ddd410f` 2026-05-14), including Skadi. The "0 dash calls" property does NOT immunize Skadi — duplicate spawn breaks the routing chain regardless of which ability is cast.
+
+**Phase 3 batch 1 is BLOCKED in entirety** until BUG-0006 RESOLVED. See [BUG-0006](../../qa/bugs/BUG-0006-hercules-e-first-cast.md) Fix options section (Option 1/2/3) for fix path decision.
+
+**Revised critical path** (post BUG-0006 fix):
+```
+2026-05-19 to 2026-05-20  →  BUG-0006 fix session (Option 1/2/3 decided + implemented + verified)
+2026-05-21                →  Soak verdict + BUG-0006 RESOLVED  →  Phase 3 batch 1 unblocked
+2026-05-21 to 2026-05-26  →  S6-03 Horus → S6-04 Volund → S6-05 Guan Yu → S6-06 Skadi → S6-07 batch gate
+2026-05-28                →  Sprint 006 end
+```
+
+Burn projection: Day-4 close (~4.85d) + BUG-0006 fix (~1d) + batch 1 (~2.5d) = ~8.35d / Sprint 006 budget 11d = within budget but tight.
+
+---
+
+### Original ordering revision proposal (RETRACTED — kept for audit trail)
+
+After BUG-0006 cousin grep (2026-05-18 EOD-late) confirmed **Skadi has 0 dash API calls** (clean from `RequestDash` + `Dash()` overloads), the recommended kickoff order was changed:
 
 ```
 Original: S6-03 Horus → S6-04 Volund → S6-05 Guan Yu → S6-06 Skadi
