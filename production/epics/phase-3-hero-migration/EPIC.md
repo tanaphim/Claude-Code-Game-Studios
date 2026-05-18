@@ -48,6 +48,38 @@ Stories run **sequentially** to allow each migration to test patterns before the
 
 **Combined Must Have**: 2.5d (within sprint capacity, soak permitting)
 
+### Ordering revision 2026-05-18 (post-BUG-0006 discovery)
+
+After BUG-0006 cousin grep (2026-05-18 EOD-late) confirmed **Skadi has 0 dash API calls** (clean from `RequestDash` + `Dash()` overloads), the recommended kickoff order changes:
+
+```
+Original: S6-03 Horus → S6-04 Volund → S6-05 Guan Yu → S6-06 Skadi
+Revised:  S6-06 Skadi → [BUG-0006 fix parallel] → S6-03 Horus → S6-04 Volund → S6-05 Guan Yu
+```
+
+**Rationale**:
+- Skadi has zero dash dependency → unblocks **the moment soak verdict signs** without waiting for BUG-0006 fix
+- Skadi validates the non-dash slice of Phase 2 pipeline (BindSlot, StateReleaseSlot, multipeer parity, AC #1-7 except dash-specific verification) independently
+- BUG-0006 fix runs parallel (~0.5d in NetworkStatusEffect.cs) — does not block Skadi work
+- Once BUG-0006 fix verified on Hercules E + R, batch 1 continues with Horus → Volund → Guan Yu in original order
+- Eliminates risk of contaminating 3 dash-bearing hero migrations simultaneously with a known dash-API bug
+
+**Critical path**:
+```
+2026-05-21 soak verdict
+   ↓
+   ├── S6-06 Skadi START (0.5d) — non-dash pipeline validation
+   ├── BUG-0006 fix (parallel, 0.5d) — verify Hercules E+R clean
+   ↓
+2026-05-23 (approx)
+   ↓
+   S6-03 Horus (0.5d) → S6-04 Volund (0.5d) → S6-05 Guan Yu (0.5d) → S6-07 gate (0.5d)
+   ↓
+2026-05-27 → batch 1 complete (within Sprint 006, ends 2026-05-28)
+```
+
+See [BUG-0006](../../qa/bugs/BUG-0006-hercules-e-first-cast.md) Phase 3 batch 1 kickoff decision section for Options A/B/C analysis.
+
 ## Dependencies (all must be ✅ before batch 1 begins)
 
 - ✅ Phase 2 Hercules pilot end-to-end (ADR-0006 §3 Exit Criteria 1-6 all PASS)

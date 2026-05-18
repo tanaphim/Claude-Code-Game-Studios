@@ -61,15 +61,50 @@ If a previous match ended with `IsDashing = true` (player died mid-dash, despawn
 ### Why no warning?
 The early-return at line 947 is silent — `return;` with no logging. **First diagnostic fix candidate**: change to `if (!Object.HasStateAuthority || IsDashing) { Debug.LogWarning($"[RequestDash] guard failed HasAuthority={Object.HasStateAuthority} IsDashing={IsDashing}"); return; }` to surface future occurrences.
 
-### Cousin scan — `RequestDash` callers in codebase
-(grep `RequestDash` in `Assets/GameScripts/Gameplays/Characters/**/*.cs`):
+### Cousin scan — both dash APIs share the same vulnerability pattern (2026-05-18 EOD-late)
 
-- `HerculesEAction.cs:18` — this bug
-- `HerculesRAction.cs:88` — likely same guard failure
-- `HorusEAction.cs:16` — **Phase 3 batch 1 (S6-03)**
-- `WildBillEAction.cs:14` — batch 2
+**KEY FINDING**: `NetworkStatusEffect.cs` has **TWO separate dash state systems**, both with the same silent-guard vulnerability shape:
 
-Indirect (via `Dash()` overloads at NetworkStatusEffect.cs:535/544/758): Athena E, Anansi E + W, Volund W, Horus Q + R — need to verify whether they go through the same `IsDashing` guard.
+| API | State var | Declared at | Used by |
+|-----|-----------|-------------|---------|
+| `RequestDash(float range, ...)` | `IsDashing` (NetworkBool) | line 943 | Hercules E, Hercules R, Horus E, Wild Bill E |
+| `Dash(Actor / Vector3, speed, height, callback)` (and 3 overloads) | `IsDash` (NetworkBool) | line 111 | Horus Q, Horus R, Volund W, Guan Yu E, (others indirect) |
+
+Both guard patterns:
+```csharp
+// Line 538, 547, 575, 598, 760 (Dash family)
+if (IsDash) return;  // silent no-op
+
+// Line 947 (RequestDash)
+if (!Object.HasStateAuthority || IsDashing) return;  // silent no-op
+```
+
+**Implication**: if BUG-0006 root cause is H4b (state leak across match), **both** `IsDash` and `IsDashing` are vulnerable — they're independent `[Networked]` state vars but share the same lifecycle weakness. Fix must reset **both** in `Spawned()` callback.
+
+### Phase 3 batch 1 hero scan (2026-05-18 EOD-late grep)
+
+| Hero / Ability | API | State var | BUG-0006 risk |
+|----------------|-----|-----------|---------------|
+| Hercules E (S5 pilot) | RequestDash | IsDashing | 🔴 Confirmed |
+| Hercules R (S5 pilot) | RequestDash | IsDashing | 🟡 Same API, not manually verified yet |
+| **Horus E (S6-03)** | RequestDash | IsDashing | 🔴 HIGH |
+| Horus Q (S6-03) | Dash(Actor,…) | IsDash | 🟡 Same pattern |
+| Horus R (S6-03) | Dash(Vector3,…) | IsDash | 🟡 Same pattern |
+| **Volund W (S6-04)** | Dash(Vector3,…) | IsDash | 🟡 Same pattern |
+| **Guan Yu E (S6-05)** | Dash(Actor,…) | IsDash | 🟡 Same pattern |
+| **Skadi (S6-06)** | **(none)** | — | ✅ **CLEAN — 0 dash calls** |
+| Wild Bill E (batch 2) | RequestDash | IsDashing | 🟡 Future verify |
+| Athena E, Anansi E + W (batch 2) | Dash overloads | IsDash | 🟡 Future verify |
+
+### Fix scope (revised)
+
+1. Reset **`IsDash = false`** in `NetworkStatusEffect.Spawned()` callback (or wherever spawn-init happens)
+2. Reset **`IsDashing = false; DashT = 0f;`** in same place
+3. Add `Debug.LogWarning` to BOTH guard branches:
+   - `if (IsDash) { Debug.LogWarning("[Dash] guard fired IsDash=true"); return; }` (lines 538, 547, 575, 598, 760)
+   - `if (!Object.HasStateAuthority || IsDashing) { Debug.LogWarning($"[RequestDash] guard HasAuth={...} IsDashing={...}"); return; }` (line 947)
+4. Verify Hercules E + R first cast clean post-fix (manual smoke + 3 matches in a row)
+5. Verify cousin: load Horus → cast Q + E + R first cast each match → confirm no first-cast bug
 
 ## Reproduction
 
@@ -134,12 +169,30 @@ PASS WITH NOTES — assumed Hercules-E-specific, Phase 3 batch 1 unblocked.
 - Workaround exists (cast twice) — playable but unshippable for new player UX
 - Soak Day 4 of 7 — full sign-off on 2026-05-21 with explicit BUG-0006 status (RESOLVED before Phase 3 ideal; OPEN with mitigation acceptable)
 
-### Phase 3 batch 1 kickoff decision (revised)
-**Option A — Block until BUG-0006 fixed**: ideal; ~0.5d fix + verify Hercules first; Phase 3 starts 2026-05-22 (1 day after soak verdict)
-**Option B — Proceed with batch 1, fix BUG-0006 parallel**: Horus E and Volund W will exhibit first-cast bug; per-hero AC #7 playtest will surface them but they would be marked Complete with known regression — risky
-**Option C — Reorder Phase 3 batch 1**: start with **S6-06 Skadi (control case, likely no `RequestDash` use)** to validate non-dash pipeline; defer S6-03 Horus / S6-04 Volund until BUG-0006 fixed
+### Phase 3 batch 1 kickoff decision (revised 2026-05-18 EOD-late)
 
-**Recommendation**: **Option A** — fix BUG-0006 first (~0.5d, fits soak window). Cleaner end-to-end test for Phase 3 batch 1 + avoids regression contamination across multiple heroes simultaneously. Final decision by tanapol.
+After cousin grep confirmed **Skadi has 0 dash calls** (S6-06 is dash-free clean control), Option C becomes the strongest plan:
+
+**Option A — Block all of batch 1 until BUG-0006 fixed**: simple but stalls; Phase 3 kickoff = 2026-05-22 earliest (1 day post-soak)
+**Option B — Proceed with batch 1, fix BUG-0006 parallel**: Horus/Volund/Guan Yu will exhibit first-cast bug; risky for closure
+**Option C ✅ RECOMMENDED — Reorder batch 1: Skadi first**: start S6-06 Skadi immediately after soak verdict (Skadi confirmed clean); BUG-0006 fix runs parallel (~0.5d); after fix verified, continue S6-03 Horus → S6-04 Volund → S6-05 Guan Yu in original order
+
+**Critical path under Option C**:
+```
+2026-05-21 soak verdict signed
+   ↓
+   ├── S6-06 Skadi START — 0.5d (validates non-dash pipeline)
+   ├── BUG-0006 fix (parallel) — 0.5d, verify Hercules E+R clean
+   ↓
+2026-05-23 (approx)
+   ↓
+   S6-03 Horus → S6-04 Volund → S6-05 Guan Yu → S6-07 batch gate
+   0.5d × 4 = 2d
+   ↓
+2026-05-27 = batch 1 complete (within Sprint 006 window, ends 2026-05-28)
+```
+
+Final decision by tanapol.
 
 ## References
 
