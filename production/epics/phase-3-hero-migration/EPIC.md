@@ -48,16 +48,17 @@ Stories run **sequentially** to allow each migration to test patterns before the
 
 **Combined Must Have**: 2.5d (within sprint capacity, soak permitting)
 
-### Ordering revision 2026-05-18 (FINAL — late-EOD-2 after legacy-reader audit)
+### Ordering revision 2026-05-18 (FINAL after BUG-0006 RESOLVED — Sprint 007 deferral RETRACTED)
 
-Late-EOD-2 legacy-reader audit (`grep` against delta-unity codebase) showed **672 references to Combat.Skill1..4/NormalAttack/Passive/SkillRecall across 75 files** → Option 1 (gate legacy CreateSkill) is Phase 4 multi-sprint refactor, not Sprint 006 feasible. Option 2 has lifecycle timing blocker; Option 3 causes secondary breakage either direction.
+After live diagnostic on 2026-05-18, BUG-0006 root cause was identified as a Unity AnimationEvent vs Animator StateMachineBehaviour timing race (NOT Phase 2 dual-path duplicate spawn as hypothesised at late-EOD-2). Fix landed at delta-unity `4ed9a04dda` (4 files, +42 lines): eager init of `m_Animator` + `m_Actor` on each `SkillStateMachine` at preload time. **BUG-0006 RESOLVED**.
 
-**FINAL DECISION**: defer BUG-0006 fix to **Sprint 007 (formal Phase 4 architectural kickoff)**. Phase 3 batch 1 proceeds with **known BUG-0006 regression** (workaround = cast twice, documented in AC #7 of each story). Internal soak + dev playtest acceptable; public release gated on Sprint 007 fix.
+**Sprint 007 Phase 4 deferral RETRACTED**: 672-caller migration is NOT required for BUG-0006 — that audit was based on the wrong root-cause hypothesis. Phase 4 (retire legacy CreateSkill + duplicate spawn cleanup) returns to its original schedule based on roadmap priorities, no BUG-0006 dependency.
 
-**Phase 3 batch 1 ordering reverted to original** (Skadi-first retraction confirmed — Skadi not immune to dual-path bug):
+**Per-hero AC #7 reverts to original (no known-regression workaround)**: manual playthrough verifies all abilities work first cast every match. The "cast twice as workaround" amendment is no longer needed.
 
+**Phase 3 batch 1 critical path (FINAL)**:
 ```
-2026-05-21  Soak verdict (PASS WITH NOTES + known BUG-0006)
+2026-05-21  Soak verdict (PASS — BUG-0006 RESOLVED, no known regressions)
    ↓
    S6-03 Horus → S6-04 Volund → S6-05 Guan Yu → S6-06 Skadi → S6-07 batch gate
    0.5d × 5 = 2.5d
@@ -65,9 +66,7 @@ Late-EOD-2 legacy-reader audit (`grep` against delta-unity codebase) showed **67
 2026-05-26 batch 1 complete (within Sprint 006, ends 2026-05-28)
 ```
 
-Sprint 006 burn projection: ~4.85d (Day-4 close) + ~2.5d (batch 1) = **~7.35d / 11d budget = within budget comfortably**. BUG-0006 fix burn deferred to Sprint 007.
-
-**Per-hero AC #7 amendment** (apply during S6-03..06 implementation): "Manual playthrough — first cast of each ability per match exhibits known BUG-0006 regression (cast twice as workaround). Document in evidence file; do not block story closure on this regression."
+Sprint 006 burn projection: ~5.35d (Day-4 wrap-up including BUG-0006 fix session) + ~2.5d (batch 1) = **~7.85d / 11d budget = -29% (well within budget)**.
 
 ---
 

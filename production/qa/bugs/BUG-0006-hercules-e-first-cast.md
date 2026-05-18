@@ -1,10 +1,13 @@
 # BUG-0006 — Hercules E (dash) first cast per match: no movement, no cooldown
 
 **Filed**: 2026-05-18 (during Phase 2 soak manual verification, Sprint 006 Day 4)
-**Status**: 🟠 **OPEN — ROOT CAUSE REVISED 2026-05-18 late-EOD** (Phase 2 dual-path duplicate spawn; fix decision pending — see 3 options below)
-**Severity**: **S1** (upgraded from S2 — affects EVERY Hero with AbilityComponent attached since S5-10 commit `748ddd410f` 2026-05-14, not just Hercules E; workaround = cast twice, unshippable)
-**Priority**: **P0** (cousin risk = ENTIRE Phase 3 batch 1 + all post-S5-10 heroes; blocks Phase 3 batch 1 implementation)
+**Status**: ✅ **RESOLVED 2026-05-18** — fix committed at delta-unity `4ed9a04dda` on `dev` (pushed)
+**Severity**: S1 (affected every Hero ability first cast per match)
+**Priority**: P0 (was)
 **Owner**: gameplay-programmer (tanapol)
+**Fix commit**: [`4ed9a04dda`](https://github.com/radiuszon/delta-unity/commit/4ed9a04dda) — "BUG-0006: fix Hercules E (and all abilities) first-cast no-op per match"
+**Actual root cause**: Unity AnimationEvent vs Animator StateMachineBehaviour timing race (NOT Phase 2 dual-path duplicate spawn — that hypothesis ruled out by live diagnostic). Fix: eagerly init `m_Animator` + `m_Actor` on each `SkillStateMachine` at preload time via new `Initialize(animator, actor)` method called from `ActorAnimation.PreloadStateMachine_Internal`. 4 files, +42 lines.
+**Verification**: 3-step manual on operator machine PASS (Hercules first-cast E + all abilities, scene_initial → game_map, multipeer Pass #4)
 
 ---
 
