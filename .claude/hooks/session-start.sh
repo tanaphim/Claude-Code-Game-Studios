@@ -32,12 +32,23 @@ if [ -n "$LATEST_MILESTONE" ]; then
     echo "Active milestone: $(basename "$LATEST_MILESTONE" .md)"
 fi
 
-# Open bug count
+# Open bug count — filter out files whose Status line indicates resolution.
+# Matches the conventions used in production/qa/bugs/BUG-*.md: a line
+# starting with "**Status**:" containing "Resolved" / "RESOLVED" / "Closed"
+# / "CLOSED" / "Won't Fix" / "WONTFIX" marks the bug as not-open.
+# Sprint 006 retro action (BUG-0006 investigation, 2026-05-18): the old
+# count was a raw file count and included resolved bugs, giving a
+# misleading "Open bugs: N" signal at session start.
 BUG_COUNT=0
+RESOLVED_PATTERN='^\*\*Status\*\*:.*\(Resolved\|RESOLVED\|Closed\|CLOSED\|Won.t Fix\|WONTFIX\)'
 for dir in tests/playtest production; do
     if [ -d "$dir" ]; then
-        count=$(find "$dir" -name "BUG-*.md" 2>/dev/null | wc -l)
-        BUG_COUNT=$((BUG_COUNT + count))
+        while IFS= read -r bugfile; do
+            [ -z "$bugfile" ] && continue
+            if ! grep -q "$RESOLVED_PATTERN" "$bugfile" 2>/dev/null; then
+                BUG_COUNT=$((BUG_COUNT + 1))
+            fi
+        done < <(find "$dir" -name "BUG-*.md" 2>/dev/null)
     fi
 done
 if [ "$BUG_COUNT" -gt 0 ]; then
