@@ -74,6 +74,32 @@ Each entry: ID, origin, description, impact, removal target, owner.
 - **Removal target**: Phase 3, or earlier if multipeer reveals the NRE.
 - **Owner**: gameplay-programmer
 
+## TD-010 — Phase 2 dual-path retention spawns duplicate `ActorCombatAction` per Hero ability
+
+- **Origin**: S5-10 (2026-05-14, commit `748ddd410f` attached `AbilityComponent` to `base_avatar.prefab`); visually confirmed during BUG-0006 investigation Sprint 006 Day 4 (2026-05-18)
+- **Status**: Documented; deferred to Phase 4 (Sprint 007+)
+- **Description**: `ActorCombat.OnStartup` (line 405-415) runs BOTH `CreateSkill()` (legacy, line 301-395) AND `BootstrapSlotBindings()` (Phase 2 S5-09, line 429-455) unconditionally for Hero actors with `AbilityComponent` attached. Each path spawns a separate `ActorCombatAction` `NetworkObject` per ability:
+  - **Legacy**: `Runner.SpawnAsync(...)` → orphan (no parent anchor), assigned to `Skill1..4` / `NormalAttack` / `Passive` / `SkillRecall` `NetworkProperties`
+  - **Phase 2**: `AbilityComponent.BindSlot()` → `registry.CreateAction(abilityId, anchor: this)` → parented to `base_avatar`, registered in `Slots[]` dictionary
+  
+  Result: 2 instances of the same ability prefab per Hero, visible in Editor hierarchy (one inside `base_avatar`, one outside).
+- **Impact**: **LOW — cosmetic / architectural concern only, NOT a functional bug.** BUG-0006 fix (delta-unity `4ed9a04dda`) confirmed the first-cast no-op was a Unity `AnimationEvent` vs `StateMachineBehaviour` timing race, NOT duplicate spawn. Abilities work correctly despite duplicates.
+  
+  Memory overhead: ~7 extra `NetworkObject`s per Hero × 10 heroes per match (5v5) = ~70 extras per match — well within Fusion's default `NetworkObject` budget (~5000). Bandwidth overhead is small because legacy spawns share the same prefab + replication metadata as Phase 2 spawns.
+- **Detection scope (2026-05-18 audit)**: 672 references to `Combat.Skill1..4` / `NormalAttack` / `Passive` / `SkillRecall` `NetworkProperties` across 75 files (every hero ability file + UI views + `Actor` base classes + Bot logic).
+- **Mitigation candidates** (decided during Phase 4 architectural session):
+  - **Option A — Gate legacy `CreateSkill` for Hero with `AbilityComponent`**: skip legacy path when Phase 2 has spawned. 672-caller migration required → multi-sprint Phase 4 work. Architecturally correct (Phase 2 was always meant to replace legacy).
+  - **Option B — Gate Phase 2 `BindSlot` to reuse legacy action**: blocked by timing issue (`CreateSkill` is async via `SpawnAsync`, `BootstrapSlotBindings` is sync — legacy `Skill1..4` properties are still `null` when `BindSlot` runs). Would require making `OnStartup` async or deferred-bind event pattern. Defeats Phase 2 architecture purpose.
+  - **Option C — Despawn duplicate post-init**: requires directional decision (despawn legacy → 672 callers break; despawn Phase 2 → `Slots[]` dangling). Hacky; doesn't fix architectural issue.
+  - **Recommended**: Option A as part of formal Phase 4 — retire `SkillKey` enum + 672 caller migration to `GetSlotAction(slot)` + remove legacy `CreateSkill` entirely.
+- **Removal target**: **Phase 4 (Sprint 007+)** — formal architectural session: technical-director + lead-programmer decide migration completion criteria + Option A implementation across multi-sprint scope.
+- **Phase 4 entry gate**: Phase 3 batch 4 closes (all 15 remaining heroes migrated per [EPIC.md](../production/epics/phase-3-hero-migration/EPIC.md) line 12).
+- **Owner**: lead-programmer (Phase 4 driver) / gameplay-programmer (caller migration)
+- **References**:
+  - [BUG-0006](../production/qa/bugs/BUG-0006-hercules-e-first-cast.md) — duplicate spawn was the late-EOD-2 hypothesised root cause, ruled out by actual fix at delta-unity `4ed9a04dda`. Investigation audit (672 callers) lives in BUG-0006 commit history.
+  - [Phase 3 hero migration EPIC](../production/epics/phase-3-hero-migration/EPIC.md) line 12 — plans Phase 4 retirement of dual-path
+  - ADR-0006 §10 — Phase 2 → Phase 3 handover criteria (forward-handover gate to Phase 4 from Phase 3 close)
+
 ---
 
 ## Conventions
