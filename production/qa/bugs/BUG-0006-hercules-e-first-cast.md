@@ -217,30 +217,88 @@ The earlier "Skadi-first ordering" plan (when root cause was thought to be dash-
 
 **Skadi is NOT a clean control case anymore**: even with 0 dash calls, Skadi will still suffer first-cast no-op on Q/W/E/R because the dual-path spawn affects every ability via the routing chain (Skill_X_Perform AnimationEvent → StateReleaseSlot → GetSlotAction returns wrong instance).
 
-### Fix options (3 candidates — next session decision)
+### Fix options — REVISED 2026-05-18 late-EOD-2 (after legacy-reader audit)
 
-**Option 1 — Gate legacy `CreateSkill` for Hero with AbilityComponent** (cleanest, most invasive)
-- In `ActorCombat.OnStartup`: if Actor is Hero AND has AbilityComponent attached → skip `CreateSkill()`, run only `BootstrapSlotBindings()`
-- Phase 2 path becomes sole source of ActorCombatAction for Hero
-- 👍 Architecturally correct (Phase 2 was always supposed to replace legacy)
-- 👎 Risk: code paths still reading `m_Skill3Action` / `Skill1..4` NetworkProperties will get null → audit + migrate input handlers + all UI / display code
-- 👎 Investigation + fix: ~1d (per-caller audit), may surface secondary issues
-- Recommended IF Phase 3 batch close requires clean state
+**Audit data (`grep` against delta-unity `Assets/GameScripts/**/*.cs` 2026-05-18)**:
 
-**Option 2 — Gate Phase 2 `BindSlot` if legacy spawned same ability** (minimal change, transitional)
-- In `AbilityComponent.BindSlot`: before `registry.CreateAction`, check if `ActorCombat.GetSkill[ID]` already exists → if yes, register existing instance into `Slots[]` dictionary instead of spawning new
-- Keeps legacy path as primary, Phase 2 wraps it
-- 👍 Minimal blast radius — no caller migration
-- 👎 Defeats purpose of Phase 2 architecture (Slot becomes a thin wrapper around legacy)
-- 👎 Investigation + fix: ~0.5-1d
-- Recommended IF Phase 3 batch needs to ship fast and proper migration is deferred to Phase 4
+| Legacy NetworkProperty | References | Unique files |
+|------------------------|------------|--------------|
+| `Combat.Skill1..4` | 403 | 50 |
+| `Combat.NormalAttack` | 211 | 55 |
+| `Combat.Passive` | 36 | 18 |
+| `Combat.SkillRecall` | 22 | 10 |
+| **Total** | **~672** | **~75 unique** |
 
-**Option 3 — Despawn duplicate in `OnStartup` post-init** (quickest, hacky)
-- After both `CreateSkill()` and `BootstrapSlotBindings()` run, scan for duplicate ActorCombatAction prefabs on the actor, despawn the orphan
-- 👍 Quick — ~0.5d
-- 👎 Doesn't fix architectural issue, just papers over symptom
-- 👎 Risk: despawning wrong instance could break either path
-- Recommended ONLY as emergency stop-gap if Sprint 006 close requires Phase 3 closure
+Distribution: ActorCombatAction core, **every Hero ability file** (Hercules, Horus, Volund, Guan Yu, Skadi + 30 others), 5 UI view files, Actor base classes, Bot logic.
+
+---
+
+**Option 1 — Gate legacy `CreateSkill` for Hero with AbilityComponent**: ❌ **NOT FEASIBLE for Sprint 006**
+
+- Would null out `Skill1..4`/`NormalAttack`/`Passive`/`SkillRecall` for Hero → 672 callers across 75 files must migrate to `GetSlotAction(slot)`
+- **This is effectively Phase 4 work** (retire SkillKey enum + migrate to slot-based exclusively, ADR-0006 §10 forward-handover)
+- Estimated: multi-sprint refactor (Sprint 007+); not a single-session fix
+- **Recommendation**: defer to Sprint 007+ as formal Phase 4 kickoff
+
+**Option 2 — Gate Phase 2 `BindSlot` to reuse legacy action**: ⚠️ **TIMING BLOCKER**
+
+`ActorCombat.OnStartup` timing prevents reuse:
+```csharp
+CreateSkill();              // void return, async SpawnAsync inside — NOT awaited
+BootstrapSlotBindings(...);  // runs immediately, Skill1..4 still null
+```
+
+`BindSlot` cannot reuse a legacy action that hasn't spawned yet → spawns its own → duplicate persists after legacy async completes.
+
+Fix would require:
+- (2a) Make `OnStartup` async + await `CreateSkill` before `BootstrapSlotBindings` — lifecycle change, risk of late init
+- (2b) Make `BindSlot` deferred (subscribe to spawn-completion callback, bind retroactively) — adds complexity
+
+Either path: ~0.5-1d implementation + careful Hercules/multipeer/cousin verify.
+
+- 👍 Minimal blast radius for callers (672 still read Skill1..4)
+- 👎 Lifecycle change risk; Phase 2 architecture becomes thin wrapper around legacy
+- **Recommendation**: viable if explicit decision to defer Phase 4 to Sprint 007+
+
+**Option 3 — Despawn duplicate in `OnStartup` post-init**: ⚠️ **DIRECTIONAL DECISION REQUIRED**
+
+Need to choose which duplicate to despawn:
+- Despawn **legacy orphan** → `Skill1..4` NetworkProperties become null → **672 callers break game-wide**
+- Despawn **Phase 2 anchored** → `Slots[]` dictionary holds dangling NetworkBehaviourId → AnimationEvent routing chain still broken
+
+Neither choice is clean. Option 3 alone is **not safe** without parallel migration of either the 672 callers (effectively Option 1) or the routing chain (partial Option 2).
+
+- 👎 Both directions cause secondary breakage
+- **Recommendation**: NOT recommended as standalone fix
+
+---
+
+### Strategic finding (escalation candidate)
+
+**Phase 2 architecture intent vs reality**:
+- ADR-0006/0008 design = Phase 2 BindSlot path **replaces** legacy CreateSkill for Hero (gated by `AbilityComponent` presence)
+- S5-10 commit `748ddd410f` (2026-05-14) attached `AbilityComponent` to `base_avatar.prefab` **but did not gate `CreateSkill`** — both paths now run unconditionally for every Hero
+- "Dual-path retention" documented in ADRs was intended for **transition state** (1 path active per hero based on migration progress) — not **always-on dual-spawn**
+
+**Sprint 006 retro escalation (NEW item — promote to TD-010)**:
+- Phase 2 dual-path retention was not gated when `AbilityComponent` attached → silent regression since 2026-05-14
+- Need formal "migration completion criteria" doc + `/story-readiness` gate check ("if AbilityComponent attached, has legacy CreateSkill been gated for this hero?")
+- Phase 4 kickoff (retire SkillKey enum + 672 caller migration) becomes Sprint 007 candidate with multi-sprint scope
+
+### Recommended path forward
+
+**Sprint 006 (current)**:
+- **Defer BUG-0006 fix to Sprint 007** — no Option 1/2/3 ships cleanly within Sprint 006 budget without architectural commitment
+- **Accept BUG-0006 as known regression** for Phase 3 batch 1 — workaround = cast twice; soak verdict = PASS WITH NOTES + known BUG-0006
+- **Update Phase 3 batch 1 stories AC #7**: explicitly document "first-cast no-op known regression — workaround cast twice — tracked in BUG-0006"
+- **Continue Phase 3 batch 1 implementation** (S6-03 Horus → S6-06 Skadi) after soak verdict 2026-05-21
+
+**Sprint 007**:
+- **Architectural session**: technical-director + lead-programmer decide Option 1 (Phase 4 start) vs Option 2 (transitional reuse) vs combined approach
+- Estimated Sprint 007 capacity dedication: 1-2 stories (~2-3d) for BUG-0006 fix + migration foundation
+- Then continue Phase 3 batch 2 (Anansi, Athena, KingArthur, etc.)
+
+**Risk**: Phase 3 batch 1 ships with known first-cast bug → playtest evidence will record workaround usage → not shippable to public but acceptable for internal soak / dev playtest until Sprint 007 fix lands.
 
 ### Phase 3 batch 1 kickoff decision (final reading)
 
