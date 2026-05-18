@@ -32,7 +32,7 @@ if [ -n "$LATEST_MILESTONE" ]; then
     echo "Active milestone: $(basename "$LATEST_MILESTONE" .md)"
 fi
 
-# Open bug count (exclude files with Status: Resolved / Closed / Won't Fix)
+# Open bug count (exclude files with Status: Resolved / Closed / Won't Fix / Fixed / Done)
 BUG_COUNT=0
 for dir in tests/playtest production; do
     if [ -d "$dir" ]; then

@@ -48,6 +48,60 @@ Stories run **sequentially** to allow each migration to test patterns before the
 
 **Combined Must Have**: 2.5d (within sprint capacity, soak permitting)
 
+### Ordering revision 2026-05-18 (FINAL after BUG-0006 RESOLVED — Sprint 007 deferral RETRACTED)
+
+After live diagnostic on 2026-05-18, BUG-0006 root cause was identified as a Unity AnimationEvent vs Animator StateMachineBehaviour timing race (NOT Phase 2 dual-path duplicate spawn as hypothesised at late-EOD-2). Fix landed at delta-unity `4ed9a04dda` (4 files, +42 lines): eager init of `m_Animator` + `m_Actor` on each `SkillStateMachine` at preload time. **BUG-0006 RESOLVED**.
+
+**Sprint 007 Phase 4 deferral RETRACTED**: 672-caller migration is NOT required for BUG-0006 — that audit was based on the wrong root-cause hypothesis. Phase 4 (retire legacy CreateSkill + duplicate spawn cleanup) returns to its original schedule based on roadmap priorities, no BUG-0006 dependency.
+
+**Per-hero AC #7 reverts to original (no known-regression workaround)**: manual playthrough verifies all abilities work first cast every match. The "cast twice as workaround" amendment is no longer needed.
+
+**Phase 3 batch 1 critical path (FINAL)**:
+```
+2026-05-21  Soak verdict (PASS — BUG-0006 RESOLVED, no known regressions)
+   ↓
+   S6-03 Horus → S6-04 Volund → S6-05 Guan Yu → S6-06 Skadi → S6-07 batch gate
+   0.5d × 5 = 2.5d
+   ↓
+2026-05-26 batch 1 complete (within Sprint 006, ends 2026-05-28)
+```
+
+Sprint 006 burn projection: ~5.35d (Day-4 wrap-up including BUG-0006 fix session) + ~2.5d (batch 1) = **~7.85d / 11d budget = -29% (well within budget)**.
+
+---
+
+### Original ordering revision proposal (RETRACTED — kept for audit trail)
+
+After BUG-0006 cousin grep (2026-05-18 EOD-late) confirmed **Skadi has 0 dash API calls** (clean from `RequestDash` + `Dash()` overloads), the recommended kickoff order was changed:
+
+```
+Original: S6-03 Horus → S6-04 Volund → S6-05 Guan Yu → S6-06 Skadi
+Revised:  S6-06 Skadi → [BUG-0006 fix parallel] → S6-03 Horus → S6-04 Volund → S6-05 Guan Yu
+```
+
+**Rationale**:
+- Skadi has zero dash dependency → unblocks **the moment soak verdict signs** without waiting for BUG-0006 fix
+- Skadi validates the non-dash slice of Phase 2 pipeline (BindSlot, StateReleaseSlot, multipeer parity, AC #1-7 except dash-specific verification) independently
+- BUG-0006 fix runs parallel (~0.5d in NetworkStatusEffect.cs) — does not block Skadi work
+- Once BUG-0006 fix verified on Hercules E + R, batch 1 continues with Horus → Volund → Guan Yu in original order
+- Eliminates risk of contaminating 3 dash-bearing hero migrations simultaneously with a known dash-API bug
+
+**Critical path**:
+```
+2026-05-21 soak verdict
+   ↓
+   ├── S6-06 Skadi START (0.5d) — non-dash pipeline validation
+   ├── BUG-0006 fix (parallel, 0.5d) — verify Hercules E+R clean
+   ↓
+2026-05-23 (approx)
+   ↓
+   S6-03 Horus (0.5d) → S6-04 Volund (0.5d) → S6-05 Guan Yu (0.5d) → S6-07 gate (0.5d)
+   ↓
+2026-05-27 → batch 1 complete (within Sprint 006, ends 2026-05-28)
+```
+
+See [BUG-0006](../../qa/bugs/BUG-0006-hercules-e-first-cast.md) Phase 3 batch 1 kickoff decision section for Options A/B/C analysis.
+
 ## Dependencies (all must be ✅ before batch 1 begins)
 
 - ✅ Phase 2 Hercules pilot end-to-end (ADR-0006 §3 Exit Criteria 1-6 all PASS)

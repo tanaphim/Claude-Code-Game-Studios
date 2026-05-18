@@ -139,8 +139,19 @@ No new errors introduced by S5-10 work.
 - Dual-path retention (S5-04/S5-05/S5-09) saved production every time a wiring gap surfaced — pattern worth codifying in `control-manifest.md`.
 
 **Phase 3 readiness gate (ADR §10):**
-- [ ] 1-week soak on dev (start date: 2026-05-14 — measure to 2026-05-21)
-- [ ] Non-Hercules call site of `GetSlotAction` identified (future — Phase 3 hero migrations)
-- [ ] `AbilityDataSnapshot.EffectiveSlot` audit (future — Phase 3)
-- [ ] Pattern-A helper added to `control-manifest.md` (future — Phase 3)
-- [ ] **S5-21 must ship before Phase 3 starts** — both TD-006 and TD-007 block end-to-end slot routing
+- [x] 1-week soak on dev (2026-05-14 → 2026-05-21): **PASS WITH NOTES + Phase 3 batch 1 dash-hero blocker** (Day 4 manual probe 2026-05-18, root cause located 2026-05-18 EOD)
+      - Verified by: tanapol, 2026-05-18 (Day 4 manual probe; full sign-off pending 2026-05-21)
+      - Bugs filed in window:
+          - BUG-0005 (test harness multipeer PeerMode) — NOT slot-related — RESOLVED 2026-05-18 at delta-unity@`eb1c4ea695`
+          - **[BUG-0006](../bugs/BUG-0006-hercules-e-first-cast.md) (Hercules E first cast no-op per match)** — slot-related; ROOT CAUSE LOCATED 2026-05-18 EOD at `NetworkStatusEffect.cs:947` (shared `RequestDash` silent guard, likely `IsDashing` networked-state leak across match — H4b). Cousin risk HIGH: affects Horus E + Volund W in Phase 3 batch 1. **P0, OPEN, fix scheduled next session (~0.5d).**
+      - Hercules manual playthrough: Q/W/R/NA/Recall/Item ทำงานปกติ; E first cast per match แสดงอาการตาม BUG-0006
+      - Multipeer Pass #1-5: ✅ (post BUG-0005 fix)
+      - **Verdict reading**:
+          - Phase 2 BindSlot/StateReleaseSlot/multipeer pipeline = GREEN per Q/W/R control proof
+          - BUG-0006 is in shared dash API (NetworkStatusEffect), affecting all dash-bearing heroes including Phase 3 batch 1 (Horus E S6-03, Volund W S6-04)
+          - **Phase 3 batch 1 dash-hero kickoff BLOCKED until BUG-0006 RESOLVED** (Option A recommended)
+          - Non-dash Phase 3 work can proceed (S6-06 Skadi appears clean — needs grep confirmation)
+- [ ] Non-Hercules call site of `GetSlotAction` identified (future — Phase 3 hero migrations, created during S6-03 Horus)
+- [ ] `AbilityDataSnapshot.EffectiveSlot` audit (future — Phase 3 batch close)
+- [ ] Pattern-A helper added to `control-manifest.md` (future — control-manifest.md still TBD)
+- [x] **S5-21 shipped** — TD-006 SetActiveSlot wired + TD-007 AbilityRegistry registered (Sprint 005 close 2026-05-14)
