@@ -1,0 +1,52 @@
+# S6-03 Multipeer Harness Pass #1-5 — Log Capture
+# Story:  production/epics/phase-3-hero-migration/S6-03-horus-migration.md
+# Date:   2026-05-18
+# Tester: tanapol
+# Build:  delta-unity (Sprint 006 Day 4, post BUG-0009 HorusQ fix)
+# Unity:  2022.3.62f1 LTS
+# Scene:  Assets/GameScripts/Gameplays/Abilities/Testing/PrototypeTest.unity
+# Harness: AbilityMultipeerRunner (with S6-14 duplicate-guard + BUG-0005 runtime PeerMode toggle eb1c4ea695)
+
+# =============================================================
+# Verdict: PASS — AC #6 [1] harness portion green
+# =============================================================
+#   Pass #1 (RPC parity)        — ✅ covered by parity check
+#   Pass #2 (state replication) — ✅ covered by parity check (Slots dict converged)
+#   Pass #3 (input replication) — ✅ covered by parity check (slot-bound binds visible host & client)
+#   Pass #4 (4-slot parity)     — ✅ explicit ✅ in log
+#   Pass #5 (bandwidth idle)    — ✅ CLIENT out ≤ 52 B/s, HOST out ≤ 26 B/s  (budget ≤ 2048 B/s)
+
+# --------- Pass #4 parity check (4-slot convergence) ---------
+
+[Multipeer-Parity] ✅ PASS #4 — all 4 slots converge (Host↔Client).
+  source: AbilityMultipeerRunner.cs:321 (TryVerifyParityOnce)
+
+# --------- Pass #5 bandwidth samples (4 consecutive ticks) ---------
+
+[Multipeer-BW-CLIENT] in=26 B/s out=52 B/s | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-HOST]   in=47 B/s out=26 B/s | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-CLIENT] in=26 B/s out=41 B/s | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-HOST]   in=41 B/s out=26 B/s | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-CLIENT] in=26 B/s out=44 B/s | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+
+# Headroom: client out 52 B/s = 2.5% of 2048 B/s budget. Phase 2 bandwidth invariant intact;
+# S6-03 Horus refactor (no shared-infrastructure touches, only HorusQAction.cs:34 stale-ref fix)
+# did not regress wire-level slot binding.
+
+# =============================================================
+# Notes
+# =============================================================
+# * AC #6 strict reading = harness [1] only — matches Hercules pilot S5-10 evidence shape.
+# * Real 2-peer Horus match (1 Editor + 1 standalone build, OR 2 Editor clones via ParrelSync)
+#   = beyond Hercules baseline. Tracked separately if pursued; see this story's evidence
+#   doc for status.
+# * BUG-0009 (HorusQ stale `Target` NRE) was surfaced + fixed during AC #7 playthrough
+#   prior to this harness run; harness does not exercise HorusQ DashEnd path (uses generic
+#   TestActor prefab).
+
+# =============================================================
+# Sign-off
+# =============================================================
+# gameplay-programmer: tanapol — 2026-05-18
+# qa-tester:           tanapol — 2026-05-18 (single-reviewer; async cross-check pending)
+# Verdict: PASS (Pass #1-5 verified; AC #6 [1] portion complete)

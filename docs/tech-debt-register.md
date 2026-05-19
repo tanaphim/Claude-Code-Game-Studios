@@ -102,6 +102,74 @@ Each entry: ID, origin, description, impact, removal target, owner.
 
 ---
 
+## TD-011 — Passive ability sibling-skill lookup hardcodes `Actor.Combat.Skill1..4` index (Pattern 6 promotion)
+
+- **Origin**: S6-04 (2026-05-19) — surfaced during Phase 3 batch 1 Volund migration code audit; **2nd confirmation case** (first was HorusI in S6-03 2026-05-18). Reaches promotion threshold defined in [phase-2-lessons-learned.md § Pattern 6](architecture/phase-2-lessons-learned.md). **3rd case** added 2026-05-19 (S6-05 GuanYu audit — GuanYuR active ability, not passive); confirms Pattern 6 scope extends beyond passive-only. **4th case + new sub-shape** added 2026-05-19 (S6-06 Skadi audit — service-hub variant; 6 instances across SkadiQ/W/E; broke "clean baseline" expectation).
+- **Severity**: **LOW** — code-smell, not a bug. Functionally correct under current convention (Q=Skill1, W=Skill2, E=Skill3, R=Skill4). Risk surfaces only if slot order is ever rebound dynamically (item swap, future hero variants with non-standard layout).
+- **Description**:
+  Four heroes use sibling-skill direct reads via `Actor.Combat.Skill1..4` index property, which represents the legacy "slot = position in array" assumption that Phase 2 (ADR-0008) specifically migrated away from. Pattern surfaces in **3 distinct sub-shapes**: (1) passive cooldown read/write, (2) passive/active event subscription, and (3) service-hub method invocation via type-coupling. Confirmed cases:
+
+  | Hero | File | Lines | Ability type | Sub-shape | Operations |
+  |---|---|---|---|---|---|
+  | HorusI | `HorusIAction.cs:79-82` | 4 | Passive (I) | Cooldown read/write | Read `Skill1.Rank` / `IsMainCooldown` / `RemainingMainCooldown` + write `MainCooldown` (passive reduces Q CD on normal-attack hit) |
+  | VolundI | `VolundIAction.cs:28-30` | 3 | Passive (I) | Event subscription | Subscribe `Skill1/2/4.OnHitTarget +=` event (passive applies stack on Q/W/R hit) |
+  | GuanYuR | `R/GuanYuRAction.cs:24` | 1 | **Active (R)** | Event subscription | Subscribe `Skill3.OnHitLockTarget += ApplyStatusEffect` (R's Initialize sets up CHALLENGER status on E hit) |
+  | **SkadiQ + SkadiW + SkadiE** | `SkadiQAction.cs:19`, `SkadiWAction.cs:18`, `SkadiEAction.cs:22-23,31-32` | **6** | **Active (Q/W/E)** | **Service-hub via type-coupling** | (a) Q hit calls `Actor.Combat.Skill3.GetComponent<SkadiEAction>()?.PassiveCooldown1(target)`; (b) W hit calls `.PassiveCooldown2(target)`; (c) E's methods write back to `Actor.Combat.Skill1.MainCooldown` and `Actor.Combat.Skill2.MainCooldown`. Q/W → E (via Skill3 slot index + `GetComponent` type cast) → Q/W (cooldown write-back via Skill1/2). Circular cross-ability dependency. |
+
+- **Proposed solution**:
+  Add `ActorCombat.GetSkillBySlot(Slot slot)` API returning the `ActorCombatAction` bound to that slot role (null if no skill bound). Migrate both confirmed cases to use the API; the slot enum (Q/W/E/R/I) is the source of truth, not array index.
+
+  ```csharp
+  // Proposed (lives in ActorCombat or wherever Skill1..4 are defined)
+  public ActorCombatAction GetSkillBySlot(Slot slot);  // null if no skill bound to that slot
+  ```
+
+- **Impact**:
+  Architectural completeness — closes the last remaining "Phase 1 indexing" anti-pattern that Phase 2 didn't address (Phase 2 focused on input→slot routing and animation-event slot routing; sibling-skill lookup was overlooked because Hercules pilot had no passive of this shape).
+
+  No runtime behavior change expected post-migration. Cosmetic / architectural concern only.
+
+- **Cross-hero scan needed before story authoring**:
+  ```bash
+  grep -rn "Actor.Combat.Skill[1-4]" C:/GitHub/delta-unity/Assets/GameScripts/Gameplays/Characters/
+  ```
+  Likely cousins: Anansi passive, Cupid passive, Merlin 3-stance passive. (GuanYu already audited — GuanYuR confirmed, others clean.) Result determines scope of Pattern 6 migration story (1-2 heroes = small story; 5+ heroes = epic).
+
+  **Updated scope expectation**: Pattern 6 now confirmed in both passive AND active ability contexts AND service-hub patterns → `GetSkillBySlot(Slot)` API must work from any ability class context (not just `*IAction.cs`).
+
+  **Service-hub sub-shape implications** (added 2026-05-19 after S6-06 Skadi audit):
+
+  The Skadi case is more refactor-intensive than the other sub-shapes because:
+  - Q/W → E call uses BOTH `Skill3` slot index AND `GetComponent<SkadiEAction>()` type cast → migration must replace both the slot lookup AND consider whether `GetSkillBySlot` returns the right type or requires an `as` cast
+  - E acts as a "service hub" exposing public methods (`PassiveCooldown1`, `PassiveCooldown2`) → if these are intentional design (service pattern), the migration should preserve them; if they're an emergent shape (one-off helper), they can be inlined or moved
+  - Circular dependency: Q→E→Q (cooldown). Refactor must not introduce stale-state read/write order issues
+
+  **Recommended `GetSkillBySlot` API extension for service-hub case**:
+
+  ```csharp
+  public ActorCombatAction GetSkillBySlot(Slot slot);
+  public T GetSkillBySlot<T>(Slot slot) where T : ActorCombatAction;  // typed variant for service-hub case
+  ```
+
+- **Removal target**: **Sprint 007 or Sprint 008** — dedicated Pattern 6 migration story. Author after cross-hero scan completes. Story creation criteria:
+  - 4 confirmed cases (HorusI + VolundI + GuanYuR + Skadi-Q/W/E) — 14 total instances across batch 1 alone ≥ threshold ✅
+  - Cross-hero scan reveals batch 2/3/4 scope (small story vs epic)
+  - `GetSkillBySlot` API design reviewed by lead-programmer (decide static-helper vs instance method; decide where `Slot` enum lives; decide whether typed variant `GetSkillBySlot<T>` is added for service-hub cases like Skadi)
+  - API must support 3 sub-shapes:
+    - **Read-style** (HorusI cooldown reads): `qSkill.Rank`, `qSkill.MainCooldown = …`
+    - **Event-subscription style** (VolundI + GuanYuR): `qSkill.OnHitTarget += …` / `qSkill.OnHitLockTarget += …`
+    - **Service-hub style** (Skadi): typed access to call hero-specific public methods, e.g. `(eSkill as SkadiEAction)?.PassiveCooldown1(target)`
+
+- **Owner**: lead-programmer (API design) + gameplay-programmer (per-hero migration)
+
+- **References**:
+  - [Pattern 6 documentation](architecture/phase-2-lessons-learned.md) — full pattern shape + proposed API
+  - [BUG-0009](../production/qa/bugs/BUG-0009-horus-q-stale-target-nre.md) — separate concern (BUG-0009 was about HorusQ stale `Target`, not Pattern 6; both lived in Horus files but are distinct issues)
+  - [Phase 3 batch 1 evidence](../production/qa/evidence/sprint-006-phase-3-batch1.md) — all four surfacings (HorusI 2026-05-18, VolundI 2026-05-19, GuanYuR 2026-05-19, Skadi-Q/W/E 2026-05-19)
+  - [Phase 3 hero migration EPIC](../production/epics/phase-3-hero-migration/EPIC.md) — context for batch ordering / when Pattern 6 story fits
+
+---
+
 ## Conventions
 - IDs are permanent (TD-NNN). Never renumber.
 - Remove entries when fixed; record removal in commit message.

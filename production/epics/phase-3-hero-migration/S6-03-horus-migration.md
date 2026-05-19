@@ -1,5 +1,6 @@
 # Story: S6-03 — Horus Migration (Phase 3 batch 1, hero #1)
 
+**Status**: Complete (2026-05-18)
 **Type**: Logic + Integration
 **ADR**: ADR-0006 Phase 2 Migration Plan (Phase 3 uses identical patterns §5-6); ADR-0008 Slot Binding via CBSUnit
 **GDD**: N/A — refactor story; hero-specific ability design lives in CBSUnit data + per-ability `*.cs` action files, not in any GDD
@@ -85,5 +86,30 @@ Expected zero — refactor is pure code transformation. No new networked state a
 
 - [Epic: Phase 3 Hero Migration](EPIC.md) — shared context + pattern shape
 - [S5-09 Hercules bootstrap](../../sprints/sprint-005.md) — template migration story
-- [Phase 2 Lessons Learned](../../../docs/architecture/phase-2-lessons-learned.md) — 5 patterns
+- [Phase 2 Lessons Learned](../../../docs/architecture/phase-2-lessons-learned.md) — 5 patterns + Pattern 6 CANDIDATE (added by S6-03)
 - [BUG-0001 fix PR #357](../../../production/sprint-006-prep/) (delta-unity) — cousin bug list
+
+---
+
+## Completion Notes
+
+**Completed**: 2026-05-18 (same-day close — start to /story-done)
+**Velocity**: ~0.5d actual vs 0.5d budget = on target
+**Criteria**: 7/8 passing; AC #2 partially DEFERRED (Pattern 6 candidate documented per story instruction; HorusI sibling-skill reads carry forward as code-smell, functionally correct)
+**Deviations** (all advisory, in-scope):
+- BUG-0009 surfaced during AC #7 playthrough + RESOLVED inline at HorusQAction.cs:34 (`Target.transform.position` → `target.transform.position`; cached field, not base property)
+- Pattern 6 (CANDIDATE) added to phase-2-lessons-learned.md — cross-hero audit required before promotion to gate/refactor story
+- HorusI `Actor.Combat.Skill1` 4× direct reads carry forward unchanged (Pattern 6 deferred)
+**Test Evidence**:
+- Integration playtest documented at [production/qa/evidence/sprint-006-phase-3-batch1.md](../../qa/evidence/sprint-006-phase-3-batch1.md)
+- Multipeer harness log at [production/qa/evidence/S6-03-multipeer.txt](../../qa/evidence/S6-03-multipeer.txt)
+- EditMode tests waived per AC #8 + QA plan (optional in batch 1)
+**Code Review**: APPROVED (inline 1-line fix review; full /code-review skill skipped — overkill for scope)
+**BUG filed**: [BUG-0009](../../qa/bugs/BUG-0009-horus-q-stale-target-nre.md) (RESOLVED in-line)
+**BUG-0001 cousin verdict**: HorusE + HorusR → CLOSED-BY-SIDE-EFFECT (S5-19 AnimatorStateSync fix resolved both)
+
+### Carry-forward (next migrations)
+
+- **VolundW cousin verification** scheduled in S6-04 — track in BUG-0001 cousin log
+- **GuanYuE cousin verification** scheduled in S6-05 — track in BUG-0001 cousin log
+- **Pattern 6 cross-hero audit**: grep `Actor.Combat.Skill[1-4]` in Anansi/Cupid/Merlin/GuanYu passive code paths before promoting Pattern 6 to gate or refactor story

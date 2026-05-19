@@ -134,6 +134,7 @@ Checklist:
 - [ ] Combined multipeer harness run: load each hero, Pass #1-5 green for all 4
 - [ ] Combined Training match: play all 4 heroes in sequence (or 4 separate matches), all abilities functional
 - [ ] No regressions surfaced in Hercules during batch 1 work (control hero)
+- [ ] **BUG-0008 surveillance step**: during multipeer combined run, use **Teleport Ticket** item (`item_teleport_to_unit.prefab`) on at least one hero with a 2nd peer connected. Verify post-teleport movement input works and animator transitions out of Idle. If movement stays frozen or animator locks Idle → escalate BUG-0008 to active Sprint 006 fix (gameplay-programmer + network-programmer); document in `production/qa/evidence/sprint-006-phase-3-batch1.md` regardless of outcome
 - [ ] **Batch 2 readiness**: if velocity ≥1.0×/day from S6-06 baseline → S6-11/S6-12 stretch unlocks. If <1.0×/day → defer to S7
 - [ ] Go/no-go for batch 2: producer sign-off recorded
 
@@ -205,6 +206,7 @@ S6-07 batch gate is DONE when all 4 hero stories above are DONE + combined batch
 - [Epic: Phase 3 Hero Migration](../epics/phase-3-hero-migration/EPIC.md)
 - [Sprint 006 plan](../sprints/sprint-006.md)
 - [BUG-0005 — Multipeer Pass #4 parity regression (RESOLVED)](bugs/BUG-0005-multipeer-parity-regression.md) — runtime PeerMode toggle fix at delta-unity `eb1c4ea695`
+- [BUG-0008 — Teleport Ticket movement freeze in multipeer (OPEN, S2)](bugs/BUG-0008-teleport-ticket-movement-freeze.md) — surveillance step added to S6-07 batch gate checklist (PM triage 2026-05-18)
 - [Phase 2 Lessons Learned](../../docs/architecture/phase-2-lessons-learned.md) — 5 patterns + Pattern #5 promoted to gate
 - [ADR-0006 Phase 2 Migration Plan](../../docs/architecture/ADR-0006-phase-2-migration-plan.md) §10 handover
 - [ADR-0008 Slot Binding via CBSUnit](../../docs/architecture/ADR-0008-slot-binding-via-cbsunit.md)

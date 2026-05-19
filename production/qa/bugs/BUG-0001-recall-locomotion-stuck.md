@@ -173,3 +173,32 @@ if any of them still stick post-S5-19.
 ≠ stored 0), which keeps `_pendingEventSyncTicks` retry loop futilely firing every auto-sync
 interval (2s) with no actual network writes. CPU cost is small but non-zero. Considered out
 of scope for BUG-0001 — file a separate optimization task if profiling shows it matters.
+
+---
+
+## Cousin verification log
+
+Tracks each cousin ability listed above as it gets a real playthrough during Phase 3.
+
+| Hero / Ability | Verification window | Status | Verdict | Date | Reference |
+|---|---|---|---|---|---|
+| HorusE | S6-03 Horus migration | ✅ VERIFIED | CLOSED-BY-SIDE-EFFECT | 2026-05-18 | [S6-03 evidence](../evidence/sprint-006-phase-3-batch1.md); cast HorusE → locomotion re-engages cleanly, no stuck animation residual |
+| HorusR | S6-03 Horus migration | ✅ VERIFIED | CLOSED-BY-SIDE-EFFECT | 2026-05-18 | [S6-03 evidence](../evidence/sprint-006-phase-3-batch1.md); cast HorusR → locomotion re-engages cleanly, no stuck animation residual |
+| VolundW | S6-04 Volund migration | ✅ VERIFIED | CLOSED-BY-SIDE-EFFECT | 2026-05-19 | [S6-04 evidence](../evidence/sprint-006-phase-3-batch1.md); cast VolundW → locomotion re-engages cleanly, no stuck animation residual |
+| GuanYuE | S6-05 Guan Yu migration | ✅ VERIFIED | CLOSED-BY-SIDE-EFFECT | 2026-05-19 | [S6-05 evidence](../evidence/sprint-006-phase-3-batch1.md); cast GuanYuE → locomotion re-engages cleanly, no stuck animation residual. **Batch 1 cousin closure cycle COMPLETE — all 4 cousins resolved by S5-19 fix.** |
+
+**Verdict legend**:
+- `CLOSED-BY-SIDE-EFFECT` — locomotion re-engages cleanly post-cast; S5-19 AnimatorStateSync fix resolved this cousin
+- `NEEDS-NEW-BUG` — stuck-animation residual reproduces; file new bug
+
+Update each row when the corresponding hero migration story completes its manual playthrough.
+
+---
+
+## Upper-layer cousin (different shape, same family)
+
+| Item / system | Layer | Verification window | Status | Verdict | Date | Reference |
+|---|---|---|---|---|---|---|
+| Teleport Ticket (and any item with `Empty` rest state) | **Item layer** (upper, not base) | S6-07 batch gate BUG-0008 surveillance (multipeer ParrelSync) | ✅ RESOLVED | RESOLVED-BY-NEW-FIX | 2026-05-19 | [BUG-0008](BUG-0008-teleport-ticket-movement-freeze.md); fix at `AnimatorStateSync.cs` adds `EmptyHash` to clear-list (extends S5-19 pattern to upper-layer rest states) |
+
+**Family note** (2026-05-19): BUG-0008 was the first **upper-layer** cousin discovered. Original S5-19 fix only covered base-layer Idle/Run rest. BUG-0008 fix extends the same logic to upper-layer `Empty` rest, making the AnimatorStateSync clear-hash pattern fully generic across layers. Future cousins on other upper layers (weapon layer, emote layer, etc.) should now be auto-covered if they use the `Empty` rest convention.

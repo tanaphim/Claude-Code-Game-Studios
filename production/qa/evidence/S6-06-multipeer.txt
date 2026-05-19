@@ -1,0 +1,64 @@
+# S6-06 Multipeer Harness Pass #1-5 — Log Capture
+# Story:  production/epics/phase-3-hero-migration/S6-06-skadi-migration.md
+# Date:   2026-05-19
+# Tester: tanapol
+# Build:  delta-unity (Sprint 006 Day 5, post S6-05 close)
+# Unity:  2022.3.62f1 LTS
+# Scene:  Assets/GameScripts/Gameplays/Abilities/Testing/PrototypeTest.unity
+# Harness: AbilityMultipeerRunner (S6-14 duplicate-guard + BUG-0005 runtime PeerMode toggle eb1c4ea695)
+
+# =============================================================
+# Verdict: PASS — AC #5 harness portion green
+# =============================================================
+#   Pass #1 (RPC parity)        — ✅ covered by parity check
+#   Pass #2 (state replication) — ✅ covered by parity check (Slots dict converged)
+#   Pass #3 (input replication) — ✅ covered by parity check (slot-bound binds visible host & client)
+#   Pass #4 (4-slot parity)     — ✅ explicit ✅ in log; all 4 slots id-matched
+#   Pass #5 (bandwidth idle)    — ✅ CLIENT out peak 65 B/s, HOST out peak 52 B/s (budget ≤ 2048 B/s)
+
+# --------- Pass #4 parity check (per-slot + summary) ---------
+
+[Multipeer-HOST] Host online.
+[Multipeer-CLIENT] Client connected.
+[Multipeer-Parity] slot=1 ✅ host=(id=[Object:[Id:1027], Behaviour:0],'proto.ability.q') client=(id=[Object:[Id:1027], Behaviour:0],'proto.ability.q')
+[Multipeer-Parity] slot=2 ✅ host=(id=[Object:[Id:1028], Behaviour:0],'proto.ability.w') client=(id=[Object:[Id:1028], Behaviour:0],'proto.ability.w')
+[Multipeer-Parity] slot=3 ✅ host=(id=[Object:[Id:1029], Behaviour:0],'proto.ability.e') client=(id=[Object:[Id:1029], Behaviour:0],'proto.ability.e')
+[Multipeer-Parity] slot=4 ✅ host=(id=[Object:[Id:1030], Behaviour:0],'proto.ability.r') client=(id=[Object:[Id:1030], Behaviour:0],'proto.ability.r')
+[Multipeer-Parity] ✅ PASS #4 — all 4 slots converge (Host↔Client).
+
+# --------- Pass #5 bandwidth samples (representative steady-state) ---------
+
+[Multipeer-BW-HOST]   in=0 B/s    out=26 B/s   | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-CLIENT] in=26 B/s   out=65 B/s   | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-HOST]   in=52 B/s   out=26 B/s   | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-CLIENT] in=26 B/s   out=47 B/s   | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-HOST]   in=0 B/s    out=26 B/s   | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-CLIENT] in=26 B/s   out=52 B/s   | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-HOST]   in=47 B/s   out=26 B/s   | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-CLIENT] in=0 B/s    out=52 B/s   | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-HOST]   in=39 B/s   out=0 B/s    | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+[Multipeer-BW-CLIENT] in=26 B/s   out=39 B/s   | written: 0 B (0 words) | objUpdates in=0 out=0 | objMemUsed=7264 B
+
+# Bandwidth summary across session:
+#   HOST   out range: 0-52 B/s    (peak ~ 2.5% of 2048 B/s budget)
+#   CLIENT out range: 0-65 B/s    (peak ~ 3.2% of 2048 B/s budget)
+#   Headroom ≥ 96.8%. Phase 2 bandwidth invariant intact across ALL 4 batch 1 heroes
+#   (Horus + Volund + GuanYu + Skadi). Pattern 6 service-hub coupling does not impact
+#   wire-level slot binding behavior.
+
+# =============================================================
+# Notes
+# =============================================================
+# * AC #5 strict reading = harness [1] only — matches Hercules pilot S5-10 baseline and
+#   S6-03/04/05 precedent.
+# * Real 2-peer Skadi match = skipped per established batch 1 pattern. S6-07 batch gate
+#   will exercise real multipeer across all 4 batch 1 heroes combined.
+# * Phase 2 bandwidth invariant intact across all batch 1 work; only delta-unity code
+#   change in batch 1 = BUG-0009 1-line stale-Target fix in HorusQAction during S6-03.
+
+# =============================================================
+# Sign-off
+# =============================================================
+# gameplay-programmer: tanapol — 2026-05-19
+# qa-tester:           tanapol — 2026-05-19 (single-reviewer; async cross-check pending)
+# Verdict: PASS (Pass #1-5 verified; AC #5 harness portion complete)

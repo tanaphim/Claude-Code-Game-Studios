@@ -1,5 +1,6 @@
 # Story: S6-04 — Volund Migration (Phase 3 batch 1, hero #2)
 
+**Status**: Complete (2026-05-19)
 **Type**: Logic + Integration
 **ADR**: ADR-0006 Phase 2 Migration Plan (Phase 3 uses identical patterns §5-6); ADR-0008 Slot Binding via CBSUnit
 **GDD**: N/A — refactor story; hero-specific ability design lives in CBSUnit data + per-ability `*.cs` action files, not in any GDD
@@ -79,5 +80,30 @@ Expected zero. VolundW size is implementation detail; refactor is pure transform
 
 - [Epic: Phase 3 Hero Migration](EPIC.md)
 - [S6-03 Horus migration](S6-03-horus-migration.md) — sequential predecessor; pattern reuse
-- [Phase 2 Lessons Learned](../../../docs/architecture/phase-2-lessons-learned.md)
-- BUG-0001 fix PR #357 — cousin bug list including VolundW
+- [Phase 2 Lessons Learned](../../../docs/architecture/phase-2-lessons-learned.md) — Pattern 6 PROMOTED 2026-05-19 (2nd confirmation case = VolundI)
+- [TD-011 — Pattern 6 dedicated tracking](../../../docs/tech-debt-register.md)
+- BUG-0001 fix PR #357 — cousin bug list including VolundW (VERIFIED CLOSED-BY-SIDE-EFFECT 2026-05-19)
+
+---
+
+## Completion Notes
+
+**Completed**: 2026-05-19 (same-day close — start to /story-done)
+**Velocity**: ~0.5d actual vs 0.5d budget = on target (faster than S6-03 because no mid-stream bug)
+**Criteria**: 7/8 passing + AC #8 explicit PASS; AC #2 partially DEFERRED (Pattern 6 PROMOTED to TD-011 with 2 confirmed cases reached threshold; VolundI sibling-skill reads carry forward as code-smell pending dedicated migration story)
+**Deviations** (all advisory, in-scope):
+- Pattern 6 status changed CANDIDATE → PROMOTED in phase-2-lessons-learned.md; TD-011 created with proposed `GetSkillBySlot(Slot)` API + Sprint 007/008 target
+- VolundI `Actor.Combat.Skill1/2/4` 3× direct event subscriptions carry forward unchanged
+- BUG-0009 cousin audit on all 5 Volund files = clean (no NRE risk during playthrough — confirmed correct)
+**Test Evidence**:
+- Integration playtest documented at [production/qa/evidence/sprint-006-phase-3-batch1.md](../../qa/evidence/sprint-006-phase-3-batch1.md) § S6-04
+- Multipeer harness log at [production/qa/evidence/S6-04-multipeer.txt](../../qa/evidence/S6-04-multipeer.txt)
+- EditMode tests waived per AC #8 + QA plan (optional in batch 1)
+**Code Review**: N/A — no delta-unity code changes in S6-04 (audit-only refactor; HorusI's VolundI's Pattern 6 cousins both deferred). No code review needed.
+**BUG-0001 cousin verdict**: VolundW → CLOSED-BY-SIDE-EFFECT (S5-19 AnimatorStateSync fix resolved this cousin as well)
+**No new bugs filed** — Volund migration was clean of NRE/regression issues
+
+### Carry-forward (next migrations)
+
+- **GuanYuE cousin verification** scheduled in S6-05 — track in BUG-0001 cousin log
+- **Pattern 6 cross-hero audit**: scope tracked in TD-011; can run opportunistically during S6-05 GuanYu audit (likely has a passive)
